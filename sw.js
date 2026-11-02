@@ -1,7 +1,7 @@
 // Loutrons : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
 // Même numéro que dans js/version.js (affiché dans Réglages).
-const VERSION = '1.7';
+const VERSION = '1.8';
 const CACHE = 'loutrons-' + VERSION;
 // Photos des exercices : pas toutes téléchargées à l'installation (environ 5 Mo), mais gardées dès qu'on les a vues une fois.
 // Cache à part, conservé d'une version à l'autre.
@@ -17,9 +17,11 @@ const FILES = [
   'js/data.js',
   'js/emile.js',
   'js/engine.js',
+  'js/food.js',
   'js/library.js',
   'js/nutrition.js',
   'js/render.js',
+  'js/scanner.js',
   'js/store.js',
   'js/timers.js',
   'js/util.js',
@@ -27,6 +29,7 @@ const FILES = [
   'js/views/calendar.js',
   'js/views/editors.js',
   'js/views/fiche.js',
+  'js/views/food.js',
   'js/views/goal.js',
   'js/views/history.js',
   'js/views/picker.js',
@@ -37,6 +40,8 @@ const FILES = [
   'js/views/setup.js',
   'js/views/today.js',
   'manifest.webmanifest',
+  'vendor/zxing/zxing.min.js',
+  'data/ciqual.json',
   'icons/logo.png',
   'icons/emile.png',
   'icons/apple-touch-icon.png',

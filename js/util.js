@@ -41,7 +41,7 @@ export const fmtDateYear = s => { const d = parseIso(s); return (d.getDate() ===
 // 2 450 : séparateur des milliers (espace fine insécable)
 export const fmtInt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
 // Texte comparable : sans accents ni majuscules, ponctuation remplacée par des espaces
-export const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+export const norm = s => String(s == null ? '' : s).replace(/[œŒ]/g, 'oe').replace(/[æÆ]/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 let toastT = null;
 export function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3500); }
 export function toggleIn(arr, v){ arr = (arr || []).slice(); const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); return arr; }

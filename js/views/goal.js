@@ -4,6 +4,7 @@ import { S } from '../store.js';
 import { bodyweight, settings } from '../data.js';
 import { ACTIVITY, GAIN, LOSS, planFor } from '../nutrition.js';
 import { emile, hey } from '../emile.js';
+import { dayDoc, totals } from '../food.js';
 
 export const nutritionOf = () => settings().nutrition || {};
 // Données de la personne : réglages et dernière pesée, ou ce qui est saisi à l'accueil
@@ -86,5 +87,8 @@ export function goalTodayCard(){
   let t = pl.status === 'keep' ? 'Ton objectif : garder ton poids (' + kg(w) + ' kg).'
     : 'Tu vises ' + kg(pl.target) + ' kg le ' + fmtDateYear(pl.status === 'fast' ? pl.realistic : n.by) + ', à ' + signed(pl.kgWeek) + ' kg par semaine. Dernière pesée : ' + kg(w) + ' kg.';
   if (pl.status === 'ok' && w != null && (pl.goal === 'gain' ? w >= pl.target : w <= pl.target)) t = 'Tu as atteint ton poids visé, bravo ! Choisis un nouvel objectif dans ton profil.';
-  return emile('<p>' + esc(hey(t)) + '</p>' + needs(pl, true) + '<p class="muted small">Sans compter tes séances. <button type="button" class="link" data-act="goal-edit">Modifier</button></p>', { title:'Ton objectif' });
+  // Ce qui est déjà noté dans le journal aujourd'hui
+  const day = dayDoc(today()); const eat = day.items.length ? totals(day.items) : null;
+  const ate = eat ? '<p class="small"><b>Mangé aujourd’hui : ' + fmtInt(eat.kcal) + ' / ' + fmtInt(pl.kcal) + ' kcal</b>, protéines ' + fmtInt(eat.p) + ' / ' + pl.protein[0] + ' g. <button type="button" class="link" data-act="tab" data-v="food">Ouvrir le journal</button></p>' : '<p class="small"><button type="button" class="link" data-act="tab" data-v="food">Noter ce que je mange</button></p>';
+  return emile('<p>' + esc(hey(t)) + '</p>' + needs(pl, true) + ate + '<p class="muted small">Sans compter tes séances. <button type="button" class="link" data-act="goal-edit">Modifier</button></p>', { title:'Ton objectif' });
 }

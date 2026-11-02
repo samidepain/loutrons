@@ -1,5 +1,5 @@
 // Actions de l’interface : clics, saisies et changements.
-import { $, addDays, addMonths, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
+import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
 import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
@@ -13,6 +13,8 @@ import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
 import { nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
+import { dayDoc, fromOff, recentFoods, validBarcode } from './food.js';
+import { foodFromDoc, foodList, preview, shown } from './views/food.js';
 
 function startWorkout(tplId){
   if (!S.loaded) return;
@@ -110,8 +112,40 @@ function nField(k, v){
   }
   if (k === 'by') { if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { render(); return; } nSave({ by: v }, true); }
 }
+// Journal des repas : une entrée garde les valeurs pour 100 g de l'aliment, pour que l'historique ne change pas
+function addEntry(day, entry){ const d = dayDoc(day); put('m_' + day, Object.assign({}, d, { date: day, items: (d.items || []).concat([entry]) })); }
+function pickFood(f){
+  const last = recentFoods(200).find(r => r.key === f.key);
+  Object.assign(S.food, { mode:'portion', sel:f, g: last ? last.g : f.serving || 100, msg:null }); S.confirm = null;
+  render(); window.scrollTo(0, 0);
+}
+// Code-barres lu ou tapé : produit déjà gardé sur le téléphone, sinon Open Food Facts
+const OFF_FIELDS = 'code,product_name,product_name_fr,brands,serving_quantity,nutriments';
+async function lookupBarcode(raw){
+  const F = S.food; if (!F) return;
+  const code = String(raw || '').replace(/\D/g, '');
+  const msg = t => { F.msg = t; const m = $('#scan-msg'); if (m) m.textContent = t; };
+  if (!validBarcode(code)) { msg('Code-barres incomplet ou mal lu : réessaie, ou tape les chiffres.'); return; }
+  const kept = S.docs.get('f_' + code);
+  if (kept) { pickFood(foodFromDoc('f_' + code, kept)); return; }
+  const notFound = why => { Object.assign(S.food, { mode:'notfound', why, code, msg:null }); render(); window.scrollTo(0, 0); };
+  if (!navigator.onLine) { notFound('offline'); return; }
+  msg('Recherche du produit ' + code + '…');
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 10000);
+    const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json?lc=fr&fields=' + OFF_FIELDS, { signal: ctl.signal });
+    clearTimeout(t);
+    if (S.food !== F) return; // écran quitté entre-temps
+    const j = r.status === 404 ? { status: 0 } : await r.json();
+    const f = fromOff(j, code);
+    if (!f) { notFound(j && j.status === 1 ? 'incomplete' : 'unknown'); return; }
+    put('f_' + code, { src:'off', code, name:f.name, brand:f.brand, per100:f.per100, serving:f.serving, fetched: today() });
+    pickFood(f);
+  } catch (e) { if (S.food === F) notFound(navigator.onLine ? 'error' : 'offline'); }
+}
+document.addEventListener('barcode', e => { if (S.food && S.food.mode === 'scan') lookupBarcode(e.detail); });
 const A = {
-  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; S.food = null; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   // Premier lancement et programme
   'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
@@ -164,6 +198,47 @@ const A = {
   'n-act'(b){ nSave({ activity: b.dataset.v }); },
   'n-goal'(b){ nSave({ goal: b.dataset.v }, true); },
   'n-realistic'(){ const pl = freshPlan(); if (pl.realistic) { nSave({ by: pl.realistic }, true); toast(withDot('Date visée : ' + fmtDate(pl.realistic))); } },
+  // Journal des repas
+  fday(b){ const d = addDays(S.foodDay || today(), +b.dataset.v); S.foodDay = d >= today() ? null : d; render(); },
+  'fd-add'(b){ S.food = { mode:'search', meal:b.dataset.v, day:S.foodDay || today(), q:'' }; render(); window.scrollTo(0, 0); },
+  'fd-cancel'(){ S.food = null; S.confirm = null; render(); },
+  'fd-back'(){ if (S.food.edit) { S.food = null; } else { S.food.mode = 'search'; S.food.msg = null; } render(); window.scrollTo(0, 0); },
+  'fd-meal'(b){ S.food.meal = b.dataset.v; render(); },
+  'fd-pick'(b){ const f = shown.get(b.dataset.v); if (f) pickFood(f); },
+  'fd-gset'(b){ S.food.g = +b.dataset.v; render(); },
+  'fd-save'(){
+    const F = S.food; const g = num(F.g);
+    if (g == null || g <= 0 || g > 5000) { toast('Indique la quantité en grammes, par exemple 120.'); const i = $('#fd-g'); if (i) i.focus(); return; }
+    const f = F.sel; const entry = { id: F.edit || rid(), meal:F.meal, key:f.key, name:f.name, brand:f.brand || '', g, per100:f.per100 };
+    if (f.serving) entry.serving = f.serving;
+    if (F.edit) { const d = dayDoc(F.day); put('m_' + F.day, Object.assign({}, d, { items: d.items.map(i => i.id === F.edit ? entry : i) })); }
+    else addEntry(F.day, entry);
+    S.food = null; render(); toast(withDot((F.edit ? 'Modifié : ' : 'Ajouté : ') + f.name));
+  },
+  'fd-edit'(b){
+    const day = S.foodDay || today(); const it = dayDoc(day).items.find(i => i.id === b.dataset.v); if (!it) return;
+    S.food = { mode:'portion', edit:it.id, meal:it.meal, day, g:it.g, sel:{ key:it.key, src:it.key.split(':')[0], name:it.name, brand:it.brand || '', per100:it.per100, serving:it.serving || null } };
+    S.confirm = null; render(); window.scrollTo(0, 0);
+  },
+  'fd-del'(){ S.confirm = 'fd-del'; render(); },
+  'fd-del-yes'(){ const F = S.food; const d = dayDoc(F.day); put('m_' + F.day, Object.assign({}, d, { items: d.items.filter(i => i.id !== F.edit) })); S.food = null; S.confirm = null; render(); toast('Retiré du journal.'); },
+  'fd-scan'(){ Object.assign(S.food, { mode:'scan', msg:null }); render(); window.scrollTo(0, 0); },
+  'fd-code'(){ const i = $('#scan-code'); lookupBarcode(i ? i.value : ''); },
+  'fd-create'(){ const F = S.food; F.draft = { name: F.mode === 'search' ? capFirst(String(F.q || '').trim()) : '' }; if (F.mode !== 'notfound') F.code = null; F.mode = 'create'; render(); window.scrollTo(0, 0); },
+  'fd-create-save'(){
+    const F = S.food; const d = F.draft; const name = String(d.name || '').trim(); const kcal = num(d.kcal);
+    if (!name) { toast('Donne un nom à l’aliment.'); $('#fc-name').focus(); return; }
+    if (kcal == null || kcal < 0 || kcal > 900) { toast('Indique les calories pour 100 g (entre 0 et 900).'); $('#fc-kcal').focus(); return; }
+    const per100 = { kcal }; let bad = '';
+    ['p', 'c', 's', 'f', 'sf', 'fib', 'salt'].forEach(k => { const v = num(d[k]); if (d[k] != null && String(d[k]).trim() !== '' && (v == null || v < 0 || v > 100)) bad = k; per100[k] = v != null && v >= 0 && v <= 100 ? v : null; });
+    if (bad) { toast('Vérifie les valeurs pour 100 g : entre 0 et 100 g.'); $('#fc-' + bad).focus(); return; }
+    if (per100.s != null && per100.c != null && per100.s > per100.c) { toast('Les sucres font partie des glucides : ils ne peuvent pas être plus élevés.'); return; }
+    if (per100.sf != null && per100.f != null && per100.sf > per100.f) { toast('Les saturés font partie des lipides : ils ne peuvent pas être plus élevés.'); return; }
+    const serving = num(d.serving); const id = F.code ? 'f_' + F.code : 'f_own' + rid();
+    const doc = { src:'own', name, brand: String(d.brand || '').trim(), per100, serving: serving > 0 && serving < 2000 ? serving : null, created: today() };
+    if (F.code) doc.code = F.code;
+    put(id, doc); toast('Aliment enregistré.'); pickFood(foodFromDoc(id, doc));
+  },
   'goal-edit'(){ A.profile(); const c = $('#goal-card'); if (c) c.scrollIntoView({ block:'start' }); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
@@ -322,6 +397,9 @@ document.addEventListener('input', e => {
   if (t.matches('[data-u]') && S.setup) { S.setup[t.dataset.u] = t.value; return; }
   if (t.matches('[data-pq]') && S.picker) { S.picker.q = t.value; const l = $('#pick-list'); if (l) l.innerHTML = pickerList(); return; }
   if (t.matches('[data-xq]')) { S.exQ = t.value; const l = $('#ex-list'); if (l) l.innerHTML = exerciseList(); return; }
+  if (t.matches('[data-fq]') && S.food) { S.food.q = t.value; const l = $('#fd-list'); if (l) l.innerHTML = foodList(); return; }
+  if (t.matches('[data-fg]') && S.food) { S.food.g = t.value; const pv = $('#fd-prev'); if (pv) pv.innerHTML = preview(S.food.sel, num(t.value)); return; }
+  if (t.matches('[data-fc]') && S.food && S.food.draft) { S.food.draft[t.dataset.fc] = t.value; return; }
   if (t.matches('[data-d]') && S.draft) { S.draft.data[t.dataset.d] = t.value; return; }
   if (t.matches('[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; return; }
   if (t.matches('[data-e]') && S.draft) { S.draft.data[t.dataset.e] = t.value; return; }
@@ -364,7 +442,7 @@ document.addEventListener('change', e => {
     r.onload = () => {
       try {
         const j = JSON.parse(r.result); const docs = j && j.docs; if (!docs || typeof docs !== 'object') throw new Error('format');
-        let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
+        let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_|m_|f_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
         // Exports version 2 ou plus anciens : réglages complétés comme au chargement
         upgradeLegacy(); applyTheme(settings().theme);
         if (S.setup && S.setup.mode === 'welcome' && !needsSetup()) S.setup = null;
