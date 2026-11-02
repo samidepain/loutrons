@@ -7,6 +7,7 @@ import { findPRs, initItem } from './engine.js';
 import { downloadFile, exportFile, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
 import { applyTheme, render } from './render.js';
+import { screenOf } from './nav.js';
 import { pickerList } from './views/picker.js';
 import { exerciseList } from './views/program.js';
 import { newSetup } from './views/setup.js';
@@ -27,7 +28,7 @@ function startWorkout(tplId){
   const w = { date, tpl:tplId, name:t.name, cut:t.cut || '', lower:tplLower(t), est:tplEst(t), status:'en_cours', startedAt:Date.now(), week:wk.n, blockWeek:wk.bw, deload:wk.deload, items, ex:{}, targets:{} };
   items.forEach(it => initItem(w, it, wk));
   put(id, w);
-  S.view = 'training'; S.summary = null; S.picker = null; S.draft = null;
+  S.view = 'training'; S.summary = null; S.picker = null; S.draft = null; S.navHint = 'up';
   render(); window.scrollTo(0, 0); requestWake();
 }
 function finishWorkout(){
@@ -35,7 +36,7 @@ function finishWorkout(){
   w.status = 'terminée'; w.endedAt = Date.now(); w.duration = Math.round((w.endedAt - w.startedAt) / 60000);
   put(w.id, w);
   S.summary = { id:w.id, prs: findPRs(w) };
-  stopRest(); S.view = 'today'; render(); window.scrollTo(0, 0);
+  stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0);
 }
 function applyPick(exId){
   const P = S.picker; if (!P) return;
@@ -145,7 +146,9 @@ async function lookupBarcode(raw){
 }
 document.addEventListener('barcode', e => { if (S.food && S.food.mode === 'scan') lookupBarcode(e.detail); });
 const A = {
-  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; S.food = null; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
+  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; S.food = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
+    render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
   // Premier lancement et programme
   'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
@@ -163,7 +166,7 @@ const A = {
     if (bad) { toast(bad); return; }
     U.step = 2; $('#toast').hidden = true; render(); window.scrollTo(0, 0);
   },
-  'setup-back'(){ S.setup.step = Math.max(1, S.setup.step - 1); render(); window.scrollTo(0, 0); },
+  'setup-back'(){ S.setup.step = Math.max(1, S.setup.step - 1); render(); },
   'setup-done'(){
     const U = S.setup; const first = U.mode === 'welcome'; const custom = U.prog === 'custom';
     if (first) {
@@ -187,7 +190,7 @@ const A = {
     putSettings(patch);
     if (first && num(U.weight) != null) saveWeight(num(U.weight));
     S.setup = null; S.renaming = false; S.progTab = 'seances';
-    S.view = custom || !first ? 'training' : 'today';
+    S.view = custom || !first ? 'training' : 'today'; if (first) S.navHint = 'fade';
     render(); window.scrollTo(0, 0);
     toast(custom ? 'Programme créé : ajoute ta première séance.' : first ? 'C’est parti !' : 'Programme changé.');
   },
@@ -202,7 +205,7 @@ const A = {
   fday(b){ const d = addDays(S.foodDay || today(), +b.dataset.v); S.foodDay = d >= today() ? null : d; render(); },
   'fd-add'(b){ S.food = { mode:'search', meal:b.dataset.v, day:S.foodDay || today(), q:'' }; render(); window.scrollTo(0, 0); },
   'fd-cancel'(){ S.food = null; S.confirm = null; render(); },
-  'fd-back'(){ if (S.food.edit) { S.food = null; } else { S.food.mode = 'search'; S.food.msg = null; } render(); window.scrollTo(0, 0); },
+  'fd-back'(){ if (S.food.edit) { S.food = null; } else { S.food.mode = 'search'; S.food.msg = null; } render(); },
   'fd-meal'(b){ S.food.meal = b.dataset.v; render(); },
   'fd-pick'(b){ const f = shown.get(b.dataset.v); if (f) pickFood(f); },
   'fd-gset'(b){ S.food.g = +b.dataset.v; render(); },
@@ -242,8 +245,9 @@ const A = {
   'goal-edit'(){ A.profile(); const c = $('#goal-card'); if (c) c.scrollIntoView({ block:'start' }); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
-  profile(){ S.view = 'profile'; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  profile(){ if (S.view !== 'profile' && S.view !== 'science') S.from = S.view; S.view = 'profile'; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
+  'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
   // Calendrier : toucher un jour ouvre son mois et affiche ce jour ; flèches ou glissement pour changer de mois
   'cal-month'(){ S.calMonth = today().slice(0, 7); S.calDay = null; render(); },
@@ -262,7 +266,7 @@ const A = {
   'ex-hide'(b){ const id = b.dataset.v; const ex = excluded().filter(x => x !== id); if (b.checked) ex.push(id); putSettings({ excluded:ex }); toast(b.checked ? 'Exercice masqué.' : 'Exercice affiché à nouveau.'); },
   'ex-unhide'(b){ putSettings({ excluded: excluded().filter(x => x !== b.dataset.v) }); render(); toast('Exercice affiché à nouveau.'); },
   bilan(b){ S.bilan = +b.dataset.v; render(); window.scrollTo(0, 0); },
-  'bilan-close'(){ S.bilan = null; render(); window.scrollTo(0, 0); },
+  'bilan-close'(){ S.bilan = null; render(); },
   'fatigue-deload'(){ const s = settings(); const wk = mondayOf(today()); const dl = Object.assign({}, s.deload); dl[wk] = true; putSettings({ deload: dl }); render(); toast('Décharge avancée à cette semaine.'); },
   'fatigue-ignore'(){ putSettings({ fatigueDismiss: mondayOf(today()) }); render(); },
   'save-jump'(){
@@ -277,7 +281,7 @@ const A = {
   start(b){ startWorkout(b.dataset.v); },
   finish(){ finishWorkout(); },
   abandon(){ S.confirm = 'abandon'; render(); },
-  'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; stopRest(); S.view = 'today'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
+  'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
   'close-summary'(){ S.summary = null; render(); },
   done(b){
     unlockAudio();
@@ -348,8 +352,8 @@ const A = {
   'draft-cancel'(){ const after = S.draft && S.draft.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null; if (after) S.picker = after.picker; render(); },
   // Exercices
   'new-ex'(){ S.draft = { kind:'ex', isNew:true, id:null, data:blankEx() }; render(); window.scrollTo(0, 0); },
-  'ex-fiche'(b){ S.fiche = b.dataset.v; S.ficheY = window.scrollY; render(); window.scrollTo(0, 0); },
-  'fiche-close'(){ S.fiche = null; render(); window.scrollTo(0, S.ficheY || 0); },
+  'ex-fiche'(b){ S.fiche = b.dataset.v; render(); window.scrollTo(0, 0); },
+  'fiche-close'(){ S.fiche = null; render(); },
   'edit-ex'(b){ const e = exDef(b.dataset.v); if (!e) return; const d = clone(e); delete d.id; delete d.custom; S.draft = { kind:'ex', isNew:false, id:e.id, data:d }; render(); window.scrollTo(0, 0); },
   'e-kind'(b){ S.draft.data.kind = b.dataset.v; if (b.dataset.v === 'plyo' && !S.draft.data.unit) S.draft.data.unit = 'sauts'; render(); },
   'e-cat'(b){ S.draft.data.cat = b.dataset.v; render(); },

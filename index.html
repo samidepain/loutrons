@@ -31,7 +31,7 @@
   --good:#1D7F48; --good-soft:#DFF1E6; --warn:#7A5E00; --warn-soft:#F7EDC8; --bad:#B3261E; --bad-soft:#F8E1E2;
   --f-display:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
   --f-body:'Source Sans 3',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --r:12px; --tabs-h:62px;
+  --r:12px; --tabs-h:62px; --shade:rgba(40,25,10,.16);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#120F10; --surface:#1C1817; --surface-2:#27221F; --line:#382F2A;
@@ -39,6 +39,7 @@
   --accent:#FE980B; --accent-ink:#FE980B; --accent-soft:#3A2508; --on-accent:#1A0F02;
   --court:#F3C98B; --court-soft:#33241A;
   --good:#52C383; --good-soft:#132D1D; --warn:#F2C94C; --warn-soft:#332A0E; --bad:#FF8A80; --bad-soft:#3A1A1C;
+  --shade:rgba(0,0,0,.5);
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -47,10 +48,27 @@
   --accent:#FE980B; --accent-ink:#FE980B; --accent-soft:#3A2508; --on-accent:#1A0F02;
   --court:#F3C98B; --court-soft:#33241A;
   --good:#52C383; --good-soft:#132D1D; --warn:#F2C94C; --warn-soft:#332A0E; --bad:#FF8A80; --bad-soft:#3A1A1C;
+  --shade:rgba(0,0,0,.5);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;overflow-x:hidden}
+/* Appui : les boutons s'enfoncent un peu, les lignes de liste se colorent, comme dans les applis du téléphone */
+button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.btn,.chip,.me,.cday,.tab svg{transition:transform .14s ease,background-color .14s ease}
+.btn:active:not(:disabled),.me:active{transform:scale(.96)}
+.chip:active:not(:disabled),.cday:active{transform:scale(.93)}
+.tab:active svg{transform:scale(.86)}
+.pick:active,.hitem:active{background:var(--surface-2)}
+.link:active{opacity:.55}
+/* Passage d'un écran à l'autre (js/nav.js) : ancien écran dans un calque fixe, voile sur l'écran du dessous */
+.nav-layer{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+.nav-layer.over{z-index:3}
+.nav-shade{position:absolute;inset:0;background:var(--shade);opacity:0}
+.nav-top{position:relative;z-index:2;background:var(--bg);min-height:100vh;box-shadow:0 0 28px rgba(0,0,0,.14)}
+.nav-clip{position:absolute;top:0;height:100%;overflow:hidden}
+.nav-layer .nav-top{position:absolute}
+.nav-sheet{border-radius:16px 16px 0 0}
 h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance;line-height:1.1}
 h1{font-size:30px} h2{font-size:24px} h3{font-size:20px}
 p{margin:0}

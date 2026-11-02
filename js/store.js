@@ -3,7 +3,7 @@ import { lsGet, lsSet, toast } from './util.js';
 
 export const S = { docs:new Map(), loaded:false, view:'today',
   progEx:'la_hack', progTab:'seances', progressTab:'stats', calMonth:null, calDay:null, openHist:null, confirm:null, summary:null,
-  restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null, setup:null, renaming:false, fiche:null, ficheY:0, exQ:'', food:null, foodDay:null };
+  restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null, setup:null, renaming:false, fiche:null, exQ:'', food:null, foodDay:null, from:null, navHint:null };
 const LS_DOCS = 'carnet_docs_v1'; // ancien stockage : recopié dans IndexedDB au premier lancement, puis laissé en place
 const IDB_NAME = 'carnet-muscu';
 let idb = null; // null : IndexedDB indisponible, on reste sur localStorage

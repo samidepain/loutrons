@@ -19,7 +19,7 @@ function presc(e){
   return '';
 }
 export function viewFiche(){
-  const back = '<div class="row"><button type="button" class="link" data-act="fiche-close">‹ Exercices</button></div>';
+  const back = '<div class="row"><button type="button" class="link" data-act="fiche-close" data-back>‹ Exercices</button></div>';
   const e = exDef(S.fiche);
   if (!e || e.deleted) return back + '<p class="empty">Cet exercice n’existe plus.</p>';
   const p = presc(e);

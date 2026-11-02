@@ -14,6 +14,7 @@ import { viewDraft } from './views/editors.js';
 import { viewFiche } from './views/fiche.js';
 import { foodAfterRender, viewFood } from './views/food.js';
 import { nutritionOf } from './views/goal.js';
+import { navigate } from './nav.js';
 
 const ICONS = {
   today:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
@@ -37,6 +38,9 @@ export function renderTabs(){
 }
 export function render(){
   if (needsSetup() && !S.setup) S.setup = newSetup('welcome');
+  navigate(paint);
+}
+function paint(){
   renderTabs();
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();

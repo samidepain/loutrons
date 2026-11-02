@@ -58,7 +58,7 @@ export function viewFood(){
 function viewFoodAdd(){
   const F = S.food;
   const mealChips = '<div class="chips" role="group">' + MEALS.map(([m, l]) => '<button type="button" class="chip txt' + (F.meal === m ? ' on' : '') + '" data-act="fd-meal" data-v="' + m + '" aria-pressed="' + (F.meal === m) + '">' + l + '</button>').join('') + '</div>';
-  const head = (title, back) => '<div class="row between"><button type="button" class="link" data-act="' + (back || 'fd-cancel') + '">' + (back ? '‹ Retour' : 'Annuler') + '</button><span class="label">' + esc(mealName(F.meal)) + ' · ' + esc(dayLabel(F.day)) + '</span></div><h1>' + title + '</h1>';
+  const head = (title, back) => '<div class="row between"><button type="button" class="link" data-act="' + (back || 'fd-cancel') + '"' + (back && F.mode !== 'scan' ? ' data-back' : '') + '>' + (back ? '‹ Retour' : 'Annuler') + '</button><span class="label">' + esc(mealName(F.meal)) + ' · ' + esc(dayLabel(F.day)) + '</span></div><h1>' + title + '</h1>';
   if (F.mode === 'scan') {
     return head('Scanner', 'fd-back') + '<div class="scan"><video id="scan-video" playsinline muted autoplay></video><i class="aim" aria-hidden="true"></i></div><p id="scan-msg" class="muted small" aria-live="polite">' + esc(F.msg || 'Vise le code-barres du produit, bien à plat et éclairé.') + '</p>'
       + '<div class="row"><input class="plain" id="scan-code" inputmode="numeric" autocomplete="off" placeholder="ou tape les chiffres du code" aria-label="Chiffres du code-barres" style="flex:1;width:auto;min-width:0"><button type="button" class="btn" data-act="fd-code">Chercher</button></div>'

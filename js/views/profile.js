@@ -12,9 +12,11 @@ export function sexChips(act, val){
   return '<div class="stack" style="gap:6px"><span class="label">Tu es un loutron ou une loutronne ?</span><div class="chips" role="group">' +
     [['m', 'Un loutron'], ['f', 'Une loutronne']].map(o => '<button type="button" class="chip txt' + (val === o[0] ? ' on' : '') + '" data-act="' + act + '" data-v="' + o[0] + '" aria-pressed="' + (val === o[0]) + '">' + o[1] + '</button>').join('') + '</div></div>';
 }
+// Retour vers l'écran d'où le profil a été ouvert
+const FROM = { today:'Aujourd’hui', training:'Entraînement', food:'Alimentation', progress:'Progrès' };
 export function viewProfile(){
   const s = settings(); const pesees = bodyDocs().filter(b => num(b.weight) > 0); const last = pesees[pesees.length - 1];
-  let h = '<h1>Profil</h1>';
+  let h = '<div class="row"><button type="button" class="link" data-act="profile-back" data-back>‹ ' + (FROM[S.from] || FROM.today) + '</button></div><h1>Profil</h1>';
   h += '<section class="card"><h3>Toi</h3><label class="f"><span>Prénom ou pseudo</span><input id="set-name" value="' + esc(s.name || '') + '" autocomplete="nickname"></label>';
   h += sexChips('set-sex', s.sex);
   h += '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>';
@@ -30,7 +32,7 @@ export function viewProfile(){
   return h;
 }
 export function viewSciencePage(){
-  return '<div class="row between"><h1>La science</h1><button type="button" class="link" data-act="profile">Retour au profil</button></div>' + viewScience();
+  return '<div class="row"><button type="button" class="link" data-act="profile" data-back>‹ Profil</button></div><h1>La science</h1>' + viewScience();
 }
 function viewSettingsCards(){
   const s = settings();
