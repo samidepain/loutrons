@@ -7,7 +7,7 @@ const EXPORT_TYPES = { json:'application/json', csv:'text/csv' };
 export function exportFile(kind){
   // La sauvegarde porte déjà sa propre date : après une restauration, le rappel repart de là
   const docs = Object.fromEntries(S.docs); if (docs.settings) docs.settings = Object.assign({}, docs.settings, { lastExport: today() });
-  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:4, exportedAt:new Date().toISOString(), docs }, null, 2) : toCsv();
+  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:5, exportedAt:new Date().toISOString(), docs }, null, 2) : toCsv();
   return new File([data], 'loutrons-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
 }
 export function downloadFile(file){

@@ -4,7 +4,7 @@ import { S } from '../store.js';
 import { dayDoc, LIMITS, loadCiqual, MEALS, myFoods, recentFoods, scale, searchFoods, totals } from '../food.js';
 import { startScanner } from '../scanner.js';
 import { emile, hey } from '../emile.js';
-import { myPlan } from './goal.js';
+import { dayPlan } from './goal.js';
 
 const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment' };
 const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fmtInt(x);
@@ -21,7 +21,7 @@ function bar(label, v, goal, unit, max){
 }
 export function viewFood(){
   if (S.food) return viewFoodAdd();
-  const day = S.foodDay || today(); const doc = dayDoc(day); const t = totals(doc.items); const pl = myPlan(); const has = pl.status !== 'missing';
+  const day = S.foodDay || today(); const doc = dayDoc(day); const t = totals(doc.items); const pl = dayPlan(day); const has = pl.status !== 'missing';
   let h = '<h1>Alimentation</h1><div class="row between daynav"><button type="button" class="btn sm" data-act="fday" data-v="-1" aria-label="Jour précédent">‹</button><b>' + esc(dayLabel(day)) + '</b><button type="button" class="btn sm" data-act="fday" data-v="1" aria-label="Jour suivant"' + (day >= today() ? ' disabled' : '') + '>›</button></div>';
   if (!S.loaded) return h + '<p class="empty">Chargement…</p>';
   // Avis d'Émile, seulement pour aujourd'hui
@@ -37,9 +37,10 @@ export function viewFood(){
     }
     h += emile('<p>' + esc(m) + '</p>', { tone });
   }
-  // Totaux du jour, comparés aux besoins (sans les séances) et aux repères
-  h += '<section class="card"><div class="row between"><h3>Ta journée</h3>' + (has ? '<span class="muted small">objectif sans tes séances</span>' : '') + '</div>';
+  // Totaux du jour, comparés aux besoins du jour (séances et activités comprises) et aux repères
+  h += '<section class="card"><div class="row between"><h3>Ta journée</h3>' + (has ? '<span class="muted small">' + (pl.extra ? 'activités comprises' : 'objectif du jour') + '</span>' : '') + '</div>';
   h += '<div class="kcal"><span class="v num">' + fmtInt(t.kcal) + '</span>' + (has ? '<span class="muted"> / ' + fmtInt(pl.kcal) + ' kcal</span>' : '<span class="muted"> kcal</span>') + '</div>';
+  if (has && pl.extra) h += '<p class="muted small">' + fmtInt(pl.base0) + ' kcal de base + ' + fmtInt(pl.extra) + ' kcal de séances et d’activités.</p>';
   if (has) h += '<div class="mbar big"><i style="width:' + Math.min(100, t.kcal / pl.kcal * 100).toFixed(1) + '%' + (t.kcal > pl.kcal * 1.1 ? ';background:var(--warn)' : '') + '"></i></div>';
   h += '<div class="stack" style="gap:6px">' + bar('Protéines', t.p, has ? pl.protein[0] : 0, 'g') + bar('Glucides', t.c, has ? pl.carbs : 0, 'g') + bar('Lipides', t.f, has ? pl.fat[1] : 0, 'g', true) + bar('Fibres', t.fib, LIMITS.fib, 'g') + '</div>';
   const sfMax = has ? pl.kcal * LIMITS.sfPct / 9 : null;

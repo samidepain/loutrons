@@ -187,7 +187,12 @@ export function daySummary(day){
   const ws = workouts().filter(w => w.date === day);
   const done = ws.filter(w => w.status === 'terminée'); const active = ws.find(w => w.status === 'en_cours') || null;
   const future = day >= today(); const p = planDay(parseIso(day).getDay());
-  return { date: day, done, active, planned: future && !done.length && !active && p.s ? p.s : null, label: future ? p.label : 'Repos' };
+  return { date: day, done, active, planned: future && !done.length && !active && p.s ? p.s : null, label: future ? p.label : 'Repos', acts: activities(day) };
+}
+// Activités notées un jour donné (course, vélo…), dans l'ordre où elles ont été ajoutées
+export function activities(day){
+  const out = []; S.docs.forEach((o, id) => { if (id.indexOf('a_') === 0 && o.date === day) out.push(Object.assign({ id }, o)); });
+  return out.sort((a, b) => (a.at || 0) - (b.at || 0));
 }
 export function countSets(w){ let n = 0; Object.keys(w.ex || {}).forEach(id => { n += validSets(w.ex[id].sets).length; }); return n; }
 export function musclesOf(key, w){

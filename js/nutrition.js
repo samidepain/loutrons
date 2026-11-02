@@ -73,8 +73,17 @@ export function planFor(p, n, day){
   const kcal = Math.max(bmr, base + out.kgWeek * KCAL_PER_KG / 7);
   out.kcal = round10(kcal);
   out.protein = PROTEIN.map(g => Math.round(g * p.weight / 5) * 5);
+  out.fibre = FIBRE;
+  return split(out);
+}
+// Lipides (part de l'énergie) et glucides (le reste) pour out.kcal
+function split(out){
   out.fat = FAT.map(f => Math.round(out.kcal * f / 9 / 5) * 5);
   out.carbs = Math.max(0, Math.round((out.kcal - out.protein[0] * 4 - out.fat[0] * 9) / 4 / 5) * 5);
-  out.fibre = FIBRE;
   return out;
+}
+// Besoins d'un jour donné : on ajoute la dépense des séances et des activités (extra, en kcal) ; protéines inchangées
+export function withExtra(pl, extra){
+  if (!pl || pl.status === 'missing' || !(extra > 0)) return pl;
+  return split(Object.assign({}, pl, { base0: pl.kcal, extra: round10(extra), kcal: round10(pl.kcal + extra) }));
 }

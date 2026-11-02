@@ -10,6 +10,8 @@ import { noTplCard } from './program.js';
 import { calendarCard } from './calendar.js';
 import { goalTodayCard } from './goal.js';
 import { emile, hey } from '../emile.js';
+import { activitiesCard, waterCard } from './activity.js';
+import { EFFORT, effortOf, sessionKcal, sessionMin } from '../energy.js';
 
 export function viewToday(){
   const d = today(); const wd = parseIso(d).getDay(); const plan = planDay(wd);
@@ -30,6 +32,11 @@ export function viewToday(){
     let b = sw ? '<p class="muted">' + esc(wName(sw)) + ' · ' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' : '';
     b += S.summary.prs.length ? '<p>' + esc(hey('Bien joué : ' + (S.summary.prs.length > 1 ? 'de nouveaux records !' : 'un nouveau record !'))) + '</p><div class="stack" style="gap:4px">' + S.summary.prs.map(p => '<p class="small">' + esc(p) + '</p>').join('') + '</div>'
       : '<p class="small">' + esc(hey('Pas de record cette fois. La régularité compte plus que chaque séance.')) + '</p>';
+    if (sw) {
+      const ef = effortOf(sw); const kc = sessionKcal(sw, bodyweight());
+      b += '<div class="stack" style="gap:6px"><span class="label">Effort de la séance</span><div class="chips" role="group">' + Object.keys(EFFORT).map(k => '<button type="button" class="chip txt' + (ef === k ? ' on' : '') + '" data-act="effort" data-v="' + k + '" aria-pressed="' + (ef === k) + '">' + EFFORT[k].label + '</button>').join('') + '</div>'
+        + '<p class="small muted">' + esc(EFFORT[ef].desc) + '. ' + (kc == null ? 'Indique ton poids pour estimer les calories.' : 'Environ ' + Math.round(kc / 10) * 10 + ' kcal dépensées en ' + sessionMin(sw) + ' min.') + '</p></div>';
+    }
     h += emile(b, { title:'Séance enregistrée', tone:'good', close:'close-summary' });
   }
   if (S.loaded) {
@@ -56,6 +63,7 @@ export function viewToday(){
     h += '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (plan.note ? '<p class="muted">' + esc(plan.note) + '</p>' : '') + (next ? '<p class="small">Prochaine séance : <b>' + esc(next.t.name) + '</b>, ' + esc(withDot(fmtDateLong(next.d))) + '</p>' : '') + '</section>';
   }
   h += goalTodayCard();
+  h += activitiesCard() + waterCard();
   // Choisir une autre séance
   const tpls = allTpl();
   if (S.loaded && !tpls.length) h += noTplCard();

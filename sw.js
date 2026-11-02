@@ -1,7 +1,7 @@
 // Loutrons : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
 // Même numéro que dans js/version.js (affiché dans Réglages).
-const VERSION = '1.9';
+const VERSION = '2.0';
 const CACHE = 'loutrons-' + VERSION;
 // Photos des exercices : pas toutes téléchargées à l'installation (environ 5 Mo), mais gardées dès qu'on les a vues une fois.
 // Cache à part, conservé d'une version à l'autre.
@@ -16,6 +16,7 @@ const FILES = [
   'js/chart.js',
   'js/data.js',
   'js/emile.js',
+  'js/energy.js',
   'js/nav.js',
   'js/engine.js',
   'js/food.js',
@@ -40,6 +41,7 @@ const FILES = [
   'js/views/session.js',
   'js/views/setup.js',
   'js/views/today.js',
+  'js/views/activity.js',
   'manifest.webmanifest',
   'vendor/zxing/zxing.min.js',
   'data/ciqual.json',

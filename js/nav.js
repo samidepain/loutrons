@@ -14,6 +14,7 @@ export function screenOf(){
   if (S.setup) { const st = S.setup.step || 1; return S.setup.mode === 'welcome' ? { key:'setup-' + st, level:st } : { key:'change-' + st, level:st, sheet:'change' }; }
   if (S.picker) return { key:'picker', level:0, sheet:'picker' };
   if (S.draft) return { key:'draft-' + S.draft.kind + '-' + (S.draft.id || 'new'), level:0, sheet:'draft' };
+  if (S.act) return { key:'act', level:0, sheet:'act' };
   if (S.bilan) return { key:'bilan-' + S.bilan, level:1, from:S.view };
   const v = S.view;
   if (v === 'training') {

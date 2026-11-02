@@ -2,7 +2,8 @@
 import { addDays, esc, fmtDateYear, fmtInt, fmtKg, num, today } from '../util.js';
 import { S } from '../store.js';
 import { bodyweight, settings } from '../data.js';
-import { ACTIVITY, GAIN, LOSS, planFor } from '../nutrition.js';
+import { ACTIVITY, GAIN, LOSS, planFor, withExtra } from '../nutrition.js';
+import { dayEnergy } from '../energy.js';
 import { emile, hey } from '../emile.js';
 import { dayDoc, totals } from '../food.js';
 
@@ -11,6 +12,8 @@ export const nutritionOf = () => settings().nutrition || {};
 export function profileData(){ const s = settings(); return { sex: s.sex, birth: s.birth, height: num(s.height), weight: bodyweight() }; }
 export function setupData(U){ return { sex: U.sex, birth: U.birth, height: num(U.height), weight: num(U.weight) }; }
 export const myPlan = () => planFor(profileData(), nutritionOf(), today());
+// Besoins d'un jour : ceux du profil, plus la dépense des séances et des activités de ce jour-là
+export const dayPlan = day => withExtra(myPlan(), dayEnergy(day).kcal);
 
 const MISSING = { sex:'si tu es un loutron ou une loutronne', birth:'ta date de naissance', height:'ta taille', weight:'ton poids', activity:'ton activité au quotidien' };
 const kg = x => fmtKg(Math.round(x * 10) / 10);
@@ -54,10 +57,10 @@ export function verdict(pl, n){
 export function needs(pl, compact){
   if (pl.status === 'missing') return '';
   const st = (v, l, wide) => '<div class="stat' + (wide ? ' wide' : '') + '"><span class="v num">' + v + '</span><span class="l">' + l + '</span></div>';
-  let h = (compact ? '' : '<span class="label">Tes besoins par jour</span>') + '<div class="stats needs">' + st(fmtInt(pl.kcal) + ' <small>kcal</small>', 'calories, sans compter tes séances', true)
+  let h = (compact ? '' : '<span class="label">Tes besoins par jour</span>') + '<div class="stats needs">' + st(fmtInt(pl.kcal) + ' <small>kcal</small>', pl.extra ? 'calories aujourd’hui, séances et activités comprises' : 'calories, sans compter tes séances', true)
     + st(pl.protein[0] + '-' + pl.protein[1] + ' <small>g</small>', 'protéines') + st(pl.fat[0] + '-' + pl.fat[1] + ' <small>g</small>', 'lipides')
     + st('≈ ' + pl.carbs + ' <small>g</small>', 'glucides (le reste)') + st(pl.fibre + ' <small>g</small>', 'fibres') + '</div>';
-  if (!compact) h += '<p class="muted small">Les jours où tu t’entraînes, tu dépenses davantage : ce total ne compte pas tes séances.' + (pl.goal !== 'keep' ? ' Calcul approximatif : environ 7 700 kcal par kilo, et le poids varie aussi d’un jour à l’autre avec l’eau.' : '') + ' Détails dans « La science ».</p>';
+  if (!compact) h += '<p class="muted small">Ce total ne compte pas tes séances ni tes activités : chaque jour, j’ajoute leur dépense (voir « Tes activités » dans Aujourd’hui).' + (pl.goal !== 'keep' ? ' Calcul approximatif : environ 7 700 kcal par kilo, et le poids varie aussi d’un jour à l’autre avec l’eau.' : '') + ' Détails dans « La science ».</p>';
   return h;
 }
 // Formulaire : activité, objectif, poids et date visés, puis avis d'Émile et besoins. n : { activity, goal, target, by }
@@ -88,7 +91,8 @@ export function goalTodayCard(){
     : 'Tu vises ' + kg(pl.target) + ' kg le ' + fmtDateYear(pl.status === 'fast' ? pl.realistic : n.by) + ', à ' + signed(pl.kgWeek) + ' kg par semaine. Dernière pesée : ' + kg(w) + ' kg.';
   if (pl.status === 'ok' && w != null && (pl.goal === 'gain' ? w >= pl.target : w <= pl.target)) t = 'Tu as atteint ton poids visé, bravo ! Choisis un nouvel objectif dans ton profil.';
   // Ce qui est déjà noté dans le journal aujourd'hui
-  const day = dayDoc(today()); const eat = day.items.length ? totals(day.items) : null;
-  const ate = eat ? '<p class="small"><b>Mangé aujourd’hui : ' + fmtInt(eat.kcal) + ' / ' + fmtInt(pl.kcal) + ' kcal</b>, protéines ' + fmtInt(eat.p) + ' / ' + pl.protein[0] + ' g. <button type="button" class="link" data-act="tab" data-v="food">Ouvrir le journal</button></p>' : '<p class="small"><button type="button" class="link" data-act="tab" data-v="food">Noter ce que je mange</button></p>';
-  return emile('<p>' + esc(hey(t)) + '</p>' + needs(pl, true) + ate + '<p class="muted small">Sans compter tes séances. <button type="button" class="link" data-act="goal-edit">Modifier</button></p>', { title:'Ton objectif' });
+  const day = dayDoc(today()); const eat = day.items.length ? totals(day.items) : null; const dp = withExtra(pl, dayEnergy(today()).kcal);
+  const ate = eat ? '<p class="small"><b>Mangé aujourd’hui : ' + fmtInt(eat.kcal) + ' / ' + fmtInt(dp.kcal) + ' kcal</b>, protéines ' + fmtInt(eat.p) + ' / ' + dp.protein[0] + ' g. <button type="button" class="link" data-act="tab" data-v="food">Ouvrir le journal</button></p>' : '<p class="small"><button type="button" class="link" data-act="tab" data-v="food">Noter ce que je mange</button></p>';
+  const incl = dp.extra ? 'Dont ' + fmtInt(dp.extra) + ' kcal pour tes séances et activités du jour.' : 'Pas de séance ni d’activité aujourd’hui.';
+  return emile('<p>' + esc(hey(t)) + '</p>' + needs(dp, true) + ate + '<p class="muted small">' + esc(incl) + ' <button type="button" class="link" data-act="goal-edit">Modifier</button></p>', { title:'Ton objectif' });
 }

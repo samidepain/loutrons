@@ -2,7 +2,7 @@
 import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
-import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
+import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
 import { findPRs, initItem } from './engine.js';
 import { downloadFile, exportFile, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
@@ -16,6 +16,8 @@ import { nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
 import { dayDoc, fromOff, recentFoods, validBarcode } from './food.js';
 import { foodFromDoc, foodList, preview, shown } from './views/food.js';
+import { activityKcal, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, waterOf } from './energy.js';
+import { actDoc, actPreview } from './views/activity.js';
 
 function startWorkout(tplId){
   if (!S.loaded) return;
@@ -34,9 +36,14 @@ function startWorkout(tplId){
 function finishWorkout(){
   const w = activeWorkout(); if (!w) return;
   w.status = 'terminée'; w.endedAt = Date.now(); w.duration = Math.round((w.endedAt - w.startedAt) / 60000);
+  w.effort = 'classic'; w.kcal = computeSessionKcal(w, bodyweight());
   put(w.id, w);
   S.summary = { id:w.id, prs: findPRs(w) };
   stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0);
+}
+function addWater(ml){
+  const d = today(); const v = Math.max(0, waterOf(d) + ml);
+  put('e_' + d, { date:d, ml:v }); render();
 }
 function applyPick(exId){
   const P = S.picker; if (!P) return;
@@ -147,7 +154,7 @@ async function lookupBarcode(raw){
 document.addEventListener('barcode', e => { if (S.food && S.food.mode === 'scan') lookupBarcode(e.detail); });
 const A = {
   // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
-  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; S.food = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
+  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
     render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
   // Premier lancement et programme
   'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
@@ -245,7 +252,7 @@ const A = {
   'goal-edit'(){ A.profile(); const c = $('#goal-card'); if (c) c.scrollIntoView({ block:'start' }); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
-  profile(){ if (S.view !== 'profile' && S.view !== 'science') S.from = S.view; S.view = 'profile'; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  profile(){ if (S.view !== 'profile' && S.view !== 'science') S.from = S.view; S.view = 'profile'; S.act = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
   'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
@@ -283,6 +290,44 @@ const A = {
   abandon(){ S.confirm = 'abandon'; render(); },
   'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
   'close-summary'(){ S.summary = null; render(); },
+  // Effort de la séance qui vient de se terminer : sa dépense est recalculée
+  effort(b){ const w = S.summary && S.docs.get(S.summary.id); if (!w || !EFFORT[b.dataset.v]) return; w.effort = b.dataset.v; w.kcal = computeSessionKcal(w, bodyweight()); put(S.summary.id, w); render(); },
+  // Activités : ajout (éventuellement le sport prévu aujourd'hui), modification, suppression
+  'act-add'(b){
+    const v = b.dataset.v; const last = settings().lastAct || 'run';
+    S.act = v ? { type:'sport', sport: sportOf(sportInfo().name), level:v, min:90, date:today() } : { type:last, date:today() };
+    S.confirm = null; render(); window.scrollTo(0, 0);
+  },
+  'act-cancel'(){ S.act = null; S.confirm = null; render(); },
+  'act-type'(b){ S.act.type = b.dataset.v; S.act.level = null; render(); },
+  'act-level'(b){ S.act.level = b.dataset.v; render(); },
+  'act-sport'(b){ S.act.sport = b.dataset.v; render(); },
+  'act-edit'(b){ const o = S.docs.get(b.dataset.v); if (!o) return; S.act = Object.assign({}, o, { edit:b.dataset.v }); S.confirm = null; render(); window.scrollTo(0, 0); },
+  'act-save'(){
+    const A = S.act; const a = actDoc(A);
+    if (!(a.min > 0 && a.min <= 900)) { toast('Indique la durée, en minutes.'); return; }
+    if (a.type === 'run' && !(a.km > 0 && a.km <= 300)) { toast('Indique la distance, en kilomètres.'); return; }
+    if (LEVELS[a.type] && !a.level) { toast('Choisis l’allure.'); return; }
+    if (a.type === 'sport' && !(a.sport && a.level)) { toast('Choisis le sport, puis entraînement ou match.'); return; }
+    if (a.kcal != null && !(a.kcal >= 0 && a.kcal <= 5000)) { toast('Calories : entre 0 et 5 000 kcal.'); return; }
+    const date = A.date && A.date <= today() ? A.date : today();
+    const doc = { date, type:a.type, min:a.min, at: A.at || Date.now() };
+    if (a.type === 'run') doc.km = a.km;
+    if (a.level) doc.level = a.level;
+    if (a.type === 'sport') doc.sport = a.sport;
+    if (a.type === 'other') { if (a.name) doc.name = a.name; doc.kcal = a.kcal; }
+    else doc.kcal = activityKcal(doc, bodyweight());
+    // L'identifiant porte la date : changer la date, c'est déplacer l'activité
+    const id = A.edit && A.edit.indexOf('a_' + date + '_') === 0 ? A.edit : 'a_' + date + '_' + rid();
+    if (A.edit && A.edit !== id) del(A.edit);
+    put(id, doc); if (!A.edit) putSettings({ lastAct: a.type });
+    S.act = null; render(); toast(A.edit ? 'Activité modifiée.' : 'Activité ajoutée.');
+  },
+  'act-del'(){ S.confirm = 'act-del'; render(); },
+  'act-del-yes'(){ del(S.act.edit); S.act = null; S.confirm = null; render(); toast('Activité supprimée.'); },
+  // Eau : un verre de plus ou de moins, ou une quantité en mL
+  water(b){ addWater(+b.dataset.v * glassOf()); },
+  'water-ml'(){ const i = $('#water-ml'); const v = num(i ? i.value : ''); if (!(v > 0 && v <= 3000)) { toast('Indique une quantité entre 1 et 3 000 mL.'); return; } addWater(v); },
   done(b){
     unlockAudio();
     const w = activeWorkout(); if (!w) return;
@@ -404,6 +449,7 @@ document.addEventListener('input', e => {
   if (t.matches('[data-fq]') && S.food) { S.food.q = t.value; const l = $('#fd-list'); if (l) l.innerHTML = foodList(); return; }
   if (t.matches('[data-fg]') && S.food) { S.food.g = t.value; const pv = $('#fd-prev'); if (pv) pv.innerHTML = preview(S.food.sel, num(t.value)); return; }
   if (t.matches('[data-fc]') && S.food && S.food.draft) { S.food.draft[t.dataset.fc] = t.value; return; }
+  if (t.matches('[data-ac]') && S.act) { S.act[t.dataset.ac] = t.value; const pv = $('#act-prev'); if (pv) pv.innerHTML = actPreview(); return; }
   if (t.matches('[data-d]') && S.draft) { S.draft.data[t.dataset.d] = t.value; return; }
   if (t.matches('[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; return; }
   if (t.matches('[data-e]') && S.draft) { S.draft.data[t.dataset.e] = t.value; return; }
@@ -432,6 +478,7 @@ document.addEventListener('change', e => {
   if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it.ss = t.value || null; return; }
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
   if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
+  if (t.id === 'glass') { putSettings({ glass: num(t.value) }); render(); toast('Verre de ' + t.value + ' mL.'); return; }
   if (t.matches('[data-n]')) { nField(t.dataset.n, t.value); return; }
   // Accueil, écran 3 : données demandées pour le calcul, vérifiées puis prises en compte
   if (t.matches('[data-u]') && S.setup && S.setup.step === 3) { const bad = profileError(t.dataset.u, t.value); if (bad) { toast(bad); return; } render(); return; }
@@ -446,7 +493,7 @@ document.addEventListener('change', e => {
     r.onload = () => {
       try {
         const j = JSON.parse(r.result); const docs = j && j.docs; if (!docs || typeof docs !== 'object') throw new Error('format');
-        let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_|m_|f_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
+        let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_|m_|f_|a_|e_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
         // Exports version 2 ou plus anciens : réglages complétés comme au chargement
         upgradeLegacy(); applyTheme(settings().theme);
         if (S.setup && S.setup.mode === 'welcome' && !needsSetup()) S.setup = null;
