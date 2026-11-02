@@ -1,5 +1,5 @@
 // Actions de l’interface : clics, saisies et changements.
-import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
+import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
 import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
@@ -12,7 +12,7 @@ import { pickerList } from './views/picker.js';
 import { exerciseList } from './views/program.js';
 import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
-import { nutritionOf, profileData, setupData } from './views/goal.js';
+import { checkDue, nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
 import { dayDoc, fromOff, recentFoods, validBarcode } from './food.js';
 import { foodFromDoc, foodList, preview, shown } from './views/food.js';
@@ -40,6 +40,17 @@ function finishWorkout(){
   put(w.id, w);
   S.summary = { id:w.id, prs: findPRs(w) };
   stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0);
+}
+// Point toutes les 2 semaines : la réponse est gardée dans l'historique ; « Passer à … » corrige les besoins
+function recordCheck(status, applied){
+  const c = checkDue(); if (!c) { render(); return; }
+  const n = Object.assign({}, nutritionOf()); const r2 = x => Math.round(x * 100) / 100;
+  const rec = { date: today(), status: status || c.status, applied: !!applied };
+  if (c.actual != null) Object.assign(rec, { actual: r2(c.actual), planned: r2(c.planned) });
+  if (c.change) rec.change = c.change;
+  if (applied && c.status === 'change') n.adjust = c.adjust;
+  n.checks = (n.checks || []).concat([rec]).slice(-12);
+  S.adjOk = false; putSettings({ nutrition: n }); render();
 }
 function addWater(ml){
   const d = today(); const v = Math.max(0, waterOf(d) + ml);
@@ -292,6 +303,12 @@ const A = {
   'close-summary'(){ S.summary = null; render(); },
   // Effort de la séance qui vient de se terminer : sa dépense est recalculée
   effort(b){ const w = S.summary && S.docs.get(S.summary.id); if (!w || !EFFORT[b.dataset.v]) return; w.effort = b.dataset.v; w.kcal = computeSessionKcal(w, bodyweight()); put(S.summary.id, w); render(); },
+  'adj-yes'(){ S.adjOk = true; render(); },
+  'adj-no'(){ recordCheck('notfollowed'); toast('Objectif gardé : je referai le point dans 2 semaines.'); },
+  'adj-apply'(){ const c = checkDue(); if (!c || c.status !== 'change') return; recordCheck('change', true); toast('Nouvel objectif : ' + fmtInt(c.kcal) + ' kcal par jour.'); },
+  'adj-keep'(){ recordCheck(); },
+  'adj-later'(){ recordCheck('skip'); },
+  'adj-reset'(){ putSettings({ nutrition: Object.assign({}, nutritionOf(), { adjust: 0 }) }); render(); toast('Corrections annulées.'); },
   // Activités : ajout (éventuellement le sport prévu aujourd'hui), modification, suppression
   'act-add'(b){
     const v = b.dataset.v; const last = settings().lastAct || 'run';

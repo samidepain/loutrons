@@ -1,8 +1,8 @@
 // Objectif de poids et besoins du jour : formulaire (accueil et profil), avis d'Émile, carte d'Aujourd'hui.
-import { addDays, esc, fmtDateYear, fmtInt, fmtKg, num, today } from '../util.js';
+import { addDays, daysBetween, esc, fmtDate, fmtDateYear, fmtInt, fmtKg, num, today, withDot } from '../util.js';
 import { S } from '../store.js';
-import { bodyweight, settings } from '../data.js';
-import { ACTIVITY, GAIN, LOSS, planFor, withExtra } from '../nutrition.js';
+import { bodyDocs, bodyweight, settings } from '../data.js';
+import { ACTIVITY, adjustFor, CHECK, GAIN, LOSS, planFor, weightTrend, withExtra } from '../nutrition.js';
 import { dayEnergy } from '../energy.js';
 import { emile, hey } from '../emile.js';
 import { dayDoc, totals } from '../food.js';
@@ -14,6 +14,54 @@ export function setupData(U){ return { sex: U.sex, birth: U.birth, height: num(U
 export const myPlan = () => planFor(profileData(), nutritionOf(), today());
 // Besoins d'un jour : ceux du profil, plus la dépense des séances et des activités de ce jour-là
 export const dayPlan = day => withExtra(myPlan(), dayEnergy(day).kcal);
+
+// Point toutes les 2 semaines : 14 jours après le début de l'objectif ou après le dernier point
+export function nextCheck(){
+  const n = nutritionOf(); const start = n.start && n.start.date; if (!n.on || !start) return null;
+  const pl = myPlan(); if (['ok', 'fast', 'keep', 'bmi'].indexOf(pl.status) < 0 || pl.age < 18) return null;
+  const checks = n.checks || []; const last = checks.length ? checks[checks.length - 1].date : null;
+  const from = last && last > start ? last : start;
+  return { from, date: addDays(from, CHECK.days), pl };
+}
+// Ce qui a été mangé d'après le journal, sur les jours notés (sans aujourd'hui, pas fini), comparé aux besoins de ces jours-là
+function intakeBetween(from, to){
+  let days = 0, kcal = 0, target = 0;
+  for (let d = from; d <= to; d = addDays(d, 1)) { const doc = dayDoc(d); if (!doc.items.length) continue; days++; kcal += totals(doc.items).kcal; target += dayPlan(d).kcal; }
+  return days ? { days, avg: kcal / days, target: target / days } : { days: 0 };
+}
+export function checkDue(){
+  const nc = nextCheck(); const d = today(); if (!nc || d < nc.date) return null;
+  // Pesées des 2 dernières semaines, ou depuis le dernier point si on l'a laissé passer (4 semaines au plus)
+  const from = daysBetween(nc.from, d) > CHECK.maxDays ? addDays(d, -CHECK.maxDays) : nc.from;
+  const trend = weightTrend(bodyDocs().map(b => ({ date: b.date, weight: num(b.weight) })), from, d);
+  const intake = intakeBetween(from, addDays(d, -1));
+  return Object.assign(adjustFor(nc.pl, trend, intake), { from, pl: nc.pl, intake });
+}
+const perWeek = x => (x > 0.005 ? '+' : x < -0.005 ? '−' : '') + fmtKg(Math.round(Math.abs(x) * 100) / 100);
+// Espace insécable avant « : » et « ? », pour qu'ils ne passent pas seuls à la ligne
+const fr = s => esc(s).replace(/ ([:;?!])/g, '\u00a0$1');
+// Carte d'Aujourd'hui, le jour du point
+export function checkCard(){
+  if (!S.loaded) return '';
+  const c = checkDue(); if (!c) return '';
+  const opt = { title:'Le point sur tes 2 semaines', id:'check-card' };
+  if (c.status === 'weighins') return emile('<p>' + fr(hey('Pour faire le point, j’ai besoin d’au moins ' + CHECK.weighins + ' pesées sur une semaine ou plus. Pèse-toi 2 ou 3 fois par semaine, le matin, avant de manger.')) + '</p><button type="button" class="link" data-act="adj-later">Pas cette fois</button>', opt);
+  const trend = 'Ta tendance : de ' + fmtKg(Math.round(c.w0 * 10) / 10) + ' à ' + fmtKg(Math.round(c.w1 * 10) / 10) + ' kg en ' + c.days + ' jours, soit ' + perWeek(c.actual) + ' kg par semaine' + (c.planned ? ' pour ' + perWeek(c.planned) + ' prévu.' : ', alors que tu veux garder ton poids.');
+  const kcal = fmtInt(c.pl.kcal);
+  if (c.status === 'offplan') {
+    const more = c.intake.avg > c.intake.target;
+    return emile('<p>' + fr(trend) + '</p><p>' + fr('D’après ton journal (' + c.intake.days + ' jours notés), tu as mangé en moyenne ' + fmtInt(c.intake.avg) + ' kcal par jour, pour un objectif moyen de ' + fmtInt(c.intake.target) + ' kcal : ' + (more ? 'plus' : 'moins') + ' que prévu. L’écart de poids vient sans doute de là, alors je garde ton objectif. Essaie de t’en approcher, je referai le point dans 2 semaines.') + '</p><button type="button" class="btn" data-act="adj-keep">Compris</button>', opt);
+  }
+  if (c.status === 'ontrack') return emile('<p>' + fr(trend) + '</p><p>' + fr(hey('Tu suis le plan : on garde ' + kcal + ' kcal par jour.')) + '</p><button type="button" class="btn" data-act="adj-keep">Super</button>', Object.assign(opt, { tone:'good' }));
+  if (c.status === 'limit') {
+    const why = { resting:'ce serait moins que ta dépense au repos', bmi:'ton poids est déjà au plus bas que je peux viser avec toi', total:'j’ai déjà corrigé tes besoins de ' + Math.round(CHECK.total * 100) + ' %, le maximum' }[c.limit];
+    return emile('<p>' + fr(trend) + '</p><p>' + fr('Je ne peux pas ajuster davantage : ' + why + '. On garde ' + kcal + ' kcal par jour. Si ça continue, parles-en à un diététicien.') + '</p><button type="button" class="btn" data-act="adj-keep">Compris</button>', Object.assign(opt, { tone:'warn' }));
+  }
+  // Ajustement proposé ; sans journal suffisant, Émile demande d'abord si l'objectif a été suivi
+  if (c.intake.days < CHECK.logDays && !S.adjOk) return emile('<p>' + fr(trend) + '</p><p>' + fr('Avant de proposer un ajustement : as-tu mangé à peu près ton objectif ces 2 semaines ?') + '</p><div class="row"><button type="button" class="btn" data-act="adj-yes">Oui, à peu près</button><button type="button" class="btn ghost" data-act="adj-no">Pas vraiment</button></div>', opt);
+  const add = c.change > 0;
+  return emile('<p>' + fr(trend) + '</p><p>' + fr('Je te propose ' + (add ? 'd’ajouter ' : 'de retirer ') + Math.abs(c.change) + ' kcal par jour : ' + fmtInt(c.kcal) + ' kcal au lieu de ' + kcal + '. Je ne corrige que la moitié de l’écart, car le poids varie aussi avec l’eau.') + '</p><div class="row"><button type="button" class="btn primary" data-act="adj-apply">Passer à ' + fmtInt(c.kcal) + ' kcal</button><button type="button" class="btn ghost" data-act="adj-keep">Garder ' + kcal + ' kcal</button></div>', opt);
+}
 
 const MISSING = { sex:'si tu es un loutron ou une loutronne', birth:'ta date de naissance', height:'ta taille', weight:'ton poids', activity:'ton activité au quotidien' };
 const kg = x => fmtKg(Math.round(x * 10) / 10);
@@ -60,7 +108,7 @@ export function needs(pl, compact){
   let h = (compact ? '' : '<span class="label">Tes besoins par jour</span>') + '<div class="stats needs">' + st(fmtInt(pl.kcal) + ' <small>kcal</small>', pl.extra ? 'calories aujourd’hui, séances et activités comprises' : 'calories, sans compter tes séances', true)
     + st(pl.protein[0] + '-' + pl.protein[1] + ' <small>g</small>', 'protéines') + st(pl.fat[0] + '-' + pl.fat[1] + ' <small>g</small>', 'lipides')
     + st('≈ ' + pl.carbs + ' <small>g</small>', 'glucides (le reste)') + st(pl.fibre + ' <small>g</small>', 'fibres') + '</div>';
-  if (!compact) h += '<p class="muted small">Ce total ne compte pas tes séances ni tes activités : chaque jour, j’ajoute leur dépense (voir « Tes activités » dans Aujourd’hui).' + (pl.goal !== 'keep' ? ' Calcul approximatif : environ 7 700 kcal par kilo, et le poids varie aussi d’un jour à l’autre avec l’eau.' : '') + ' Détails dans « La science ».</p>';
+  if (!compact) h += '<p class="muted small">Ce total ne compte pas tes séances ni tes activités : chaque jour, j’ajoute leur dépense (voir « Tes activités » dans Aujourd’hui).' + (pl.adjust ? ' Il comprend la correction de ' + signedKcal(pl.adjust) + ' issue de nos derniers points.' : '') + (pl.goal !== 'keep' ? ' Calcul approximatif : environ 7 700 kcal par kilo, et le poids varie aussi d’un jour à l’autre avec l’eau.' : '') + ' Détails dans « La science ».</p>';
   return h;
 }
 // Formulaire : activité, objectif, poids et date visés, puis avis d'Émile et besoins. n : { activity, goal, target, by }
@@ -80,7 +128,18 @@ export function goalProfileCard(){
   let h = '<section class="card" id="goal-card"><h3>Ton alimentation</h3>';
   if (!n.on) return h + emile('<p>Veux-tu suivre ton alimentation ? Je calcule tes besoins en calories et en protéines, et un rythme réaliste pour ton objectif de poids.</p><button type="button" class="btn primary" data-act="n-on" data-v="1">Oui, je veux suivre</button>') + '</section>';
   h += '<p class="muted small">Je me sers de ta date de naissance, de ta taille, de ton poids et de « loutron ou loutronne », ci-dessus.</p>';
-  return h + goalForm(n, myPlan()) + '<button type="button" class="btn ghost" data-act="n-on" data-v="0">Arrêter le suivi</button></section>';
+  return h + goalForm(n, myPlan()) + checkSummary(n) + '<button type="button" class="btn ghost" data-act="n-on" data-v="0">Arrêter le suivi</button></section>';
+}
+const CHECK_DONE = { change:'ajustement refusé', ontrack:'dans le plan', offplan:'journal loin de l’objectif, rien changé', notfollowed:'objectif pas suivi, rien changé', limit:'limite atteinte, rien changé', skip:'passé, pas assez de pesées' };
+const signedKcal = x => (x > 0 ? '+' : '−') + fmtInt(Math.abs(x)) + ' kcal';
+function checkSummary(n){
+  const nc = nextCheck(); const done = (n.checks || []).slice(-3).reverse();
+  let h = '<div class="stack" style="gap:4px"><span class="label">Le point toutes les 2 semaines</span><p class="small">';
+  h += nc ? (nc.date <= today() ? 'C’est le moment de faire le point : regarde dans Aujourd’hui.' : 'Prochain point le ' + esc(fmtDateYear(nc.date)) + '.') : 'Le point se fera une fois ton objectif complet.';
+  if (n.adjust) h += ' Tes besoins sont corrigés de ' + signedKcal(n.adjust) + ' par jour.';
+  h += '</p>' + done.map(c => '<p class="small muted">' + esc(fmtDate(c.date)) + ' : ' + (c.actual != null ? perWeek(c.actual) + ' kg par semaine' + (c.planned ? ' pour ' + perWeek(c.planned) + ' prévu' : '') + ', ' : '') + esc(c.applied ? signedKcal(c.change) + ' par jour' : CHECK_DONE[c.status] || '') + '</p>').join('');
+  if (n.adjust) h += '<button type="button" class="link" data-act="adj-reset" style="align-self:flex-start">Annuler les corrections</button>';
+  return h + '</div>';
 }
 // Carte d'Aujourd'hui : objectif, rythme et besoins du jour
 export function goalTodayCard(){
@@ -93,6 +152,6 @@ export function goalTodayCard(){
   // Ce qui est déjà noté dans le journal aujourd'hui
   const day = dayDoc(today()); const eat = day.items.length ? totals(day.items) : null; const dp = withExtra(pl, dayEnergy(today()).kcal);
   const ate = eat ? '<p class="small"><b>Mangé aujourd’hui : ' + fmtInt(eat.kcal) + ' / ' + fmtInt(dp.kcal) + ' kcal</b>, protéines ' + fmtInt(eat.p) + ' / ' + dp.protein[0] + ' g. <button type="button" class="link" data-act="tab" data-v="food">Ouvrir le journal</button></p>' : '<p class="small"><button type="button" class="link" data-act="tab" data-v="food">Noter ce que je mange</button></p>';
-  const incl = dp.extra ? 'Dont ' + fmtInt(dp.extra) + ' kcal pour tes séances et activités du jour.' : 'Pas de séance ni d’activité aujourd’hui.';
+  const nc = nextCheck(); const incl = (dp.extra ? 'Dont ' + fmtInt(dp.extra) + ' kcal pour tes séances et activités du jour.' : 'Pas de séance ni d’activité aujourd’hui.') + (nc && nc.date > today() ? ' ' + withDot('Prochain point sur ton poids le ' + fmtDate(nc.date)) : '');
   return emile('<p>' + esc(hey(t)) + '</p>' + needs(dp, true) + ate + '<p class="muted small">' + esc(incl) + ' <button type="button" class="link" data-act="goal-edit">Modifier</button></p>', { title:'Ton objectif' });
 }

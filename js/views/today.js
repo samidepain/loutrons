@@ -8,7 +8,7 @@ import { useShare } from '../backup.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
 import { calendarCard } from './calendar.js';
-import { goalTodayCard } from './goal.js';
+import { checkCard, goalTodayCard } from './goal.js';
 import { emile, hey } from '../emile.js';
 import { activitiesCard, waterCard } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin } from '../energy.js';
@@ -27,6 +27,7 @@ export function viewToday(){
     h += emile('<p>' + esc(hey(le ? withDot('Ta dernière sauvegarde date du ' + fmtDate(le)) : 'Tu n’as pas encore sauvegardé tes données.')) + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>'
       + '<button type="button" class="btn primary" data-act="export" data-v="json">Exporter maintenant</button>' + (useShare('json') ? '<p class="muted small">Choisis ensuite «&nbsp;Enregistrer dans Fichiers&nbsp;».</p>' : ''), { title:'Sauvegarde', tone:'warn' });
   }
+  h += checkCard();
   if (S.summary) {
     const sw = S.docs.get(S.summary.id);
     let b = sw ? '<p class="muted">' + esc(wName(sw)) + ' · ' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' : '';

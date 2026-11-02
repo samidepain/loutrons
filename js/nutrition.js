@@ -33,7 +33,8 @@ export function dateAt(start, target, pct){
   return addDays(start.date, Math.max(1, Math.ceil(Math.abs(target - start.weight) / kgWeek)) * 7);
 }
 
-// p : { sex, birth, height, weight } (poids actuel) ; n : { activity, goal: 'lose' | 'keep' | 'gain', target, by, start: { date, weight } }
+// p : { sex, birth, height, weight } (poids actuel) ; n : { activity, goal: 'lose' | 'keep' | 'gain', target, by, start: { date, weight },
+// adjust : correction des besoins en kcal par jour, issue des points toutes les 2 semaines }
 // Renvoie les besoins du jour, hors sport, et l'état de l'objectif :
 // 'missing' (données manquantes), 'keep', 'ok', 'fast' (trop rapide : recadré), 'target' (poids visé à indiquer),
 // 'direction' (poids visé du mauvais côté), 'bmi' (refusé : IMC sous 18,5), 'minor' (refusé : perte avant 18 ans), 'date' (date à indiquer ou passée).
@@ -43,8 +44,9 @@ export function planFor(p, n, day){
   if (missing.length) return { status:'missing', missing };
   const age = ageOn(p.birth, day);
   const bmr = restingKcal(p.sex, p.weight, p.height, age);
-  const base = bmr * ACTIVITY[n.activity].pal;
-  const out = { age, bmr: round10(bmr), base: round10(base), status:'keep', kgWeek:0, minKg: Math.ceil(minWeight(p.height) * 2) / 2 };
+  // Dépense estimée : repos × activité, corrigée par les points toutes les 2 semaines
+  const adjust = Number(n.adjust) || 0; const base = bmr * ACTIVITY[n.activity].pal + adjust;
+  const out = { age, bmr: round10(bmr), base: round10(base - adjust), adjust, status:'keep', kgWeek:0, minKg: Math.ceil(minWeight(p.height) * 2) / 2 };
   const goal = n.goal === 'lose' || n.goal === 'gain' ? n.goal : 'keep';
   const target = Number(n.target);
   const start = n.start && n.start.weight ? n.start : { date: day, weight: p.weight };
@@ -81,6 +83,39 @@ function split(out){
   out.fat = FAT.map(f => Math.round(out.kcal * f / 9 / 5) * 5);
   out.carbs = Math.max(0, Math.round((out.kcal - out.protein[0] * 4 - out.fat[0] * 9) / 4 / 5) * 5);
   return out;
+}
+// Point toutes les 2 semaines : règles de l'appli (voir La science). days : écart entre deux points ; weighins, span : pesées
+// nécessaires et jours qu'elles doivent couvrir ; tolerance : écart ignoré (kg par semaine) ; share : part de l'écart corrigée ;
+// step : correction maximale à chaque point (kcal par jour) ; total : correction cumulée maximale (part des besoins estimés) ;
+// logDays : jours de journal suffisants pour vérifier ce qui a été mangé ; offPlan : écart toléré avec l'objectif (part)
+export const CHECK = { days:14, maxDays:28, weighins:4, span:7, tolerance:0.1, share:0.5, step:200, total:0.2, logDays:10, offPlan:0.1 };
+// Tendance du poids : droite des moindres carrés sur les pesées [{ date, weight }] (triées) entre from et to.
+// Renvoie le rythme en kg par semaine et le poids de la tendance à from (w0) et à to (w1), ou null si les pesées manquent.
+export function weightTrend(points, from, to){
+  const pts = points.filter(p => p.date >= from && p.date <= to && p.weight > 0);
+  if (pts.length < CHECK.weighins) return null;
+  const xs = pts.map(p => daysBetween(from, p.date)); if (xs[xs.length - 1] - xs[0] < CHECK.span) return null;
+  const mx = xs.reduce((a, x) => a + x, 0) / xs.length; const my = pts.reduce((a, p) => a + p.weight, 0) / pts.length;
+  let sxy = 0, sxx = 0; xs.forEach((x, i) => { sxy += (x - mx) * (pts[i].weight - my); sxx += (x - mx) * (x - mx); });
+  const slope = sxy / sxx; const end = daysBetween(from, to);
+  return { n: pts.length, days: end, perWeek: slope * 7, w0: my - slope * mx, w1: my + slope * (end - mx) };
+}
+// Proposition au point des 2 semaines. pl : besoins actuels (planFor) ; trend : weightTrend ; intake : { days, avg, target } (journal)
+// status : 'weighins' (pas assez de pesées), 'offplan' (journal loin de l'objectif), 'ontrack', 'change', 'limit' (rien de possible : limit dit pourquoi)
+export function adjustFor(pl, trend, intake){
+  if (!trend) return { status:'weighins' };
+  const out = { planned: pl.kgWeek || 0, actual: trend.perWeek, w0: trend.w0, w1: trend.w1, days: trend.days };
+  const delta = out.actual - out.planned;
+  if (intake && intake.days >= CHECK.logDays && Math.abs(intake.avg - intake.target) > CHECK.offPlan * intake.target) return Object.assign(out, { status:'offplan' });
+  if (Math.abs(delta) <= CHECK.tolerance) return Object.assign(out, { status:'ontrack' });
+  // La moitié de l'écart (environ 7 700 kcal par kilo), arrondie à 50 kcal, au plus 200 kcal
+  const want = Math.max(-CHECK.step, Math.min(CHECK.step, Math.round(-delta * KCAL_PER_KG / 7 * CHECK.share / 50) * 50));
+  const cap = Math.round(pl.base * CHECK.total / 50) * 50; const adj = pl.adjust || 0;
+  let change = Math.max(-cap, Math.min(cap, adj + want)) - adj; let limit = change !== want ? 'total' : null;
+  if (change < 0 && pl.kcal + change < pl.bmr) { change = Math.min(0, Math.ceil((pl.bmr - pl.kcal) / 10) * 10); limit = 'resting'; }
+  if (change < 0 && trend.w1 <= pl.minKg) { change = 0; limit = 'bmi'; }
+  if (!change) return Object.assign(out, { status:'limit', limit: limit || 'total' });
+  return Object.assign(out, { status:'change', change, kcal: pl.kcal + change, adjust: adj + change, limit });
 }
 // Besoins d'un jour donné : on ajoute la dépense des séances et des activités (extra, en kcal) ; protéines inchangées
 export function withExtra(pl, extra){
