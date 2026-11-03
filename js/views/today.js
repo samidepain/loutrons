@@ -2,7 +2,7 @@
 import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { DAY_ORDER, DAY_SHORT } from '../library.js';
 import { S } from '../store.js';
-import { activeWorkout, allTpl, backupDue, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, planDay, settings, sportInfo, sportOn, testForBlock, tplDef, tplEst, weekGoal, weekInfo, wName, workouts } from '../data.js';
+import { activeWorkout, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, planDay, settings, sportInfo, sportOn, testForBlock, tplDef, tplEst, weekGoal, weekInfo, wName, workouts } from '../data.js';
 import { fatigueCheck } from '../engine.js';
 import { useShare } from '../backup.js';
 import { kneeChips } from '../render.js';
@@ -25,7 +25,7 @@ export function viewToday(){
   if (S.loaded && backupDue()) {
     const le = settings().lastExport;
     h += emile('<p>' + esc(hey(le ? withDot('Ta dernière sauvegarde date du ' + fmtDate(le)) : 'Tu n’as pas encore sauvegardé tes données.')) + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>'
-      + '<button type="button" class="btn primary" data-act="export" data-v="json">Exporter maintenant</button>' + (useShare('json') ? '<p class="muted small">Choisis ensuite «&nbsp;Enregistrer dans Fichiers&nbsp;».</p>' : ''), { title:'Sauvegarde', tone:'warn' });
+      + '<button type="button" class="btn primary" data-act="export" data-v="json">Exporter maintenant</button>' + (useShare('json') ? '<p class="muted small">Choisis ensuite «&nbsp;Enregistrer dans Fichiers&nbsp;».</p>' : ''), { title:'Sauvegarde', tone:'warn', key:'backup:' + mondayOf(d) });
   }
   h += checkCard();
   if (S.summary) {
@@ -42,14 +42,14 @@ export function viewToday(){
   }
   if (S.loaded) {
     const fat = fatigueCheck();
-    if (fat) h += emile('<p>' + esc(hey('Ta force baisse sur ' + fat.drops.length + ' exercices sur ' + fat.compared + ' cette semaine : ' + fat.drops.join(', ') + '.')) + (fat.avgSleep != null && fat.avgSleep < 7 ? ' Ton sommeil moyen ces derniers jours est de ' + fmtKg(Math.round(fat.avgSleep * 10) / 10) + ' h.' : '') + ' Avancer la semaine de décharge peut t’aider à récupérer.</p><div class="row"><button type="button" class="btn primary" data-act="fatigue-deload">Avancer la décharge</button><button type="button" class="btn" data-act="fatigue-ignore">Ignorer cette semaine</button></div>', { title:'Fatigue probable', tone:'warn' });
-    if (jumpsOn() && wk.bw === 6 && !testForBlock(wk.block)) h += emile('<p>Test de détente cette semaine : il s’affichera au début de ta prochaine séance jambes. La décharge te laisse reposé, c’est le bon moment.</p>');
-    else if (jumpsOn() && wk.bw === 5) h += emile('<p>Test de détente la semaine prochaine, pendant la décharge.</p>');
+    if (fat) h += emile('<p>' + esc(hey('Ta force baisse sur ' + fat.drops.length + ' exercices sur ' + fat.compared + ' cette semaine : ' + fat.drops.join(', ') + '.')) + (fat.avgSleep != null && fat.avgSleep < 7 ? ' Ton sommeil moyen ces derniers jours est de ' + fmtKg(Math.round(fat.avgSleep * 10) / 10) + ' h.' : '') + ' Avancer la semaine de décharge peut t’aider à récupérer.</p><div class="row"><button type="button" class="btn primary" data-act="fatigue-deload">Avancer la décharge</button><button type="button" class="btn" data-act="fatigue-ignore">Ignorer cette semaine</button></div>', { title:'Fatigue probable', tone:'warn' , close:'fatigue-ignore' });
+    if (jumpsOn() && wk.bw === 6 && !testForBlock(wk.block)) h += emile('<p>Test de détente cette semaine : il s’affichera au début de ta prochaine séance jambes. La décharge te laisse reposé, c’est le bon moment.</p>', { key:'jumps:' + wk.block + ':6' });
+    else if (jumpsOn() && wk.bw === 5) h += emile('<p>Test de détente la semaine prochaine, pendant la décharge.</p>', { key:'jumps:' + wk.block + ':5' });
     const bb = wk.bw === 6 ? wk.block : (wk.bw === 1 && wk.block > 1 ? wk.block - 1 : 0);
     if (bb) h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>Bilan du bloc ' + bb + '</h3><span class="muted small">Force, régularité, volume, genou, poids, sommeil et détente, avec des pistes pour la suite.</span></div><button type="button" class="btn" data-act="bilan" data-v="' + bb + '">Voir</button></div></section>';
   }
-  if (S.loaded && kneeAlert()) h += emile('<p>Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts, charges maintenues sur les exercices qui sollicitent le genou. Si ça ne redescend pas, consulte un kiné ou un médecin du sport.</p>', { title:'Genou', tone:'bad' });
-  h += emile('<p>' + esc(goal.d) + '</p>', { title: goal.t });
+  if (S.loaded && kneeAlert()) h += emile('<p>Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts, charges maintenues sur les exercices qui sollicitent le genou. Si ça ne redescend pas, consulte un kiné ou un médecin du sport.</p>', { title:'Genou', tone:'bad', key:'knee:' + kneeEntries().filter(k => k.v > 3).map(k => k.date).sort().pop() });
+  h += emile('<p>' + esc(goal.d) + '</p>', { title: goal.t, key:'week:' + mondayOf(d) + ':' + goal.t });
 
   if (aw) {
     h += '<section class="card plan"><span class="label">Séance en cours</span><div class="name">' + esc(wName(aw)) + '</div><button type="button" class="btn primary big" data-act="tab" data-v="training">Reprendre la séance</button></section>';

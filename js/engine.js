@@ -4,9 +4,9 @@ import { DAY_ORDER, MUSCLES } from './library.js';
 import { bestE1, blockRange, bodyDocs, bodyweight, canon, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, maxKg, musclesOf, planDay, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
 
 /* ================= Moteur de progression =================
-   Sources : ACSM 2009 (+2 à 10 % quand 1-2 reps de plus que la cible deux séances de suite, moins pour les petits muscles),
-   règle « 2 pour 2 » de la NSCA, Plotkin et al. 2022 (progresser en reps ou en charge : résultats proches),
-   Robinson et al. 2024 (hypertrophie meilleure plus près de l’échec), consensus de Bell et al. 2023 (décharge). */
+   Sources : règle « 2 pour 2 » de la NSCA et paliers de terrain (la position de l'ACSM de 2026 ne fixe pas de chiffre),
+   Plotkin et al. 2022 (progresser en reps ou en charge : résultats proches),
+   Robinson et al. 2024 et ACSM 2026 (s'arrêter à 1-2 reps de l'échec suffit), Bell et al. 2023 et Coleman et al. 2024 (décharge). */
 const PCT = { iso:[0.02, 0.05], upper:[0.025, 0.05], lower:[0.05, 0.10] };
 export function targetRIR(e, wk){ if (e.cat === 'iso') return 1; if (wk && wk.bw === 5 && !(e.knee && kneeOn())) return 1; return 2; }
 export function computeTarget(e, wk, excludeId){
@@ -198,17 +198,17 @@ export function blockReport(block){
     else if (knee.length >= 5) tips.push(['good', 'Genou stable sous 3/10 tout le bloc : tu peux continuer à élargir l’amplitude au leg extension et garder les sauts.']);
   }
   if (wc) {
-    // Rythme comparé à l'objectif choisi (suivi de l'alimentation) ; sans objectif, à la prise de muscle, comme avant
+    // Rythme comparé à l'objectif choisi (suivi de l'alimentation) ; sans objectif, à la prise de masse musculaire, comme avant
     const p = wc.pctWeek; const pc = fmtKg(Math.round(Math.abs(p) * 100) / 100); const kgTxt = (wc.kg >= 0 ? '+' : '') + fmtKg(Math.round(wc.kg * 10) / 10) + ' kg';
     const nu = settings().nutrition || {}; const goal = nu.on ? (nu.goal || 'keep') : 'gain';
-    if (goal === 'lose') tips.push(p <= -1.1 ? ['warn', 'Baisse rapide (' + pc + ' % par semaine) : au-delà de 1 %, tu risques de perdre aussi du muscle.']
-      : p <= -0.4 ? ['good', 'Poids en baisse de ' + pc + ' % par semaine : dans la cible de 0,5 à 1 % pour perdre du gras en gardant ton muscle.']
-      : ['info', 'Poids ' + (p < 0 ? 'en légère baisse' : 'stable ou en hausse') + ' (' + kgTxt + '). Pour perdre du gras en gardant ton muscle, la cible courante est une baisse de 0,5 à 1 % du poids par semaine (Helms et al., 2014).']);
+    if (goal === 'lose') tips.push(p <= -1.1 ? ['warn', 'Baisse rapide (' + pc + ' % par semaine) : au-delà de 1 %, tu risques de perdre aussi de la masse musculaire.']
+      : p <= -0.4 ? ['good', 'Poids en baisse de ' + pc + ' % par semaine : dans la cible de 0,5 à 1 % pour perdre de la masse grasse en préservant ta masse musculaire.']
+      : ['info', 'Poids ' + (p < 0 ? 'en légère baisse' : 'stable ou en hausse') + ' (' + kgTxt + '). Pour perdre de la masse grasse en préservant ta masse musculaire, la cible courante est une baisse de 0,5 à 1 % du poids par semaine (Helms et al., 2014).']);
     else if (goal === 'keep') tips.push(Math.abs(p) < 0.25 ? ['good', 'Poids stable (' + kgTxt + ') : conforme à ton objectif.']
       : ['info', 'Ton poids ' + (p > 0 ? 'monte' : 'baisse') + ' de ' + pc + ' % par semaine (' + kgTxt + ') alors que tu vises à le garder : ajuste un peu ce que tu manges.']);
-    else tips.push(p < 0.1 ? ['info', 'Poids stable (' + kgTxt + '). Pour prendre du muscle, la cible courante est une hausse de 0,25 à 0,5 % du poids par semaine (Iraki et al., 2019).']
-      : p > 0.6 ? ['warn', 'Hausse rapide (' + pc + ' % par semaine) : au-dessus de 0,5 %, une plus grande part risque d’être du gras.']
-      : ['good', 'Poids en hausse de ' + pc + ' % par semaine : dans la cible de 0,25 à 0,5 % pour prendre du muscle.']);
+    else tips.push(p < 0.1 ? ['info', 'Poids stable (' + kgTxt + '). Pour prendre de la masse musculaire, la cible courante est une hausse de 0,25 à 0,5 % du poids par semaine (Iraki et al., 2019).']
+      : p > 0.6 ? ['warn', 'Hausse rapide (' + pc + ' % par semaine) : au-dessus de 0,5 %, une plus grande part risque d’être de la masse grasse.']
+      : ['good', 'Poids en hausse de ' + pc + ' % par semaine : dans la cible de 0,25 à 0,5 % pour prendre de la masse musculaire.']);
   }
   if (sleepAvg != null && sleepAvg < 7) tips.push(['info', 'Sommeil moyen ' + fmtKg(Math.round(sleepAvg * 10) / 10) + ' h' + (shortN ? ', dont ' + shortN + ' nuit' + (shortN > 1 ? 's' : '') + ' sous 6 h' : '') + '. Les recommandations pour les adultes visent au moins 7 h.']);
   if (jumpsOn() && test && prevTest) { const dlt = test.cm - prevTest.cm; tips.push([dlt >= 0 ? 'good' : 'warn', 'Détente : ' + fmtKg(test.cm) + ' cm contre ' + fmtKg(prevTest.cm) + ' cm au bloc précédent (' + (dlt >= 0 ? '+' : '') + fmtKg(Math.round(dlt * 10) / 10) + ' cm).']); }

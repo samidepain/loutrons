@@ -21,14 +21,14 @@ export function viewSession(){
   let h = '<div class="sess-head"><div class="row between"><div class="stack" style="gap:2px"><h1>' + esc(wName(w)) + '</h1><span class="muted small">Semaine ' + w.week + ' · ' + (w.deload ? 'décharge' : 'bloc semaine ' + w.blockWeek + '/6') + (w.est ? ' · environ ' + w.est + ' min' : '') + '</span></div><span id="elapsed" class="clock">0:00</span></div>';
   h += '<div class="bar" aria-label="Avancement"><i style="width:' + pct + '%"></i></div><span class="muted small">' + done + '/' + total + ' séries validées</span></div>';
   const b = S.docs.get('b_' + w.date) || {};
-  if (num(b.sleep) != null && num(b.sleep) < 6) h += emile('<p>Nuit courte (' + fmtKg(num(b.sleep)) + ' h) : vise les objectifs, mais garde 1 rep de plus en réserve et ne force pas de record aujourd’hui.</p>', { tone:'warn' });
+  if (num(b.sleep) != null && num(b.sleep) < 6) h += emile('<p>Nuit courte (' + fmtKg(num(b.sleep)) + ' h) : vise les objectifs, mais garde 1 rep de plus en réserve et ne force pas de record aujourd’hui.</p>', { tone:'warn', key:'sleep:' + w.id });
   if (w.lower && jumpsOn() && testDue(w.date)) {
     h += '<section class="card" style="border-color:var(--court)"><div class="stack" style="gap:4px"><h3>Test de détente du bloc ' + weekInfo(w.date).block + '</h3><p class="small">' + esc(JUMP_PROTOCOL) + '</p></div>';
     h += '<div class="fields">' + [0,1,2].map(i => '<label class="f"><span>Essai ' + (i + 1) + ' (cm)</span><input class="n" id="jump-' + i + '" inputmode="decimal" placeholder="cm"></label>').join('') + '</div>';
     const prevT = testForBlock(weekInfo(w.date).block - 1);
     h += (prevT ? '<p class="muted small">Bloc précédent : ' + fmtKg(prevT.cm) + ' cm.</p>' : '') + '<button type="button" class="btn primary" data-act="save-jump">Enregistrer le test</button></section>';
   }
-  h += emile('<p>Plus de 75 min : si tu manques de temps, coupe ' + (w.cut ? 'dans cet ordre : ' + esc(w.cut) : 'les dernières séries d’isolation') + '. Ne raccourcis pas les repos des mouvements lourds.</p>', { id:'cutwarn', hidden:true, tone:'warn' });
+  h += emile('<p>Plus de 75 min : si tu manques de temps, coupe ' + (w.cut ? 'dans cet ordre : ' + esc(w.cut) : 'les dernières séries d’isolation') + '. Ne raccourcis pas les repos des mouvements lourds.</p>', { id:'cutwarn', hidden:true, tone:'warn', key:'long:' + w.id });
   let i = 0;
   while (i < items.length) {
     const it = items[i];

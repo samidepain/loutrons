@@ -44,9 +44,10 @@ const fr = s => esc(s).replace(/ ([:;?!])/g, '\u00a0$1');
 export function checkCard(){
   if (!S.loaded) return '';
   const c = checkDue(); if (!c) return '';
-  const opt = { title:'Le point sur tes 2 semaines', id:'check-card' };
+  // La croix vaut « Pas cette fois », ou « Compris » quand il n'y a rien à décider
+  const opt = { title:'Le point sur tes 2 semaines', id:'check-card', close: ['ontrack', 'offplan', 'limit'].indexOf(c.status) >= 0 ? 'adj-keep' : 'adj-later' };
   if (c.status === 'weighins') return emile('<p>' + fr(hey('Pour faire le point, j’ai besoin d’au moins ' + CHECK.weighins + ' pesées sur une semaine ou plus. Pèse-toi 2 ou 3 fois par semaine, le matin, avant de manger.')) + '</p><button type="button" class="link" data-act="adj-later">Pas cette fois</button>', opt);
-  const trend = 'Ta tendance : de ' + fmtKg(Math.round(c.w0 * 10) / 10) + ' à ' + fmtKg(Math.round(c.w1 * 10) / 10) + ' kg en ' + c.days + ' jours, soit ' + perWeek(c.actual) + ' kg par semaine' + (c.planned ? ' pour ' + perWeek(c.planned) + ' prévu.' : ', alors que tu veux garder ton poids.');
+  const trend = 'Ta tendance : de ' + fmtKg(Math.round(c.w0 * 10) / 10) + ' à ' + fmtKg(Math.round(c.w1 * 10) / 10) + ' kg en ' + c.days + ' jours, soit ' + perWeek(c.actual) + ' kg par semaine' + (c.planned ? ' pour ' + perWeek(c.planned) + ' prévu.' : ', alors que tu veux maintenir ton poids.');
   const kcal = fmtInt(c.pl.kcal);
   if (c.status === 'offplan') {
     const more = c.intake.avg > c.intake.target;
@@ -69,37 +70,37 @@ const andList = l => l.length > 1 ? l.slice(0, -1).join(', ') + ' et ' + l[l.len
 const pct = x => fmtKg(Math.round(x * 100) / 100);
 const signed = x => (x > 0 ? '+' : '−') + kg(Math.abs(x));
 // Avis d'Émile sur l'objectif. n : réglages de l'objectif (pour la date visée)
-export function verdict(pl, n){
+export function verdict(pl, n, key){
   let t = '', tone = '', btn = '';
   if (pl.status === 'missing') t = 'Pour calculer tes besoins, dis-moi ' + andList(['birth', 'height', 'weight', 'activity', 'sex'].filter(k => pl.missing.indexOf(k) >= 0).map(k => MISSING[k])) + '.';
-  else if (pl.status === 'keep') t = 'Pour garder ton poids, vise à peu près ta dépense de chaque jour, ci-dessous.';
+  else if (pl.status === 'keep') t = 'Pour maintenir ton poids, vise à peu près ta dépense de chaque jour, ci-dessous.';
   else if (pl.status === 'target') t = 'Indique ton poids visé.';
   else if (pl.status === 'date') t = n.by && n.by <= today() ? 'La date visée est passée : choisis-en une nouvelle.' : 'Choisis la date à laquelle tu veux l’atteindre.';
   else if (pl.status === 'direction') t = 'Ton poids visé doit être ' + (pl.goal === 'lose' ? 'sous' : 'au-dessus de') + ' ton poids actuel (' + kg(pl.start.weight) + ' kg).';
-  else if (pl.status === 'minor') { tone = 'warn'; t = 'Avant 18 ans, je ne propose pas de perte de poids : ton corps grandit encore. Si ton poids te préoccupe, parles-en à ton médecin ou à un diététicien. Les besoins ci-dessous servent à garder ton poids.'; }
-  else if (pl.status === 'bmi') { tone = 'warn'; t = 'Je ne peux pas t’accompagner jusqu’à ' + kg(pl.target) + ' kg : pour ta taille, ce poids correspond à un IMC sous 18,5, ce que l’Organisation mondiale de la santé considère comme une insuffisance pondérale. Le plus bas que je peux viser avec toi : ' + kg(pl.minKg) + ' kg. Les besoins ci-dessous servent à garder ton poids.'; }
+  else if (pl.status === 'minor') { tone = 'warn'; t = 'Avant 18 ans, je ne propose pas d’objectif de perte de masse grasse : ton corps grandit encore. Si ton poids te préoccupe, parles-en à ton médecin ou à un diététicien. Les besoins ci-dessous servent à maintenir ton poids.'; }
+  else if (pl.status === 'bmi') { tone = 'warn'; t = 'Je ne peux pas t’accompagner jusqu’à ' + kg(pl.target) + ' kg : pour ta taille, ce poids correspond à un IMC sous 18,5, ce que l’Organisation mondiale de la santé considère comme une insuffisance pondérale. Le plus bas que je peux viser avec toi : ' + kg(pl.minKg) + ' kg. Les besoins ci-dessous servent à maintenir ton poids.'; }
   else {
     const gain = pl.goal === 'gain'; const d = Math.abs(pl.target - pl.start.weight);
     if (pl.status === 'ok') {
       tone = 'good';
-      t = 'Passer de ' + kg(pl.start.weight) + ' à ' + kg(pl.target) + ' kg d’ici le ' + fmtDateYear(n.by) + ' : ' + signed(pl.kgWeek) + ' kg par semaine, soit ' + pct(Math.abs(pl.pctWeek)) + ' % de ton poids. ';
+      t = (gain ? 'Prendre de la masse musculaire' : 'Perdre de la masse grasse') + ' pour passer de ' + kg(pl.start.weight) + ' à ' + kg(pl.target) + ' kg d’ici le ' + fmtDateYear(n.by) + ' : ' + signed(pl.kgWeek) + ' kg par semaine, soit ' + pct(Math.abs(pl.pctWeek)) + ' % de ton poids. ';
       const adv = gain ? GAIN.advised : LOSS.advised;
       // Nettement sous le rythme conseillé (la date proposée par Émile, arrondie à la semaine, reste « le bon rythme »)
       t += Math.abs(pl.pctWeek) < adv * 0.8
         ? (gain ? 'C’est un rythme lent : jusqu’à 0,5 % par semaine reste raisonnable.' : 'C’est un rythme doux : jusqu’à 1 % par semaine reste raisonnable.')
-        : (gain ? 'C’est le bon rythme pour prendre du muscle sans trop de gras.' : 'C’est un rythme qui aide à garder ton muscle.');
+        : (gain ? 'C’est le bon rythme pour prendre de la masse musculaire en limitant la masse grasse.' : 'C’est un rythme qui aide à préserver ta masse musculaire.');
     } else {
       tone = 'warn';
       t = (gain ? 'Prendre ' : 'Perdre ') + kg(d) + ' kg d’ici le ' + fmtDateYear(n.by) + ', c’est trop rapide : ';
-      t += gain ? 'au-delà de 0,5 % de ton poids par semaine (' + kg(pl.maxKg) + ' kg pour toi), une grande part serait du gras. '
+      t += gain ? 'au-delà de 0,5 % de ton poids par semaine (' + kg(pl.maxKg) + ' kg pour toi), une grande part serait de la masse grasse. '
         : pl.limit === 'resting' ? 'il faudrait manger moins que ta dépense au repos (' + fmtInt(pl.bmr) + ' kcal par jour), et ça, je ne te le proposerai jamais. '
-        : 'au-delà de 1 % de ton poids par semaine (' + kg(pl.maxKg) + ' kg pour toi), tu perdrais aussi du muscle. ';
+        : 'au-delà de 1 % de ton poids par semaine (' + kg(pl.maxKg) + ' kg pour toi), tu perdrais aussi de la masse musculaire. ';
       t += 'Au plus tôt, vise le ' + fmtDateYear(pl.realistic) + ' : j’ai calculé tes besoins sur ce rythme.';
       btn = '<button type="button" class="btn" data-act="n-realistic">Viser le ' + esc(fmtDateYear(pl.realistic)) + '</button>';
     }
   }
   if (pl.age != null && pl.age < 18 && pl.status !== 'minor') t += ' Ce calcul est prévu pour les adultes : avant 18 ans, prends-le comme une estimation.';
-  return emile('<p>' + esc(t) + '</p>' + btn, { tone });
+  return emile('<p>' + esc(t) + '</p>' + btn, { tone, key });
 }
 // Besoins du jour, hors séances
 export function needs(pl, compact){
@@ -115,7 +116,7 @@ export function needs(pl, compact){
 export function goalForm(n, pl){
   let h = '<div class="stack" style="gap:6px"><span class="label">Ton activité au quotidien, hors sport</span>';
   Object.keys(ACTIVITY).forEach(k => { const a = ACTIVITY[k]; h += '<button type="button" class="pick' + (n.activity === k ? ' on' : '') + '" data-act="n-act" data-v="' + k + '" aria-pressed="' + (n.activity === k) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(a.label) + '</span><span class="m">' + esc(a.desc) + '</span></span><span aria-hidden="true">' + (n.activity === k ? '✓' : '') + '</span></button>'; });
-  h += '</div><div class="stack" style="gap:6px"><span class="label">Ton objectif</span><div class="chips" role="group">' + [['lose', 'Perdre du poids'], ['keep', 'Garder mon poids'], ['gain', 'Prendre du poids']].map(o => '<button type="button" class="chip txt' + ((n.goal || 'keep') === o[0] ? ' on' : '') + '" data-act="n-goal" data-v="' + o[0] + '" aria-pressed="' + ((n.goal || 'keep') === o[0]) + '">' + o[1] + '</button>').join('') + '</div></div>';
+  h += '</div><div class="stack" style="gap:6px"><span class="label">Ton objectif</span><div class="chips" role="group">' + [['lose', 'Perdre de la masse grasse'], ['keep', 'Maintenir mon poids'], ['gain', 'Prendre de la masse musculaire']].map(o => '<button type="button" class="chip txt' + ((n.goal || 'keep') === o[0] ? ' on' : '') + '" data-act="n-goal" data-v="' + o[0] + '" aria-pressed="' + ((n.goal || 'keep') === o[0]) + '">' + o[1] + '</button>').join('') + '</div></div>';
   if (n.goal === 'lose' || n.goal === 'gain') {
     h += '<div class="fields"><label class="f"><span>Poids visé (kg)</span><input class="n" id="n-target" data-n="target" inputmode="decimal" value="' + esc(n.target == null || n.target === '' ? '' : fmtKg(num(n.target))) + '" placeholder="ex. ' + (n.goal === 'lose' ? '72' : '78') + '"></label>';
     h += '<label class="f"><span>Date visée</span><input type="date" id="n-by" data-n="by" value="' + esc(n.by || '') + '" min="' + addDays(today(), 7) + '"></label></div>';
@@ -126,7 +127,7 @@ export function goalForm(n, pl){
 export function goalProfileCard(){
   const n = nutritionOf();
   let h = '<section class="card" id="goal-card"><h3>Ton alimentation</h3>';
-  if (!n.on) return h + emile('<p>Veux-tu suivre ton alimentation ? Je calcule tes besoins en calories et en protéines, et un rythme réaliste pour ton objectif de poids.</p><button type="button" class="btn primary" data-act="n-on" data-v="1">Oui, je veux suivre</button>') + '</section>';
+  if (!n.on) return h + emile('<p>Veux-tu suivre ton alimentation ? Je calcule tes besoins en calories et en protéines, et un rythme réaliste pour perdre de la masse grasse ou prendre de la masse musculaire.</p><button type="button" class="btn primary" data-act="n-on" data-v="1">Oui, je veux suivre</button>') + '</section>';
   h += '<p class="muted small">Je me sers de ta date de naissance, de ta taille, de ton poids et de « loutron ou loutronne », ci-dessus.</p>';
   return h + goalForm(n, myPlan()) + checkSummary(n) + '<button type="button" class="btn ghost" data-act="n-on" data-v="0">Arrêter le suivi</button></section>';
 }
@@ -145,13 +146,13 @@ function checkSummary(n){
 export function goalTodayCard(){
   const n = nutritionOf(); if (!S.loaded || !n.on) return '';
   const pl = myPlan(); const w = bodyweight();
-  if (['ok', 'fast', 'keep'].indexOf(pl.status) < 0) return verdict(pl, n).replace('</p>', ' <button type="button" class="link" data-act="goal-edit">Régler dans ton profil</button></p>');
-  let t = pl.status === 'keep' ? 'Ton objectif : garder ton poids (' + kg(w) + ' kg).'
-    : 'Tu vises ' + kg(pl.target) + ' kg le ' + fmtDateYear(pl.status === 'fast' ? pl.realistic : n.by) + ', à ' + signed(pl.kgWeek) + ' kg par semaine. Dernière pesée : ' + kg(w) + ' kg.';
+  if (['ok', 'fast', 'keep'].indexOf(pl.status) < 0) return verdict(pl, n, 'goal:' + today()).replace('</p>', ' <button type="button" class="link" data-act="goal-edit">Régler dans ton profil</button></p>');
+  let t = pl.status === 'keep' ? 'Ton objectif : maintenir ton poids (' + kg(w) + ' kg).'
+    : 'Ton objectif : ' + (pl.goal === 'gain' ? 'prendre de la masse musculaire' : 'perdre de la masse grasse') + ', jusqu’à ' + kg(pl.target) + ' kg le ' + fmtDateYear(pl.status === 'fast' ? pl.realistic : n.by) + ', à ' + signed(pl.kgWeek) + ' kg par semaine. Dernière pesée : ' + kg(w) + ' kg.';
   if (pl.status === 'ok' && w != null && (pl.goal === 'gain' ? w >= pl.target : w <= pl.target)) t = 'Tu as atteint ton poids visé, bravo ! Choisis un nouvel objectif dans ton profil.';
   // Ce qui est déjà noté dans le journal aujourd'hui
   const day = dayDoc(today()); const eat = day.items.length ? totals(day.items) : null; const dp = withExtra(pl, dayEnergy(today()).kcal);
   const ate = eat ? '<p class="small"><b>Mangé aujourd’hui : ' + fmtInt(eat.kcal) + ' / ' + fmtInt(dp.kcal) + ' kcal</b>, protéines ' + fmtInt(eat.p) + ' / ' + dp.protein[0] + ' g. <button type="button" class="link" data-act="tab" data-v="food">Ouvrir le journal</button></p>' : '<p class="small"><button type="button" class="link" data-act="tab" data-v="food">Noter ce que je mange</button></p>';
   const nc = nextCheck(); const incl = (dp.extra ? 'Dont ' + fmtInt(dp.extra) + ' kcal pour tes séances et activités du jour.' : 'Pas de séance ni d’activité aujourd’hui.') + (nc && nc.date > today() ? ' ' + withDot('Prochain point sur ton poids le ' + fmtDate(nc.date)) : '');
-  return emile('<p>' + esc(hey(t)) + '</p>' + needs(dp, true) + ate + '<p class="muted small">' + esc(incl) + ' <button type="button" class="link" data-act="goal-edit">Modifier</button></p>', { title:'Ton objectif' });
+  return emile('<p>' + esc(hey(t)) + '</p>' + needs(dp, true) + ate + '<p class="muted small">' + esc(incl) + ' <button type="button" class="link" data-act="goal-edit">Modifier</button></p>', { title:'Ton objectif', key:'goal:' + today() });
 }

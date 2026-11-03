@@ -50,7 +50,7 @@ export function viewSetup(){
 // Écran 3 de l'accueil : suivre son alimentation ou non. U.ask : données de l'écran 1 encore manquantes, demandées ici.
 function viewSetupFood(U){
   let h = '<div class="row between"><button type="button" class="link" data-act="setup-back" data-back>‹ Retour</button><span class="label">Étape 3 sur 3</span></div><h1>Ton alimentation</h1>';
-  h += '<section class="card">' + emile('<p>Veux-tu suivre ton alimentation ? Je calcule tes besoins en calories et en protéines, et un rythme réaliste si tu veux perdre ou prendre du poids.</p>');
+  h += '<section class="card">' + emile('<p>Veux-tu suivre ton alimentation ? Je calcule tes besoins en calories et en protéines, et un rythme réaliste si tu veux perdre de la masse grasse ou prendre de la masse musculaire.</p>');
   h += '<div class="chips" role="group">' + [['1', 'Oui'], ['0', 'Pas maintenant']].map(o => '<button type="button" class="chip txt' + ((U.n.on ? '1' : '0') === o[0] ? ' on' : '') + '" data-act="setup-n-on" data-v="' + o[0] + '" aria-pressed="' + ((U.n.on ? '1' : '0') === o[0]) + '">' + o[1] + '</button>').join('') + '</div>';
   if (U.n.on) {
     if (U.ask.length) {

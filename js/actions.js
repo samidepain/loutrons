@@ -301,6 +301,12 @@ const A = {
   abandon(){ S.confirm = 'abandon'; render(); },
   'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
   'close-summary'(){ S.summary = null; render(); },
+  // Conseil d'Émile fermé : il ne revient que quand sa clé change ; on oublie les clés de plus de 4 mois
+  'emile-x'(b){
+    const lim = addDays(today(), -120); const d = {}; const old = settings().dismissed || {};
+    Object.keys(old).forEach(k => { if (old[k] >= lim) d[k] = old[k]; });
+    d[b.dataset.v] = today(); putSettings({ dismissed: d }); render();
+  },
   // Effort de la séance qui vient de se terminer : sa dépense est recalculée
   effort(b){ const w = S.summary && S.docs.get(S.summary.id); if (!w || !EFFORT[b.dataset.v]) return; w.effort = b.dataset.v; w.kcal = computeSessionKcal(w, bodyweight()); put(S.summary.id, w); render(); },
   'adj-yes'(){ S.adjOk = true; render(); },
@@ -452,10 +458,19 @@ const A = {
     catch (e) { if (e && e.name === 'AbortError') return; downloadFile(file); saved(); toast('Partage impossible : fichier téléchargé à la place.'); }
   }
 };
+// Croix d'un conseil d'Émile : la bulle se replie, puis l'action s'applique
+function collapse(el){
+  if (!el || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
+  el.style.overflow = 'hidden';
+  return el.animate([{ height: el.offsetHeight + 'px', opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+}
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
   if (b.tagName === 'INPUT') return; // cases à cocher : gérées par change
-  const fn = A[b.dataset.act]; if (fn) { e.preventDefault(); fn(b, e); }
+  const fn = A[b.dataset.act]; if (!fn) return;
+  e.preventDefault();
+  if (b.classList.contains('emile-x')) { b.disabled = true; collapse(b.closest('.emile')).then(() => fn(b, e)); return; }
+  fn(b, e);
 });
 document.addEventListener('input', e => {
   const t = e.target;

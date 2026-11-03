@@ -26,16 +26,16 @@ export function viewFood(){
   if (!S.loaded) return h + '<p class="empty">Chargement…</p>';
   // Avis d'Émile, seulement pour aujourd'hui
   if (day === today()) {
-    let m = '', tone = '';
-    if (!doc.items.length) m = hey('Note ce que tu manges au fil de la journée : je fais les comptes.');
-    else if (!has) m = 'Complète ton profil (date de naissance, taille, poids, loutron ou loutronne) pour que je compare à tes besoins.';
+    let m = '', tone = '', kind = 'rest';
+    if (!doc.items.length) { kind = 'empty'; m = hey('Note ce que tu manges au fil de la journée : je fais les comptes.'); }
+    else if (!has) { kind = 'profile'; m = 'Complète ton profil (date de naissance, taille, poids, loutron ou loutronne) pour que je compare à tes besoins.'; }
     else {
       const rest = pl.kcal - t.kcal; const prot = pl.protein[0] - t.p;
-      if (t.kcal > pl.kcal * 1.1) { tone = 'warn'; m = hey('Tu as dépassé ton objectif de ' + fmtInt(-rest) + ' kcal. Sur une journée, ce n’est pas grave : c’est la régularité sur la semaine qui compte.'); }
-      else if (rest <= pl.kcal * 0.1) { tone = 'good'; m = hey('Tu es dans ton objectif de calories' + (prot > 0 ? ' ; il te manque ' + fmtInt(prot) + ' g de protéines.' : ', avec assez de protéines.')); }
+      if (t.kcal > pl.kcal * 1.1) { kind = 'over'; tone = 'warn'; m = hey('Tu as dépassé ton objectif de ' + fmtInt(-rest) + ' kcal. Sur une journée, ce n’est pas grave : c’est la régularité sur la semaine qui compte.'); }
+      else if (rest <= pl.kcal * 0.1) { kind = 'ok'; tone = 'good'; m = hey('Tu es dans ton objectif de calories' + (prot > 0 ? ' ; il te manque ' + fmtInt(prot) + ' g de protéines.' : ', avec assez de protéines.')); }
       else m = hey('Il te reste environ ' + fmtInt(rest) + ' kcal' + (prot > 0 ? ' et ' + fmtInt(prot) + ' g de protéines' : '') + ' pour atteindre ton objectif.');
     }
-    h += emile('<p>' + esc(m) + '</p>', { tone });
+    h += emile('<p>' + esc(m) + '</p>', { tone, key:'food:' + day + ':' + kind });
   }
   // Totaux du jour, comparés aux besoins du jour (séances et activités comprises) et aux repères
   h += '<section class="card"><div class="row between"><h3>Ta journée</h3>' + (has ? '<span class="muted small">' + (pl.extra ? 'activités comprises' : 'objectif du jour') + '</span>' : '') + '</div>';
@@ -67,7 +67,7 @@ function viewFoodAdd(){
   }
   if (F.mode === 'notfound') {
     const why = { offline:'Pas de connexion, et ce produit n’a jamais été scanné sur ce téléphone.', unknown:'Je ne trouve pas ce produit dans Open Food Facts.', incomplete:'Ce produit est dans Open Food Facts, mais sans ses valeurs nutritionnelles.', error:'Open Food Facts ne répond pas pour l’instant.' }[F.why] || '';
-    return head('Produit introuvable', 'fd-back') + emile('<p>' + esc(why) + ' Tu peux le créer avec les valeurs de l’emballage : il sera reconnu au prochain scan.</p><p class="muted small">Code ' + esc(F.code) + '</p>', { tone:'warn' })
+    return head('Produit introuvable', 'fd-back') + emile('<p>' + esc(why) + ' Tu peux le créer avec les valeurs de l’emballage : il sera reconnu au prochain scan.</p><p class="muted small">Code ' + esc(F.code) + '</p>', { tone:'warn', key:'notfound:' + F.code })
       + '<button type="button" class="btn primary" data-act="fd-create">Créer cet aliment</button><button type="button" class="btn" data-act="fd-scan">Scanner à nouveau</button>';
   }
   if (F.mode === 'create') {

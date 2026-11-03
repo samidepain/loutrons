@@ -82,8 +82,8 @@ test('poids : comparé à l’objectif choisi quand l’alimentation est suivie'
   assert.deepEqual(poids(), ['good', 'Poids stable (+1 kg) : conforme à ton objectif.']);
   donnees(avec('lose'));
   assert.equal(poids()[0], 'info');
-  assert.match(poids()[1], /^Poids stable ou en hausse \(\+1 kg\)\. Pour perdre du gras/);
-  // Suivi arrêté : retour à la cible de prise de muscle
+  assert.match(poids()[1], /^Poids stable ou en hausse \(\+1 kg\)\. Pour perdre de la masse grasse/);
+  // Suivi arrêté : retour à la cible de prise de masse musculaire
   donnees(bloc({ nutrition: { on: false, goal: 'lose' } }));
   assert.match(poids()[1], /^Poids en hausse de 0,25 %/);
 });
