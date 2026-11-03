@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, relative, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..', 'js');
 const fichiers = [];
@@ -61,4 +62,9 @@ test('chaque module importe les fonctions des autres modules qu’il utilise', (
     }
   });
   assert.deepEqual([...new Set(erreurs)], []);
+});
+
+test('chaque module a une syntaxe valide (sinon l’appli ne se charge pas)', () => {
+  const erreurs = fichiers.filter(f => spawnSync(process.execPath, ['--check', f], { encoding: 'utf8' }).status !== 0).map(f => relative(racine, f));
+  assert.deepEqual(erreurs, []);
 });

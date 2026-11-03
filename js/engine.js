@@ -12,6 +12,7 @@ export function targetRIR(e, wk){ if (e.cat === 'iso') return 1; if (wk && wk.bw
 export function computeTarget(e, wk, excludeId){
   const alert = kneeAlert(); const knee = !!e.knee && alert;
   if (e.kind === 'check') return { type:'check', label:'À faire', text:e.cue || '' };
+  if (e.kind === 'cardio') return { type:'cardio', label: wk.deload ? 'Décharge' : 'Cardio', sets:1, min:e.lo, text:'Durée prévue : ' + e.lo + ' min' + (wk.deload ? ', à une allure confortable.' : '. Choisis ton allure ci-dessous.') };
   if (e.kind === 'plyo') {
     if (alert) return { type:'skip', label:'Suspendu', sets:0, text:'Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts pour l’instant.' };
     if (wk.busy) return { type:'skip', label:'Pas cette semaine', sets:0, text:'Semaine chargée en ' + lowFirst(sportInfo().name) + ' : pas de sauts en salle.' };
@@ -95,8 +96,22 @@ export function initItem(w, it, wk){
   const t = computeTarget(e, wk, w.id);
   w.targets[it.ex] = t;
   const sets = [];
-  if (e.kind !== 'check') { const n = t.sets == null ? e.sets : t.sets; for (let i = 0; i < n; i++) sets.push({ kg: e.kind === 'plyo' ? null : (t.kg == null ? null : t.kg), reps:null, done:false }); }
+  if (e.kind === 'cardio') sets.push({ min:null, km:null, done:false });
+  else if (e.kind !== 'check') { const n = t.sets == null ? e.sets : t.sets; for (let i = 0; i < n; i++) sets.push({ kg: e.kind === 'plyo' ? null : (t.kg == null ? null : t.kg), reps:null, done:false }); }
   w.ex[it.ex] = { sets, done:false, rir:null, skip: t.type === 'skip' || t.type === 'opt' };
+  if (e.kind === 'cardio') { const lv = e.levels || []; const last = lastCardio(it.ex, w.id); w.ex[it.ex].level = last && lv.some(l => l[0] === last.level) ? last.level : (lv[Math.floor((lv.length - 1) / 2)] || [null])[0]; }
+}
+// Dernière séance où ce cardio a été fait : { date, min, km, level }
+export function lastCardio(exId, excludeId){
+  let best = null; const id = canon(exId);
+  workouts().forEach(w => {
+    if (w.id === excludeId || !w.ex) return;
+    Object.keys(w.ex).forEach(k => {
+      if (canon(k) !== id) return; const st = w.ex[k]; const s = (st.sets || []).find(x => x.done && num(x.min) > 0); if (!s) return;
+      if (!best || w.date > best.date || (w.date === best.date && (w.startedAt || 0) > best.at)) best = { date:w.date, at:w.startedAt || 0, min:num(s.min), km:num(s.km), level:st.level };
+    });
+  });
+  return best;
 }
 export function findPRs(w){
   const out = []; const bw = bodyweight();
@@ -116,7 +131,7 @@ export function muscleDone(from, to){
   const m = {}; MUSCLES.forEach(x => { m[x] = 0; });
   workouts().filter(w => w.date >= from && w.date <= to).forEach(w => {
     Object.keys(w.ex || {}).forEach(k => {
-      const kind = kindOf(k, w); if (kind === 'plyo' || kind === 'check') return;
+      const kind = kindOf(k, w); if (kind === 'plyo' || kind === 'check' || kind === 'cardio') return;
       const n = validSets(w.ex[k].sets).length; if (!n) return;
       const ms = musclesOf(k, w);
       (ms.p || []).forEach(x => { if (m[x] != null) m[x] += n; });
@@ -128,7 +143,7 @@ export function muscleDone(from, to){
 export function musclePlanned(){
   const m = {}; MUSCLES.forEach(x => { m[x] = 0; });
   DAY_ORDER.forEach(wd => { const p = planDay(wd); if (!p.s) return; const t = tplDef(p.s); if (!t) return;
-    tplItems(t).forEach(it => { const e = exDef(it.ex); if (!e || e.kind === 'plyo' || e.kind === 'check') return; const n = it.sets || e.sets || 0;
+    tplItems(t).forEach(it => { const e = exDef(it.ex); if (!e || e.kind === 'plyo' || e.kind === 'check' || e.kind === 'cardio') return; const n = it.sets || e.sets || 0;
       (e.muscles.p || []).forEach(x => { if (m[x] != null) m[x] += n; }); (e.muscles.s || []).forEach(x => { if (m[x] != null) m[x] += n * 0.5; }); }); });
   return m;
 }

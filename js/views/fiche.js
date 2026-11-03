@@ -1,5 +1,5 @@
 // Fiche d’un exercice : photos du mouvement, muscles travaillés, consignes.
-import { esc, fmtKg } from '../util.js';
+import { esc, fmtKg, fmtRest } from '../util.js';
 import { KINDS } from '../library.js';
 import { S } from '../store.js';
 import { excluded, exDef } from '../data.js';
@@ -14,7 +14,8 @@ function photos(e){
 // Photos puis silhouette : utilisé dans la fiche et dans les consignes pendant la séance
 export function exVisual(e){ const m = musclesForMap(e); return photos(e) + (m ? bodyMap(m) : ''); }
 function presc(e){
-  if (e.kind === 'load' || e.kind === 'bw') return e.sets + ' × ' + e.lo + '-' + e.hi + (e.uni ? ' par côté' : '') + ' · repos ' + e.rest + ' s · palier ' + fmtKg(e.step) + ' kg';
+  if (e.kind === 'load' || e.kind === 'bw') return e.sets + ' × ' + e.lo + '-' + e.hi + (e.uni ? ' par côté' : '') + ' · repos ' + fmtRest(e.rest) + ' · palier ' + fmtKg(e.step) + ' kg';
+  if (e.kind === 'cardio') return e.lo + ' min' + (e.levels && e.levels.length > 1 ? ' · ' + e.levels.length + ' allures' : '');
   if (e.kind === 'plyo') return e.sets + ' × ' + e.lo + ' ' + (e.unit || '');
   return '';
 }

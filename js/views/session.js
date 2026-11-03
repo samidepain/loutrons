@@ -1,9 +1,9 @@
 // Écran Séance.
-import { esc, fmtDate, fmtKg, num } from '../util.js';
+import { capFirst, esc, fmtDate, fmtKg, fmtRest, lowFirst, num } from '../util.js';
 import { JUMP_PROTOCOL } from '../library.js';
 import { S } from '../store.js';
 import { activeWorkout, allTpl, exDef, history, itemsOf, jumpsOn, kneeOn, testDue, testForBlock, weekInfo, wName } from '../data.js';
-import { warmup } from '../engine.js';
+import { lastCardio, warmup } from '../engine.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
 import { exVisual } from './fiche.js';
@@ -35,7 +35,7 @@ export function viewSession(){
     if (it.ss) {
       let j = i; const grp = [];
       while (j < items.length && items[j].ss === it.ss) { grp.push(j); j++; }
-      h += '<div class="group"><span class="gh">Superset : alterne sans repos, puis repos ' + (items[grp[grp.length - 1]].rest || 75) + ' s</span>' + grp.map(k => exCard(items[k], w, k)).join('') + '</div>';
+      h += '<div class="group"><span class="gh">Superset : alterne sans repos, puis repos ' + fmtRest(items[grp[grp.length - 1]].rest || 90) + '</span>' + grp.map(k => exCard(items[k], w, k)).join('') + '</div>';
       i = j;
     } else { h += exCard(it, w, i); i++; }
   }
@@ -51,8 +51,9 @@ function exCard(it, w, idx){
   const pillCls = { up:'good', reps:'acc', calib:'court', deload:'court', down:'warn', reset:'warn', hold:'warn', confirm:'court', skip:'bad', opt:'', plyo:'acc', check:'' }[t.type] || '';
   const e = exDef(key) || it;
   let presc = '';
-  if (it.kind === 'load' || it.kind === 'bw') presc = (t.sets || it.sets) + ' × ' + it.lo + '-' + it.hi + (it.uni ? ' par jambe' : '') + ' · repos ' + (it.rest >= 120 ? Math.floor(it.rest / 60) + (it.rest % 60 ? ' min ' + (it.rest % 60) : ' min') : it.rest + ' s') + (t.rir != null ? ' · ' + t.rir + ' en réserve' : '');
+  if (it.kind === 'load' || it.kind === 'bw') presc = (t.sets || it.sets) + ' × ' + it.lo + '-' + it.hi + (it.uni ? ' par jambe' : '') + ' · repos ' + fmtRest(it.rest) + (t.rir != null ? ' · ' + t.rir + ' en réserve' : '');
   else if (it.kind === 'plyo') presc = (t.sets || it.sets) + ' × ' + it.lo + ' ' + it.unit;
+  else if (it.kind === 'cardio') presc = it.lo + ' min';
   const complete = it.kind === 'check' ? st.done : (st.sets.length && st.sets.every(s => s.done));
   let h = '<section class="card ex' + (st.skip ? ' skipped' : '') + (complete ? ' complete' : '') + '">';
   h += '<div class="row between" style="align-items:flex-start"><div class="stack" style="gap:4px;flex:1"><div class="exname">' + esc(it.name) + '</div>' + (presc ? '<span class="presc">' + esc(presc) + '</span>' : '') + '</div><button type="button" class="btn sm" data-act="pick-replace" data-i="' + idx + '">Remplacer</button></div>';
@@ -65,7 +66,15 @@ function exCard(it, w, idx){
     const last = history(key, w.id)[0];
     if (last) h += '<p class="last">Dernière fois (' + esc(fmtDate(last.date)) + ') : <b>' + last.sets.map(s => (it.kind === 'bw' && !s.kg ? 'PdC' : fmtKg(s.kg)) + '×' + s.reps).join(' · ') + '</b>' + (last.rir != null ? ' · ' + (last.rir >= 4 ? '4+' : last.rir) + ' en réserve' : '') + '</p>';
   }
-  if (it.kind === 'check') {
+  if (it.kind === 'cardio') {
+    const lv = e.levels || []; const s = st.sets[0] || {}; const last = lastCardio(key, w.id);
+    if (last) h += '<p class="last">Dernière fois (' + esc(fmtDate(last.date)) + ') : <b>' + last.min + ' min' + (last.km ? ' · ' + fmtKg(last.km) + ' km' : '') + '</b>' + (lv.find(l => l[0] === last.level) ? ' · ' + esc(lowFirst(lv.find(l => l[0] === last.level)[1])) : '') + '</p>';
+    if (lv.length > 1) h += '<div class="stack" style="gap:6px"><span class="label">Allure</span><div class="chips">' + lv.map(l => '<button type="button" class="chip txt' + (st.level === l[0] ? ' on' : '') + '" data-act="clevel" data-ex="' + esc(key) + '" data-v="' + l[0] + '" aria-pressed="' + (st.level === l[0]) + '"' + (s.done ? ' disabled' : '') + '>' + esc(l[1]) + '</button>').join('') + '</div>' + (lv.find(l => l[0] === st.level) && lv.find(l => l[0] === st.level)[2] ? '<p class="muted small">' + esc(capFirst(lv.find(l => l[0] === st.level)[2])) + '</p>' : '') + '</div>';
+    h += '<div class="sets"><div class="setrow' + (s.done ? ' done' : '') + '"><span class="sn">⏱</span>'
+      + '<label class="fld"><input id="min-' + esc(key) + '-0" data-f="min" data-ex="' + esc(key) + '" data-i="0" inputmode="numeric" autocomplete="off" value="' + esc(s.min == null ? '' : s.min) + '" placeholder="' + it.lo + '" aria-label="Durée en minutes"><span>min</span></label>'
+      + (e.dist ? '<label class="fld"><input id="km-' + esc(key) + '-0" data-f="km" data-ex="' + esc(key) + '" data-i="0" inputmode="decimal" autocomplete="off" value="' + esc(s.km == null || s.km === '' ? '' : s.km) + '" placeholder="km" aria-label="Distance en km, facultative"><span>km</span></label>' : '')
+      + '<button type="button" class="chk" data-act="done" data-ex="' + esc(key) + '" data-i="0" aria-label="Valider le cardio">✓</button></div></div>';
+  } else if (it.kind === 'check') {
     h += '<p class="small">' + esc(e.cue || '') + '</p><div class="setrow plyo' + (st.done ? ' done' : '') + '"><span class="sn">✓</span><span class="plyo-lab">' + (st.done ? 'Fait' : 'À faire') + '</span><button type="button" class="chk" data-act="check" data-ex="' + esc(key) + '" aria-label="Marquer comme fait">✓</button></div>';
   } else if (st.skip) {
     if (t.type === 'opt') h += '<button type="button" class="btn" data-act="unskip" data-ex="' + esc(key) + '">Je le fais cette semaine</button>';
@@ -83,7 +92,7 @@ function exCard(it, w, idx){
       }
     });
     h += '</div><div class="row between"><button type="button" class="link" data-act="addset" data-ex="' + esc(key) + '">+ Ajouter une série</button>' + (st.sets.length > 1 ? '<button type="button" class="link" data-act="rmset" data-ex="' + esc(key) + '">Retirer la dernière</button>' : '') + '</div>';
-    if (it.kind !== 'plyo') h += '<div class="stack" style="gap:6px"><span class="label">Reps en réserve sur la dernière série</span><div class="chips">' + [0,1,2,3,4].map(v => '<button type="button" class="chip' + (st.rir === v ? ' on' : '') + '" data-act="rir" data-ex="' + esc(key) + '" data-v="' + v + '" aria-pressed="' + (st.rir === v) + '">' + (v === 4 ? '4+' : v) + '</button>').join('') + '</div></div>';
+    if (it.kind !== 'plyo' && it.kind !== 'cardio') h += '<div class="stack" style="gap:6px"><span class="label">Reps en réserve sur la dernière série</span><div class="chips">' + [0,1,2,3,4].map(v => '<button type="button" class="chip' + (st.rir === v ? ' on' : '') + '" data-act="rir" data-ex="' + esc(key) + '" data-v="' + v + '" aria-pressed="' + (st.rir === v) + '">' + (v === 4 ? '4+' : v) + '</button>').join('') + '</div></div>';
   }
   const cue = it.kind !== 'check' && e.cue; const vis = exVisual(e);
   if (cue || vis) h += '<details class="cue"><summary>' + (cue && vis ? 'Consignes et schéma' : cue ? 'Consignes' : 'Schéma') + '</summary>' + (cue ? '<p>' + esc(cue) + '</p>' : '') + vis + '</details>';

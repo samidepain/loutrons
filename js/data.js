@@ -90,14 +90,20 @@ export function allTpl(){
 // Exercices réellement faits : sans les sauts si le module détente est désactivé
 export function tplItems(t){ return (t.items || []).filter(it => jumpsOn() || !isPlyo(it)); }
 export function tplLower(t){ return tplItems(t).some(it => { const e = exDef(it.ex); return e && (e.knee || e.cat === 'lower' || e.kind === 'plyo'); }); }
+// Temps estimé d'une séance, en minutes. Par exercice : séries (45 s d'effort, ou 2 × 45 s en unilatéral) et repos,
+// plus 2 min pour s'installer et changer de machine (1 min pour le 2e exercice d'un superset, à côté),
+// plus 4 min de montée en charge sur les gros exercices à la charge. Règles de l'appli.
+export const SETUP_SEC = 120, WARMUP_SEC = 240;
 export function tplEst(t){
   let sec = 0;
   tplItems(t).forEach(it => { const e = exDef(it.ex); if (!e) return;
     if (e.kind === 'check') { sec += 480; return; }
-    const sets = it.sets || e.sets || 3;
-    if (e.kind === 'plyo') { sec += sets * 75; return; }
-    const rest = it.rest || e.rest || 90; const work = (e.uni ? 2 : 1) * 45;
-    sec += sets * (work + (it.ss ? rest / 2 + 20 : rest)) + 60;
+    if (e.kind === 'cardio') { sec += (num(it.lo) || num(e.lo) || 20) * 60 + SETUP_SEC / 2; return; }
+    const sets = num(it.sets) || num(e.sets) || 3;
+    if (e.kind === 'plyo') { sec += sets * 75 + SETUP_SEC / 2; return; }
+    const rest = num(it.rest) || num(e.rest) || 90; const work = (e.uni ? 2 : 1) * 45;
+    sec += sets * (work + (it.ss ? rest / 2 + 20 : rest)) + (it.ss ? SETUP_SEC / 2 : SETUP_SEC);
+    if (e.kind === 'load' && (e.cat === 'lower' || e.cat === 'upper')) sec += WARMUP_SEC;
   });
   return Math.round(sec / 60);
 }

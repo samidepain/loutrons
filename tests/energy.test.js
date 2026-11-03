@@ -65,3 +65,13 @@ test('besoins du jour : dépense ajoutée aux calories, protéines inchangées, 
   assert.ok(d.fat[0] > pl.fat[0] && d.carbs > pl.carbs);
   assert.equal(withExtra(pl, 0), pl);
 });
+
+test('séance avec cardio : le cardio compte avec sa propre allure, le reste avec l’effort de la séance', () => {
+  donnees(docs(reglages(), pesee(80)));
+  const w = { est: 60, duration: 60, effort: 'classic', items: [{ ex: 'ex_rower', kind: 'cardio', name: 'Rameur', lo: 15 }, { ex: 'lib_bench', kind: 'load', name: 'Développé couché', lo: 6, hi: 8 }],
+    ex: { ex_rower: { level: 'mod', sets: [{ min: '15', km: '3,2', done: true }] }, lib_bench: { sets: [] } } };
+  // Rameur soutenu (7,5 MET) 15 min : 6,5 × 80 × 0,25 = 130 ; muscu classique 45 min : 2,5 × 80 × 0,75 = 150
+  assert.equal(computeSessionKcal(w, 80), 280);
+  w.ex.ex_rower.sets[0].done = false;
+  assert.equal(computeSessionKcal(w, 80), 200);
+});

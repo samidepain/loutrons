@@ -24,6 +24,9 @@ export const rid = () => Math.random().toString(36).slice(2, 8);
 export function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
 export function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
 export const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+// Temps de repos lisible : « 45 s », « 1 min 30 », « 2 min »
+export const fmtRest = sec => { const s = Math.round(Number(sec) || 0); if (s < 60) return s + ' s'; const m = Math.floor(s / 60), r = s % 60; return m + ' min' + (r ? ' ' + String(r).padStart(2, '0') : ''); };
+export const REST_CHOICES = [60, 75, 90, 120, 150, 180, 240, 300];
 export const nSeries = n => n + ' série' + (n > 1 ? 's' : '');
 // Mois au format AAAA-MM : nom, mois voisins, et cases du lundi au dimanche (null hors du mois)
 const MONTHS_LONG = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];

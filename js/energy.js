@@ -3,7 +3,7 @@
 // Une séance de muscu terminée garde son effort (w.effort) et sa dépense (w.kcal, calculée à la fin de la séance).
 import { norm, num, parseIso, today } from './util.js';
 import { S } from './store.js';
-import { bodyweight, daySummary, settings, sportInfo, sportOn, tplDef, tplEst, wName } from './data.js';
+import { bodyweight, daySummary, exDef, itemsOf, settings, sportInfo, sportOn, tplDef, tplEst, wName } from './data.js';
 
 // Valeurs MET du Compendium of Physical Activities 2024 (Herrmann et al.) ; 1 MET ≈ 1 kcal par kg et par heure, au repos.
 // La dépense comptée est nette (MET − 1) : le repos est déjà dans les besoins du jour.
@@ -46,7 +46,21 @@ export function sessionMin(w){
   return d == null || d <= 0 ? est : d > 2 * est ? est : d;
 }
 export const effortOf = w => EFFORT[w.effort] ? w.effort : 'classic';
-export function computeSessionKcal(w, kg){ return kg ? Math.round(net(EFFORT[effortOf(w)].met, kg, sessionMin(w))) : null; }
+// Cardio fait pendant la séance : minutes et dépense, avec la valeur MET de l'allure choisie
+export function sessionCardio(w, kg){
+  let min = 0, kcal = 0;
+  itemsOf(w).forEach(it => {
+    if (it.kind !== 'cardio') return; const st = w.ex && w.ex[it.ex]; if (!st) return;
+    const lv = ((exDef(it.ex) || {}).levels || []).find(l => l[0] === st.level);
+    (st.sets || []).forEach(s => { const m = num(s.min); if (s.done && m > 0) { min += m; if (lv) kcal += net(lv[3], kg || 0, m); } });
+  });
+  return { min, kcal };
+}
+// Séance de muscu : le cardio avec sa propre valeur, le reste de la durée avec l'effort choisi
+export function computeSessionKcal(w, kg){
+  if (!kg) return null; const c = sessionCardio(w, kg);
+  return Math.round(net(EFFORT[effortOf(w)].met, kg, Math.max(0, sessionMin(w) - c.min)) + c.kcal);
+}
 export const sessionKcal = (w, kg) => w.kcal != null ? w.kcal : computeSessionKcal(w, kg);
 
 export function activityMet(a){

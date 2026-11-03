@@ -356,6 +356,12 @@ const A = {
     const w = activeWorkout(); if (!w) return;
     const key = b.dataset.ex; const it = itemsOf(w).find(x => x.ex === key); if (!it) return;
     const i = +b.dataset.i; const st = w.ex[key]; const s = st.sets[i];
+    if (!s.done && it.kind === 'cardio') {
+      const minIn = document.getElementById('min-' + key + '-0'); const kmIn = document.getElementById('km-' + key + '-0');
+      s.min = minIn && num(minIn.value) > 0 ? minIn.value : String(it.lo); if (kmIn) s.km = kmIn.value;
+      if (!(num(s.min) > 0 && num(s.min) <= 300)) { toast('Indique la durée, en minutes.'); return; }
+      s.done = true; put(w.id, w); render(); return;
+    }
     if (!s.done) {
       if (it.kind !== 'plyo') {
         const t = w.targets[key] || {};
@@ -379,6 +385,7 @@ const A = {
   unskip(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.skip = false; if (!st.sets.length) { const it = itemsOf(w).find(x => x.ex === b.dataset.ex); for (let i = 0; i < (it ? it.sets : 3); i++) st.sets.push({ kg:null, reps:null, done:false }); } put(w.id, w); render(); },
   addset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const last = st.sets[st.sets.length - 1]; st.sets.push({ kg: last ? last.kg : null, reps:null, done:false }); put(w.id, w); render(); },
   rmset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st.sets.length > 1) st.sets.pop(); put(w.id, w); render(); },
+  clevel(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st) { st.level = b.dataset.v; put(w.id, w); render(); } },
   rir(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const v = +b.dataset.v; st.rir = st.rir === v ? null : v; put(w.id, w); render(); },
   knee(b){ const w = activeWorkout(); if (!w) return; const v = +b.dataset.v; w.knee = w.knee === v ? null : v; put(w.id, w); render(); },
   stairs(b){ const d = today(); const id = 'k_' + d; const v = +b.dataset.v; const cur = S.docs.get(id); if (cur && cur.stairs === v) del(id); else put(id, { date:d, stairs:v }); render(); },
@@ -437,6 +444,8 @@ const A = {
     if (isSet && !(e.muscles.p || []).length) { toast('Choisis au moins un muscle principal.'); return; }
     const out = { name:String(e.name).trim(), kind:e.kind, cat:e.cat || 'iso', sets:num(e.sets) || 3, lo:lo || 1, hi:hi || lo || 1, rest:num(e.rest) || 90, step:num(e.step) || 2.5, unit:e.unit || '', uni:!!e.uni, knee:!!e.knee, muscles:{ p:(e.muscles.p || []).slice(), s:(e.muscles.s || []).slice() }, cue:e.cue || '' };
     if (e.optional) out.optional = true;
+    // Cardio : une seule « série », sa durée ; les allures restent celles de la bibliothèque
+    if (e.kind === 'cardio') Object.assign(out, { cat:'cardio', sets:1, hi:out.lo, rest:0, unit:'min' });
     const id = D.id || ('c' + rid());
     put('x_' + id, out);
     const after = D.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null;
@@ -507,7 +516,7 @@ document.addEventListener('touchend', e => {
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.matches('input[type=checkbox][data-act]')) { const fn = A[t.dataset.act]; if (fn) fn(t); return; }
-  if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it.ss = t.value || null; return; }
+  if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; render(); return; }
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
   if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
   if (t.id === 'glass') { putSettings({ glass: num(t.value) }); render(); toast('Verre de ' + t.value + ' mL.'); return; }

@@ -42,7 +42,7 @@ function viewExercises(){
   h += '<input class="plain" type="search" id="ex-q" data-xq="1" placeholder="Rechercher : nom, muscle, « DC », « squat »…" aria-label="Rechercher un exercice" value="' + esc(S.exQ || '') + '" autocomplete="off" enterkeyhint="search">';
   return h + '<div class="stack" id="ex-list" style="gap:16px">' + exerciseList() + '</div>';
 }
-const exRow = (e, hidden) => '<button type="button" class="pick" data-act="ex-fiche" data-v="' + esc(e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(e.name) + '</span><span class="m">' + esc(KINDS[e.kind] || '') + (e.kind === 'load' || e.kind === 'bw' ? ' · ' + e.sets + ' × ' + e.lo + '-' + e.hi : '') + (e.custom ? ' · perso' : '') + (hidden ? ' · masqué' : '') + '</span></span><span aria-hidden="true">›</span></button>';
+const exRow = (e, hidden) => '<button type="button" class="pick" data-act="ex-fiche" data-v="' + esc(e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(e.name) + '</span><span class="m">' + esc(KINDS[e.kind] || '') + (e.kind === 'load' || e.kind === 'bw' ? ' · ' + e.sets + ' × ' + e.lo + '-' + e.hi : e.kind === 'cardio' ? ' · ' + e.lo + ' min' : '') + (e.custom ? ' · perso' : '') + (hidden ? ' · masqué' : '') + '</span></span><span aria-hidden="true">›</span></button>';
 // Avec une recherche : résultats du plus proche au moins proche ; sinon, groupes par muscle principal
 export function exerciseList(){
   const hid = excluded(); const list = allEx().filter(e => e.kind !== 'plyo' || jumpsOn());
@@ -52,8 +52,8 @@ export function exerciseList(){
       : '<p class="empty">Aucun exercice trouvé. Tu peux le créer avec « Ajouter un exercice ».</p>';
   }
   const groups = {};
-  list.forEach(e => { const g = hid.indexOf(e.id) >= 0 ? 'Masqués' : e.kind === 'plyo' ? 'Pliométrie' : ((e.muscles.p || [])[0] || 'Autres'); (groups[g] = groups[g] || []).push(e); });
-  return [...MUSCLES, 'Pliométrie', 'Autres', 'Masqués'].filter(g => groups[g]).map(g =>
+  list.forEach(e => { const g = hid.indexOf(e.id) >= 0 ? 'Masqués' : e.kind === 'plyo' ? 'Pliométrie' : e.kind === 'cardio' ? 'Cardio' : ((e.muscles.p || [])[0] || 'Autres'); (groups[g] = groups[g] || []).push(e); });
+  return [...MUSCLES, 'Cardio', 'Pliométrie', 'Autres', 'Masqués'].filter(g => groups[g]).map(g =>
     '<section class="card"><h3>' + esc(g) + ' <span class="muted small">' + groups[g].length + '</span></h3>' + (g === 'Masqués' ? '<p class="muted small">Plus proposés quand tu ajoutes ou remplaces un exercice.</p>' : '') + groups[g].map(e => exRow(e, false)).join('') + '</section>').join('');
 }
 function viewPlanning(){
