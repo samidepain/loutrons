@@ -15,7 +15,8 @@ import { blankEx } from './views/editors.js';
 import { checkDue, nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
 import { dayDoc, fromOff, recentFoods, validBarcode } from './food.js';
-import { foodFromDoc, foodList, preview, shown } from './views/food.js';
+import { foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
+import { ownRecipe } from './recipes.js';
 import { activityKcal, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, waterOf } from './energy.js';
 import { actDoc, actPreview } from './views/activity.js';
 
@@ -232,6 +233,8 @@ const A = {
     if (g == null || g <= 0 || g > 5000) { toast('Indique la quantité en grammes, par exemple 120.'); const i = $('#fd-g'); if (i) i.focus(); return; }
     const f = F.sel; const entry = { id: F.edit || rid(), meal:F.meal, key:f.key, name:f.name, brand:f.brand || '', g, per100:f.per100 };
     if (f.serving) entry.serving = f.serving;
+    if (f.portion) entry.portion = f.portion;
+    if (f.src === 'rec' || f.src === 'recipe') entry.src = f.src;
     if (F.edit) { const d = dayDoc(F.day); put('m_' + F.day, Object.assign({}, d, { items: d.items.map(i => i.id === F.edit ? entry : i) })); }
     else addEntry(F.day, entry);
     S.food = null; render(); toast(withDot((F.edit ? 'Modifié : ' : 'Ajouté : ') + f.name));
@@ -246,6 +249,24 @@ const A = {
   'fd-scan'(){ Object.assign(S.food, { mode:'scan', msg:null }); render(); window.scrollTo(0, 0); },
   'fd-code'(){ const i = $('#scan-code'); lookupBarcode(i ? i.value : ''); },
   'fd-create'(){ const F = S.food; F.draft = { name: F.mode === 'search' ? capFirst(String(F.q || '').trim()) : '' }; if (F.mode !== 'notfound') F.code = null; F.mode = 'create'; render(); window.scrollTo(0, 0); },
+  // Recettes : créer (ingrédients et quantités pour toute la recette), modifier, enregistrer comme un aliment (portion)
+  'rec-new'(){ const F = S.food; F.rec = { name: capFirst(String(F.q || '').trim()), servings:'4', cooked:'', items:[], q:'' }; F.mode = 'recipe'; render(); window.scrollTo(0, 0); },
+  'rec-edit'(b){ const o = S.docs.get(b.dataset.v); if (!o) return; S.food.rec = { id:b.dataset.v, name:o.name, servings:String(o.servings || 1), cooked: o.cooked ? String(o.cooked) : '', items: clone(o.items || []), q:'' }; S.food.mode = 'recipe'; render(); window.scrollTo(0, 0); },
+  'rec-add'(b){ const f = recShown.get(b.dataset.v); if (!f) return; const R = S.food.rec; R.items.push({ key:f.key, name:f.name, g: f.serving || 100, per100:f.per100 }); R.q = ''; render(); },
+  'rec-rm'(b){ S.food.rec.items.splice(+b.dataset.i, 1); render(); },
+  'rec-save'(){
+    const F = S.food; const R = F.rec; const name = String(R.name || '').trim(); const items = R.items.filter(i => i.g > 0);
+    const servings = num(R.servings); const cooked = num(R.cooked);
+    if (!name) { toast('Donne un nom à ta recette.'); $('#rc-name').focus(); return; }
+    if (!items.length) { toast('Ajoute au moins un ingrédient, avec sa quantité.'); $('#rec-q').focus(); return; }
+    if (!(servings >= 1 && servings <= 50)) { toast('Indique le nombre de portions, entre 1 et 50.'); $('#rc-servings').focus(); return; }
+    if (R.cooked && !(cooked >= 10 && cooked <= 20000)) { toast('Poids du plat cuit : en grammes, par exemple 1200.'); $('#rc-cooked').focus(); return; }
+    const r = ownRecipe(items, servings, cooked);
+    if (r.per100.kcal == null) { toast('Il manque les calories d’un ingrédient important.'); return; }
+    const id = R.id || 'f_own' + rid();
+    const doc = { src:'recipe', name, servings, cooked: cooked || null, items: items.map(i => ({ key:i.key, name:i.name, g:i.g, per100:i.per100 })), per100:r.per100, serving:r.serving, created: (S.docs.get(id) || {}).created || today() };
+    put(id, doc); toast(R.id ? 'Recette modifiée.' : 'Recette enregistrée.'); F.rec = null; pickFood(foodFromDoc(id, doc));
+  },
   'fd-create-save'(){
     const F = S.food; const d = F.draft; const name = String(d.name || '').trim(); const kcal = num(d.kcal);
     if (!name) { toast('Donne un nom à l’aliment.'); $('#fc-name').focus(); return; }
@@ -490,6 +511,9 @@ document.addEventListener('input', e => {
   if (t.matches('[data-fq]') && S.food) { S.food.q = t.value; const l = $('#fd-list'); if (l) l.innerHTML = foodList(); return; }
   if (t.matches('[data-fg]') && S.food) { S.food.g = t.value; const pv = $('#fd-prev'); if (pv) pv.innerHTML = preview(S.food.sel, num(t.value)); return; }
   if (t.matches('[data-fc]') && S.food && S.food.draft) { S.food.draft[t.dataset.fc] = t.value; return; }
+  if (t.matches('[data-rc]') && S.food && S.food.rec) { S.food.rec[t.dataset.rc] = t.value; const pv = $('#rec-prev'); if (pv) pv.innerHTML = recPreview(); return; }
+  if (t.matches('[data-ri]') && S.food && S.food.rec) { const it = S.food.rec.items[+t.dataset.ri]; if (it) it.g = num(t.value); const pv = $('#rec-prev'); if (pv) pv.innerHTML = recPreview(); return; }
+  if (t.matches('[data-rq]') && S.food && S.food.rec) { S.food.rec.q = t.value; const l = $('#rec-list'); if (l) l.innerHTML = recList(); return; }
   if (t.matches('[data-ac]') && S.act) { S.act[t.dataset.ac] = t.value; const pv = $('#act-prev'); if (pv) pv.innerHTML = actPreview(); return; }
   if (t.matches('[data-d]') && S.draft) { S.draft.data[t.dataset.d] = t.value; return; }
   if (t.matches('[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; return; }

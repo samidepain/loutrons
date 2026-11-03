@@ -41,11 +41,11 @@ export function recentFoods(limit){
   const days = []; S.docs.forEach((o, id) => { if (id.indexOf('m_') === 0) days.push(o); });
   days.sort((a, b) => a.date < b.date ? 1 : -1);
   const seen = new Map();
-  days.forEach(d => (d.items || []).slice().reverse().forEach(it => { if (!seen.has(it.key)) seen.set(it.key, { key: it.key, src: it.key.split(':')[0], name: it.name, brand: it.brand || '', per100: it.per100, serving: it.serving || null, g: it.g }); }));
+  days.forEach(d => (d.items || []).slice().reverse().forEach(it => { if (!seen.has(it.key)) seen.set(it.key, { key: it.key, src: it.src || it.key.split(':')[0], name: it.name, brand: it.brand || '', per100: it.per100, serving: it.serving || null, portion: it.portion || null, g: it.g }); }));
   return [...seen.values()].slice(0, limit || 20);
 }
-// Recherche tolérante (accents, majuscules, pluriels) : chaque mot doit commencer un mot du nom ou de la marque.
-// Les aliments déjà notés ou créés passent avant ceux de la table ; puis les noms qui commencent par la recherche,
+// Recherche tolérante (accents, majuscules, pluriels) : chaque mot doit commencer un mot du nom, de la marque ou d'un autre nom (alt).
+// Les aliments déjà notés ou créés passent avant tout, puis la 2e liste (les recettes) ; puis les noms qui commencent par la recherche,
 // les mots écrits tels quels (« pâtes » avant « pâte sablée ») et les noms qui commencent par le premier mot.
 export function searchFoods(lists, q, limit){
   const typed = norm(q).split(' ').filter(Boolean);
@@ -54,11 +54,11 @@ export function searchFoods(lists, q, limit){
   const qn = words.join(' '); const out = []; const seen = new Set();
   lists.forEach((list, li) => list.forEach(f => {
     if (seen.has(f.key)) return;
-    const n = f.n || norm(f.name); const nw = n.split(' '); const all = nw.concat(norm(f.brand).split(' '));
+    const n = f.n || norm(f.name); const nw = n.split(' '); const all = nw.concat(norm(f.brand).split(' '), f.alt ? f.alt.split(' ') : []);
     if (!words.every(w => all.some(x => x.indexOf(w) === 0))) return;
     seen.add(f.key);
     out.push({ f, r: (n.indexOf(qn) === 0 ? 4 : 0) + (words.every(w => nw.some(x => x.indexOf(w) === 0)) ? 2 : 0) + typed.filter(w => nw.indexOf(w) >= 0).length
-      + (nw[0].indexOf(words[0]) === 0 ? 1 : 0) + (li === 0 ? 10 : 0), len: n.length });
+      + (nw[0].indexOf(words[0]) === 0 ? 1 : 0) + ([10, 1][li] || 0), len: n.length });
   }));
   return out.sort((a, b) => b.r - a.r || a.len - b.len).slice(0, limit || 40).map(x => x.f);
 }

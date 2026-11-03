@@ -5,13 +5,14 @@ import { dayDoc, LIMITS, loadCiqual, MEALS, myFoods, recentFoods, scale, searchF
 import { startScanner } from '../scanner.js';
 import { emile, hey } from '../emile.js';
 import { dayPlan } from './goal.js';
+import { ownRecipe, recipeFoods } from '../recipes.js';
 
-const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment' };
+const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment', rec:'Recette type', recipe:'Ta recette' };
 const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fmtInt(x);
 const mealName = m => (MEALS.find(x => x[0] === m) || ['', ''])[1];
 const dayLabel = d => d === today() ? 'Aujourd’hui' : d === addDays(today(), -1) ? 'Hier' : capFirst(fmtDateLong(d));
 // Aliment d'un document f_ (produit scanné ou aliment créé)
-export function foodFromDoc(id, o){ return { key: o.code ? 'off:' + o.code : 'own:' + id.slice(5), src: o.src || 'own', code: o.code || null, name: o.name, brand: o.brand || '', per100: o.per100, serving: o.serving || null }; }
+export function foodFromDoc(id, o){ return { key: o.code ? 'off:' + o.code : 'own:' + id.slice(5), src: o.src || 'own', code: o.code || null, name: o.name, brand: o.brand || '', per100: o.per100, serving: o.serving || null, portion: o.src === 'recipe' ? '1 portion' : null, docId: id }; }
 // Aliments affichés dans la dernière liste, pour retrouver celui qu'on touche
 export const shown = new Map();
 
@@ -78,11 +79,30 @@ function viewFoodAdd(){
     h += '<div class="fields">' + fld('serving', 'Une portion (g), facultatif', 'ex. 40') + '</div><p class="muted small">Seuls le nom et les calories sont obligatoires. Une case vide compte comme « inconnu ».</p>';
     return h + '<button type="button" class="btn primary big" data-act="fd-create-save">Enregistrer l’aliment</button></section>';
   }
+  if (F.mode === 'recipe') {
+    const R = F.rec;
+    let h = head(R.id ? 'Modifier la recette' : 'Créer une recette', 'fd-back') + '<section class="card">';
+    h += '<label class="f"><span>Nom</span><input id="rc-name" data-rc="name" value="' + esc(R.name || '') + '" placeholder="ex. Gratin de pâtes de mamie"></label>';
+    h += '<div class="fields"><label class="f"><span>Nombre de portions</span><input class="n" id="rc-servings" data-rc="servings" inputmode="numeric" value="' + esc(R.servings == null ? '' : R.servings) + '"></label>';
+    h += '<label class="f"><span>Poids du plat cuit (g), facultatif</span><input class="n" id="rc-cooked" data-rc="cooked" inputmode="numeric" value="' + esc(R.cooked == null ? '' : R.cooked) + '" placeholder="ex. 1200"></label></div>';
+    h += '<span class="label">Ingrédients (' + R.items.length + '), pour toute la recette</span>';
+    h += R.items.map((it, i) => '<div class="row" style="flex-wrap:nowrap"><span class="small" style="flex:1;min-width:0">' + esc(it.name) + '</span><label class="fld" style="width:96px;flex:none"><input data-ri="' + i + '" inputmode="decimal" value="' + esc(it.g == null ? '' : fmtKg(it.g)) + '" aria-label="Quantité de ' + esc(it.name) + ' en grammes"><span>g</span></label><button type="button" class="btn sm" data-act="rec-rm" data-i="' + i + '" aria-label="Retirer ' + esc(it.name) + '">✕</button></div>').join('');
+    h += '<input class="plain" type="search" id="rec-q" data-rq="1" placeholder="Ajouter un ingrédient : riz, poulet, crème…" aria-label="Chercher un ingrédient" value="' + esc(R.q || '') + '" autocomplete="off">';
+    h += '<div class="stack" id="rec-list">' + recList() + '</div><div id="rec-prev">' + recPreview() + '</div>';
+    h += '<p class="muted small">Pèse les ingrédients comme tu les utilises. Si tu pèses le plat cuit, les valeurs pour 100 g tiennent compte de l’eau perdue ou absorbée à la cuisson ; sinon, l’appli additionne les ingrédients.</p>';
+    return h + '<button type="button" class="btn primary big" data-act="rec-save">Enregistrer la recette</button></section>';
+  }
   if (F.mode === 'portion') {
     const f = F.sel; const g = num(F.g);
     let h = head(F.edit ? 'Modifier' : 'Quantité', F.edit ? 'fd-cancel' : 'fd-back') + '<section class="card"><div class="stack" style="gap:2px"><h2>' + esc(f.name) + '</h2><span class="muted small">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal pour 100 g</span></div>';
     h += '<label class="f"><span>Quantité (g)</span><input class="n" id="fd-g" data-fg="1" inputmode="decimal" value="' + esc(F.g == null ? '' : fmtKg(num(F.g))) + '"></label>';
-    h += '<div class="chips" role="group">' + (f.serving ? '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + f.serving + '">1 portion (' + fmtKg(f.serving) + ' g)</button>' : '') + [50, 100, 150, 200].map(x => '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + x + '">' + x + ' g</button>').join('') + '</div>';
+    const dish = f.src === 'rec' || f.src === 'recipe';
+    h += '<div class="chips" role="group">' + (f.serving ? '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + f.serving + '">' + esc(f.portion || '1 portion') + ' (' + fmtKg(f.serving) + ' g)</button>' : '') + (dish ? [200, 300, 400] : [50, 100, 150, 200]).map(x => '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + x + '">' + x + ' g</button>').join('') + '</div>';
+    const rf = f.src === 'rec' && !f.items ? recipeByKey(f.key) : f;
+    if (rf && rf.items) h += '<details class="cue"><summary>Recette type pour ' + esc(rf.portion) + '</summary><p>' + rf.items.map(i => i[1] + ' g ' + esc(i[0])).join(' · ') + '</p><p class="muted small">Valeurs calculées à partir des ingrédients de la table Ciqual. Ta recette peut différer : ajuste la quantité, ou crée ta propre recette.</p></details>';
+    // Ta recette (trouvée dans tes aliments ou dans les récents) : on peut la modifier
+    const docId = f.docId || (f.key.indexOf('own:') === 0 ? 'f_own' + f.key.slice(4) : null);
+    if (f.src === 'recipe' && docId && S.docs.get(docId)) h += '<button type="button" class="link" data-act="rec-edit" data-v="' + esc(docId) + '" style="align-self:flex-start">Modifier la recette</button>';
     h += '<span class="label">Repas</span>' + mealChips + '<div id="fd-prev">' + preview(f, g) + '</div>';
     h += '<button type="button" class="btn primary big" data-act="fd-save">' + (F.edit ? 'Enregistrer' : 'Ajouter au journal') + '</button>';
     if (F.edit) h += S.confirm === 'fd-del' ? '<button type="button" class="btn danger" data-act="fd-del-yes">Confirmer : retirer du journal</button>' : '<button type="button" class="btn ghost" data-act="fd-del">Retirer du journal</button>';
@@ -90,9 +110,24 @@ function viewFoodAdd(){
   }
   // Recherche
   let h = head('Ajouter un aliment') + mealChips;
-  h += '<div class="row"><button type="button" class="btn primary" data-act="fd-scan">Scanner un code-barres</button><button type="button" class="btn" data-act="fd-create">Créer un aliment</button></div>';
-  h += '<input class="plain" type="search" id="fd-q" data-fq="1" placeholder="Rechercher : pomme, riz, poulet…" aria-label="Rechercher un aliment" value="' + esc(F.q || '') + '" autocomplete="off" enterkeyhint="search">';
+  h += '<div class="row"><button type="button" class="btn primary" data-act="fd-scan">Scanner un code-barres</button><button type="button" class="btn" data-act="fd-create">Créer un aliment</button><button type="button" class="btn" data-act="rec-new">Créer une recette</button></div>';
+  h += '<input class="plain" type="search" id="fd-q" data-fq="1" placeholder="Rechercher : pomme, riz, bolognaise…" aria-label="Rechercher un aliment" value="' + esc(F.q || '') + '" autocomplete="off" enterkeyhint="search">';
   return h + '<div class="stack" id="fd-list">' + foodList() + '</div>';
+}
+// Éditeur de recette : ingrédients trouvés (aliments notés, créés, table Ciqual ; pas d'autres recettes)
+export const recShown = new Map();
+export function recList(){
+  const R = S.food.rec; const q = String(R.q || '').trim(); recShown.clear();
+  if (!q) return '';
+  needCiqual(() => { const l = document.getElementById('rec-list'); if (l && S.food && S.food.mode === 'recipe') l.innerHTML = recList(); });
+  const mine = recentFoods(200).filter(f => f.src !== 'rec' && f.src !== 'recipe'); const own = myFoods().map(o => foodFromDoc(o.id, o)).filter(f => f.src !== 'recipe' && !mine.some(m => m.key === f.key));
+  const res = searchFoods([mine.concat(own), [], ciq || []], q, 8);
+  return res.map(f => { recShown.set(f.key, f); return '<button type="button" class="pick" data-act="rec-add" data-v="' + esc(f.key) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(f.name) + '</span><span class="m">' + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal/100 g</span></span><span aria-hidden="true">+</span></button>'; }).join('') || (ciq ? '<p class="muted small">Aucun aliment trouvé.</p>' : '<p class="muted small">Chargement de la table Ciqual…</p>');
+}
+export function recPreview(){
+  const R = S.food.rec; const items = R.items.filter(i => i.g > 0); if (!items.length) return '';
+  const r = ownRecipe(items, num(R.servings), num(R.cooked)); const v = scale(r.per100, r.serving);
+  return '<p class="small"><b>Une portion : ' + fmtKg(r.serving) + ' g, ' + (v.kcal == null ? '— kcal' : fmtInt(v.kcal) + ' kcal') + '</b>, protéines ' + q1(v.p) + ' g, glucides ' + q1(v.c) + ' g, lipides ' + q1(v.f) + ' g.</p>';
 }
 export function preview(f, g){
   if (!(g > 0)) return '<p class="muted small">Indique une quantité.</p>';
@@ -101,7 +136,11 @@ export function preview(f, g){
     + '<p class="small muted">Lipides ' + q1(v.f) + ' g (saturés ' + q1(v.sf) + ' g) · sucres ' + q1(v.s) + ' g · fibres ' + q1(v.fib) + ' g · sel ' + q1(v.salt) + ' g</p>';
 }
 const row = f => { shown.set(f.key, f); return '<button type="button" class="pick" data-act="fd-pick" data-v="' + esc(f.key) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(f.name) + '</span><span class="m">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal/100 g' + (f.g ? ' · dernière fois ' + fmtKg(f.g) + ' g' : '') + '</span></span><span aria-hidden="true">›</span></button>'; };
-let ciq = null; // table Ciqual, une fois chargée
+let ciq = null, recs = null; // table Ciqual, une fois chargée, et recettes types calculées avec elle
+const recipeByKey = key => (recs || []).find(r => r.key === key);
+function needCiqual(after){
+  if (!ciq) loadCiqual().then(list => { ciq = list; recs = recipeFoods(list); after(); });
+}
 export function foodList(){
   const F = S.food; const q = String(F.q || '').trim(); shown.clear();
   const mine = recentFoods(200); const own = myFoods().map(o => foodFromDoc(o.id, o)).filter(f => !mine.some(m => m.key === f.key));
@@ -109,10 +148,8 @@ export function foodList(){
     const rec = mine.slice(0, 15);
     return rec.length ? '<span class="label">Récents</span>' + rec.map(row).join('') : '<p class="empty">Cherche un aliment par son nom, ou scanne un code-barres.</p>';
   }
-  if (!ciq) {
-    loadCiqual().then(list => { ciq = list; if (S.food && S.food.mode === 'search') { const l = document.getElementById('fd-list'); if (l) l.innerHTML = foodList(); } });
-  }
-  const res = searchFoods([mine.concat(own), ciq || []], q, 40);
+  needCiqual(() => { if (S.food && S.food.mode === 'search') { const l = document.getElementById('fd-list'); if (l) l.innerHTML = foodList(); } });
+  const res = searchFoods([mine.concat(own), recs || [], ciq || []], q, 40);
   let h = res.length ? res.map(row).join('') : ciq ? '<p class="empty">Aucun aliment trouvé. Essaie un autre mot, scanne le produit ou crée-le.</p>' : '';
   if (!ciq) h += '<p class="muted small">Chargement de la table Ciqual…</p>';
   else if (!ciq.length) h += '<p class="muted small">La table Ciqual n’est pas disponible pour l’instant.</p>';
