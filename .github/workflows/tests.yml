@@ -1,0 +1,25 @@
+# Loutrons : lance les tests à chaque envoi sur GitHub. Un échec s'affiche en rouge sur le dépôt
+# et GitHub prévient par e-mail ; la publication sur GitHub Pages n'est pas bloquée.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Actions fixées à un commit précis (et pas seulement à une étiquette, qui peut être déplacée)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # Aucune dépendance à installer : les tests utilisent l'outil intégré à Node
+      - run: npm test
