@@ -100,12 +100,15 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
   - Aujourd'hui, Entraînement, Alimentation (seulement si le suivi est activé) et Progrès ;
   - le profil s'ouvre avec le rond en haut à droite ;
   - un nouvel écran trouve sa place dans cette structure, il n'ajoute pas d'onglet.
-- **Où sont les choses** (version 2.8) :
+- **Où sont les choses** (version 2.8, séance en 2.9) :
   - **Aujourd'hui**, dans l'ordre : salut et date ; la séance du jour (prévue, en cours, faite, ou jour de repos ou de sport) ; « Ta semaine » ; « Ton alimentation » si le suivi est activé ; un seul conseil d'Émile ; « Ton suivi du jour » en lignes compactes (eau, poids et sommeil, activités, genou). Le haut tient sans défilement à 390 × 844 : ne rien ajouter au-dessus du conseil d'Émile ;
   - **Entraînement › Séances** : « Ton programme » (changer de programme, changer les jours) et les séances ; **› Exercices** : la liste, et les exercices masqués tout en bas ; **› Planning** : « Tes jours », « Cette semaine » (semaine chargée, décharge anticipée), « Réglages de l'entraînement » (début du programme, options genou, détente et sport, jours de sport) ;
   - **Profil** : toi, ton alimentation, apparence, tes données, La science, et une ligne vers les réglages de l'entraînement ;
   - **fiche d'un exercice** : ouverte depuis Entraînement › Exercices ou Progrès › « Tes exercices » ; `S.ficheFrom` (`'exercices' | 'progress'`) nomme le retour.
+  - **séance en cours** (Entraînement) : un seul exercice ouvert (ou un superset), les autres repliés en lignes ; `sessionFocus(w, { open, ask })` (`js/data.js`) dit lesquels sont ouverts, quelle série est en cours et si la question des reps en réserve attend ;
+  - **« Voir le mouvement »** : fenêtre (`S.move`, `sheet:'move'`) ouverte depuis l'exercice ouvert ; le même bloc est dans la fiche.
 - **États d'affichage d'Aujourd'hui** (non enregistrés) : `S.todayOpen` (ligne compacte ouverte, une seule) et `S.emileMore` (autres conseils affichés).
+- **États d'affichage de la séance** (non enregistrés, remis à zéro au début, à la fin et à l'abandon) : `S.sessOpen` (exercice ouvert à la main), `S.rirAsk` (exercice qui attend ses reps en réserve), `S.setEdit` (`{ ex, i }`, série faite en correction), `S.move` (exercice de « Voir le mouvement »). Après une validation, `showCurrent()` (`actions.js`) garde `#cur` visible au-dessus du minuteur.
 
 ## 5. Identité graphique
 
@@ -176,7 +179,12 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | Choix dans une liste (programme, aliment, activité) | `button.pick` avec `.n` (nom) et `.m` (précision) ; `.on` sélectionné ; `.static` non cliquable ; `.planned` prévu |
 | Choix court ou nombre (jours, reps en réserve, douleur 0-10) | `.chips` > `button.chip` (`.txt` pour du texte, `.on`, `.sec`, `.hi`) ; `.days` pour 7 jours ; `.seg` pour des sous-onglets qui défilent |
 | Champs de formulaire | `.fields` (grille) > `label.f` > `span` + `input` (classe `.n` pour un nombre, aussi hors de `label.f`) ; champs remplis sans bordure, contour orange pendant la saisie |
-| Saisie pendant la séance | `.setrow` > `.sn`, `.fld` (champ et unité), `.chk` |
+| Exercice replié dans la séance | `button.pick.ex-line` (`data-act="ex-open"`) > `.exl` > `.n` + `.m` (« 0/3 · 49,5 kg × 6 », « ✓ 3/3 ») ; exercice ouvert : `section.card.ex.open[data-ex]` |
+| Série en cours (une seule à l'écran, `#cur`) | `.cur-set` > `.stepper` × 2 (`.st-lab`, `button.step` − et + avec `data-act="step"` et `data-f="kg" | "reps"`, `.fld`), puis `.btn.primary.big` « Valider la série N » ; valeur ± palier avec `stepValue()` (`util.js`) |
+| Séries faites et à venir | `.set-line` : `.done` (bouton, `data-act="set-edit"` pour corriger) ou `.next` (grisée) ; `.sn`, `.sl-v`, `.sl-ok` |
+| Question des reps en réserve | `.cur-set.rir-ask` > `.rir-q`, `.chips` en grille de 5 > `.rir-c` (puce, et `.vise` sous la valeur visée), `button.link` « Passer la question » |
+| Photos du mouvement et silhouette en grand | `movementBlock(e, { cue })` (`js/views/movement.js`) : `.mv` > `button.mv-photos` (alternance en CSS, `.mv.paused` la fige), `.mv-cap`, puis `bodyMap(m, { big:true })` (`.bodymap.big` et `.legend.big`) ; moins d'animations : `.photos` côte à côte |
+| Saisie du cardio pendant la séance | `.setrow.cardio` > `.sn`, `.fld` (champ et unité) |
 | Case à cocher avec explication | `label.toggle` |
 | Petite information d'état | `.pill` (`.good`, `.warn`, `.bad`, `.acc`, `.court`) |
 | Ligne compacte d'Aujourd'hui (nom, valeur, geste rapide, détail ouvert sur place) | `lineCard(clé, nom, valeur, bouton, détail)` dans `js/views/activity.js` : `section.card.line` > `.line-row` > `button.line-h[data-act="today-open"]` |
@@ -187,7 +195,7 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | Chiffres clés | `.stats` > `.stat` > `.v` + `.l` ; `.stats.needs` sur 2 colonnes |
 | Barre de progression | `.bar > i` (fine) ; `.mbar > i` (+ `b` pour un repère) dans `.mrow` |
 | Tableau | `.scroll > table.tbl` |
-| Détail repliable, consignes | `details.cue > summary` |
+| Détail repliable | `details.cue > summary` |
 | Groupe (superset) | `.group > .gh` |
 | Objectif calculé | `.target` |
 | Liste vide | `p.empty` |

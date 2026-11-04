@@ -10,6 +10,8 @@ export const mondayOf = s => { const d = parseIso(s); d.setDate(d.getDate() - ((
 export const addDays = (s, n) => { const d = parseIso(s); d.setDate(d.getDate() + n); return iso(d); };
 export const daysBetween = (a, b) => Math.round((parseIso(b) - parseIso(a)) / 86400000);
 export const num = v => { if (v == null) return null; const s = String(v).trim().replace(',', '.'); if (s === '') return null; const n = Number(s); return isFinite(n) ? n : null; };
+// Valeur ± un palier (boutons − et + de la séance) : vide compté pour 0, arrondie au centième, jamais sous 0
+export const stepValue = (v, delta, step) => Math.max(0, Math.round(((v == null ? 0 : v) + delta * step) * 100) / 100);
 export const fmtKg = x => (x == null || isNaN(x)) ? '—' : String(Math.round(x * 100) / 100).replace('.', ',');
 export const roundTo = (x, step) => { step = step > 0 ? step : 0.25; return Math.round(Math.round(x / step) * step * 100) / 100; };
 export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));

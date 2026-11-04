@@ -184,7 +184,7 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 .bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
 .clock{font-family:var(--f-display);font-size:28px;font-weight:800;font-stretch:100%;font-variant-numeric:tabular-nums}
 .clock.warn{color:var(--warn)} .clock.bad{color:var(--bad)}
-.group{border:1px solid var(--line);border-radius:calc(var(--r) + 4px);padding:10px;display:flex;flex-direction:column;gap:10px}
+.group{border:1px solid var(--line);border-radius:calc(var(--r) + 4px);padding:8px;display:flex;flex-direction:column;gap:8px}
 .group > .gh{color:var(--accent-ink);font-size:15px;font-weight:600;padding:0 4px}
 .ex .exname{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch:100%;line-height:1.15}
 .presc{font-size:15px;color:var(--muted)}
@@ -221,6 +221,52 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 }
 .ex.skipped{opacity:.75}
 .ex.complete{box-shadow:inset 0 0 0 2px var(--good)}
+/* Exercice replié : une ligne de la couleur des blocs, qui l'ouvre */
+.pick.ex-line{background:var(--surface);border-radius:16px;min-height:54px;padding:7px 16px}
+.pick.ex-line:active{background:var(--surface-2)}
+.ex-line .exl{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ex-line .n{overflow-wrap:anywhere;line-height:1.2}
+.ex-line .m{line-height:1.25}
+.ex-line.complete .m{color:var(--good)}
+.ex-h{gap:2px}
+.ex-h .exname{margin:0}
+.ex-acts{gap:8px;margin-top:6px}
+/* Série en cours : charge et reps avec − et +, puis « Valider la série » */
+.cur-set{display:flex;flex-direction:column;gap:10px;background:var(--surface-2);border-radius:14px;padding:12px}
+.stepper{display:grid;grid-template-columns:58px 44px minmax(0,1fr) 44px;gap:8px;align-items:center}
+.st-lab{font-size:15px;color:var(--muted)}
+.step{width:44px;height:44px;border-radius:50%;border:none;background:var(--bg);color:var(--ink);font-size:26px;font-weight:700;line-height:1;transition:transform .14s}
+.step:active{transform:scale(.93)}
+.cur-set .fld{background:var(--bg);justify-content:center}
+.cur-set .fld input{text-align:center}
+.cur-set .plyo-lab{text-align:center}
+.cur-set .btn:not(.primary){background:var(--bg)}
+/* Question des reps en réserve : « visé » sous la puce de la valeur visée */
+.rir-q{font-weight:600}
+.rir-ask .chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;align-items:start}
+.rir-c{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.rir-c .chip{width:100%;min-width:0;padding-inline:0}
+.rir-c .vise{font-size:13px;color:var(--muted)}
+.cur-set .chip:not(.on){background:var(--bg)}
+.rir-ask .link{align-self:flex-start}
+.setrow.cardio{grid-template-columns:26px minmax(0,1fr) minmax(0,1fr)}
+/* Séries faites (touchées : correction) et à venir */
+.set-line{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;min-height:44px;padding:4px 12px 4px 0;border:none;background:transparent;border-radius:12px;text-align:left;color:var(--ink);font-size:17px}
+.set-line .sl-v{font-weight:600;font-variant-numeric:tabular-nums;min-width:0}
+.set-line .sl-ok{color:var(--good);font-weight:800}
+/* Texte lu par les lecteurs d'écran seulement */
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.set-line.done:active{background:var(--surface-2)}
+.set-line.next{color:var(--muted)}
+.set-line.next .sl-v{font-weight:400}
+@media (max-width:360px){
+  .stepper{grid-template-columns:44px 44px minmax(0,1fr) 44px;gap:6px}
+  .st-lab{font-size:13px}
+  .cur-set{padding:10px}
+  .pick.ex-line{padding:7px 12px}
+}
+/* Écrans peu hauts (iPhone SE) : l'en-tête de la séance défile, pour laisser la série en cours visible au-dessus du minuteur */
+@media (max-height:700px){.sess-head{position:static}}
 details.cue summary{cursor:pointer;color:var(--accent-ink);font-weight:600;font-size:15px;list-style:none}
 details.cue summary::-webkit-details-marker{display:none}
 details.cue p{font-size:15px;margin-top:6px}
@@ -294,6 +340,27 @@ input[type=search]{-webkit-appearance:none;appearance:none}
 .bodymap path.p{fill:var(--accent);stroke:var(--accent-ink)}
 .bodymap path.s{fill:var(--accent);fill-opacity:.35;stroke:var(--accent)}
 .bodymap text{fill:var(--muted);font-size:10px;text-anchor:middle;font-family:var(--f-body)}
+/* « Voir le mouvement » : départ et arrivée superposés, en alternance (2,9 s : chaque photo 1,2 s, fondu 0,25 s), figés au toucher */
+.mv{display:flex;flex-direction:column;gap:12px}
+.mv-photos{display:grid;width:100%;padding:0;border:none;border-radius:14px;overflow:hidden;background:var(--surface-2);aspect-ratio:3/2}
+.mv-photos img{grid-area:1/1;display:block;width:100%;height:100%;object-fit:cover}
+.mv-photos .mv-a,.mv-cap .mv-la{animation:mv-a 2.9s infinite}
+.mv-photos .mv-b,.mv-cap .mv-lb{animation:mv-b 2.9s infinite}
+@keyframes mv-a{0%,41%{opacity:1}50%,91%{opacity:0}100%{opacity:1}}
+@keyframes mv-b{0%,41%{opacity:0}50%,91%{opacity:1}100%{opacity:0}}
+.mv.paused .mv-photos img,.mv.paused .mv-cap .mv-l{animation-play-state:paused}
+.mv-cap{display:flex;justify-content:center;flex-wrap:wrap;gap:0 6px;font-size:15px;color:var(--muted);margin-top:-4px}
+.mv-ls{display:grid;font-weight:600;color:var(--ink)}
+.mv-l{grid-area:1/1}
+.mv-hint::before,.mv-p::before{content:'· '}
+.mv-p{display:none}
+.mv.paused .mv-p{display:inline}
+.mv.paused .mv-hint{display:none}
+.mv-cue{gap:4px}
+@media (max-width:360px){.mv-cap{flex-direction:column;align-items:center}.mv-hint::before,.mv-p::before{content:none}}
+.bodymap.big{max-width:none}
+.legend.big{flex-direction:column;gap:4px;font-size:15px;color:var(--ink)}
+.legend.big i{border-radius:50%}
 .legend .lg-p{background:var(--accent)}
 .legend .lg-s{background:var(--accent);opacity:.35}
 p.legend{justify-content:center}

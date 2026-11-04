@@ -7,7 +7,9 @@ export const S = { docs:new Map(), loaded:false, view:'today',
   // Aujourd'hui : ligne compacte ouverte ('eau' | 'corps' | 'activites' | 'genou' | null), autres conseils d'Émile affichés
   todayOpen:null, emileMore:false,
   // fiche d'un exercice ouverte depuis 'exercices' ou 'progress'
-  ficheFrom:null };
+  ficheFrom:null,
+  // Séance : exercice ouvert à la main, exercice qui attend ses reps en réserve, série faite en correction ({ ex, i }), exercice de « Voir le mouvement »
+  sessOpen:null, rirAsk:null, setEdit:null, move:null };
 const LS_DOCS = 'carnet_docs_v1'; // ancien stockage : recopié dans IndexedDB au premier lancement, puis laissé en place
 const IDB_NAME = 'carnet-muscu';
 let idb = null; // null : IndexedDB indisponible, on reste sur localStorage

@@ -16,6 +16,7 @@ import { foodAfterRender, viewFood } from './views/food.js';
 import { nutritionOf } from './views/goal.js';
 import { navigate } from './nav.js';
 import { viewActivity } from './views/activity.js';
+import { viewMovement } from './views/movement.js';
 
 const ICONS = {
   today:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
@@ -47,7 +48,7 @@ function paint(){
   renderTabs();
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
-  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.bilan ? viewBilan(S.bilan) : S.act ? viewActivity()
+  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.act ? viewActivity()
     : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : viewProgressPage())
     : v === 'food' && nutritionOf().on ? viewFood()
     : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : viewToday();

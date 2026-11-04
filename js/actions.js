@@ -1,8 +1,8 @@
 // Actions de l’interface : clics, saisies et changements.
-import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
+import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, num, rid, stepValue, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
-import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
+import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
 import { findPRs, initItem } from './engine.js';
 import { downloadFile, exportFile, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
@@ -31,7 +31,7 @@ function startWorkout(tplId){
   const w = { date, tpl:tplId, name:t.name, cut:t.cut || '', lower:tplLower(t), est:tplEst(t), status:'en_cours', startedAt:Date.now(), week:wk.n, blockWeek:wk.bw, deload:wk.deload, items, ex:{}, targets:{} };
   items.forEach(it => initItem(w, it, wk));
   put(id, w);
-  S.view = 'training'; S.summary = null; S.picker = null; S.draft = null; S.navHint = 'up';
+  S.view = 'training'; S.summary = null; S.picker = null; S.draft = null; S.navHint = 'up'; resetSession();
   render(); window.scrollTo(0, 0); requestWake();
 }
 function finishWorkout(){
@@ -39,7 +39,7 @@ function finishWorkout(){
   w.status = 'terminée'; w.endedAt = Date.now(); w.duration = Math.round((w.endedAt - w.startedAt) / 60000);
   w.effort = 'classic'; w.kcal = computeSessionKcal(w, bodyweight());
   put(w.id, w);
-  S.summary = { id:w.id, prs: findPRs(w) };
+  S.summary = { id:w.id, prs: findPRs(w) }; resetSession();
   stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0);
 }
 // Point toutes les 2 semaines : la réponse est gardée dans l'historique ; « Passer à … » corrige les besoins
@@ -89,6 +89,34 @@ function setField(t){
   if (f === 'notes') w.notes = t.value;
   else { const st = w.ex[t.dataset.ex]; const s = st && st.sets[+t.dataset.i]; if (!s) return; s[f] = t.value; }
   put(w.id, w);
+}
+// État de l'écran de séance, remis à zéro au début, à la fin et à l'abandon d'une séance
+function resetSession(){ S.sessOpen = null; S.rirAsk = null; S.setEdit = null; S.move = null; }
+// Exercice terminé ? (toutes ses séries validées, ou coché)
+const exFinished = (it, st) => !!st && (it.kind === 'check' ? !!st.done : st.sets.length > 0 && st.sets.every(x => x.done));
+// Premier exercice à faire après celui-ci (ni terminé ni passé), pour le minuteur
+function nextExercise(w, key){ const items = itemsOf(w); const k = items.findIndex(x => x.ex === key); return items.slice(k + 1).find(x => { const st = w.ex[x.ex]; return st && !st.skip && !exFinished(x, st); }) || null; }
+const lessMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Après une validation ou l'ouverture d'un exercice : la série en cours (#cur) reste visible entre l'en-tête de la séance et le minuteur
+function showCurrent(){
+  const c = document.getElementById('cur'); if (!c) return;
+  const r = c.getBoundingClientRect(); const bar = document.querySelector('#restbar:not([hidden]) .restbar-in') || document.querySelector('.tabs');
+  const lo = (bar ? bar.getBoundingClientRect().top : innerHeight) - 8; const hi = stickyBottom() + 8;
+  let dy = 0; if (r.bottom > lo) dy = r.bottom - lo; if (r.top - dy < hi) dy = r.top - hi;
+  if (Math.abs(dy) > 1) window.scrollBy({ top: dy, behavior: lessMotion() ? 'auto' : 'smooth' });
+}
+// Exercice ouvert à la main et terminé (question des reps en réserve réglée) : on l'oublie, le suivant s'ouvre
+function forgetOpen(w){ if (S.sessOpen && !S.rirAsk && !sessionFocus(w, { open:S.sessOpen }).turn) S.sessOpen = null; }
+// Réponse à la question des reps en réserve, ou « Passer » (v = null)
+function answerRir(key, v){ const w = activeWorkout(); if (!w || !w.ex[key]) return; if (v != null) w.ex[key].rir = v; S.rirAsk = null; forgetOpen(w); put(w.id, w); render(); showCurrent(); }
+// Bas des en-têtes collés en haut (barre de l'appli, et en-tête de la séance sauf sur les écrans peu hauts)
+const stickyBottom = () => Math.max(0, ...[...document.querySelectorAll('.top, .sess-head')].filter(e => getComputedStyle(e).position === 'sticky').map(e => e.getBoundingClientRect().bottom));
+// Exercice ouvert à la main : son haut sous l'en-tête de la séance
+function showOpen(key){
+  const c = [...document.querySelectorAll('.card.ex.open')].find(x => x.dataset.ex === key); if (!c) return;
+  const box = c.closest('.group') || c;
+  const dy = box.getBoundingClientRect().top - stickyBottom() - 8;
+  if (Math.abs(dy) > 1) window.scrollBy({ top: dy, behavior: lessMotion() ? 'auto' : 'smooth' });
 }
 function supersetNext(w, key){ const items = itemsOf(w); const i = items.findIndex(x => x.ex === key); const it = items[i]; const nx = items[i + 1]; return it && it.ss && nx && nx.ss === it.ss ? nx : null; }
 const bodyTimers = {};
@@ -166,7 +194,7 @@ async function lookupBarcode(raw){
 document.addEventListener('barcode', e => { if (S.food && S.food.mode === 'scan') lookupBarcode(e.detail); });
 const A = {
   // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
-  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
+  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
     render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
   // Aujourd'hui : ouvrir ou fermer une ligne compacte, afficher les autres conseils d'Émile, liens vers Séances et Alimentation
   'today-open'(b){ S.todayOpen = S.todayOpen === b.dataset.v ? null : b.dataset.v; render(); },
@@ -291,7 +319,7 @@ const A = {
   'goal-edit'(){ A.profile(); const c = $('#goal-card'); if (c) c.scrollIntoView({ block:'start' }); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
-  profile(){ if (S.view !== 'profile' && S.view !== 'science') S.from = S.view; S.view = 'profile'; S.act = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  profile(){ if (S.view !== 'profile' && S.view !== 'science') S.from = S.view; S.view = 'profile'; S.act = null; S.move = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
   'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
@@ -327,7 +355,7 @@ const A = {
   start(b){ startWorkout(b.dataset.v); },
   finish(){ finishWorkout(); },
   abandon(){ S.confirm = 'abandon'; render(); },
-  'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
+  'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; resetSession(); stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
   'close-summary'(){ S.summary = null; render(); },
   // Conseil d'Émile fermé : il ne revient que quand sa clé change ; on oublie les clés de plus de 4 mois
   'emile-x'(b){
@@ -389,7 +417,7 @@ const A = {
       const minIn = document.getElementById('min-' + key + '-0'); const kmIn = document.getElementById('km-' + key + '-0');
       s.min = minIn && num(minIn.value) > 0 ? minIn.value : String(it.lo); if (kmIn) s.km = kmIn.value;
       if (!(num(s.min) > 0 && num(s.min) <= 300)) { toast('Indique la durée, en minutes.'); return; }
-      s.done = true; put(w.id, w); render(); return;
+      s.done = true; forgetOpen(w); put(w.id, w); render(); showCurrent(); return;
     }
     if (!s.done) {
       if (it.kind !== 'plyo') {
@@ -403,19 +431,44 @@ const A = {
         const nx = st.sets[i + 1]; if (nx && !nx.done && num(nx.kg) == null) nx.kg = s.kg;
       } else s.reps = it.lo;
       s.done = true;
+      // Après la dernière série d'un exercice, le minuteur annonce l'exercice suivant
+      const left = st.sets.findIndex(x => !x.done); const after = left < 0 ? nextExercise(w, key) : null;
+      // Dernière série d'un exercice à la charge ou au poids du corps : la question des reps en réserve, si elles ne sont pas notées
+      if (left < 0 && (it.kind === 'load' || it.kind === 'bw') && st.rir == null) S.rirAsk = key;
+      forgetOpen(w);
       const nxt = supersetNext(w, key);
       if (nxt) toast('Enchaîne : ' + nxt.name);
-      else if (it.kind !== 'plyo') startRest(it.rest || 90, it.name + (i + 1 < st.sets.length ? ' · série ' + (i + 2) + ' ensuite' : ' · terminé'));
-      else startRest(60, 'Récupère avant la série suivante');
-    } else s.done = false;
+      else if (it.kind !== 'plyo') startRest(it.rest || 90, after ? 'Prochain : ' + after.name : it.name + (left >= 0 ? ' · série ' + (left + 1) + ' ensuite' : ' · terminé'));
+      else startRest(60, after ? 'Prochain : ' + after.name : 'Récupère avant la série suivante');
+    } else { s.done = false; if (S.rirAsk === key) S.rirAsk = null; }
+    S.setEdit = null; put(w.id, w); render(); showCurrent();
+  },
+  // − et + de la série en cours : la charge avance du palier de l'exercice, les reps de 1
+  step(b){
+    const w = activeWorkout(); if (!w) return;
+    const key = b.dataset.ex; const i = +b.dataset.i; const f = b.dataset.f; const it = itemsOf(w).find(x => x.ex === key);
+    const st = w.ex[key]; const s = st && st.sets[i]; if (!it || !s || (f !== 'kg' && f !== 'reps')) return;
+    const t = w.targets[key] || {}; const inp = document.getElementById(f + '-' + key + '-' + i);
+    let v = num(inp ? inp.value : s[f]); if (v == null && f === 'reps') v = Array.isArray(t.reps) && t.reps[i] != null ? t.reps[i] : it.lo;
+    s[f] = String(stepValue(v, +b.dataset.v, f === 'kg' ? (it.step || (exDef(key) || {}).step || 1) : 1));
     put(w.id, w); render();
   },
-  check(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.done = !st.done; put(w.id, w); render(); },
+  // Ouvrir un autre exercice pendant la question des reps en réserve revient à la passer (rien n'est noté)
+  'ex-open'(b){ const w = activeWorkout(); if (w && S.rirAsk && sessionFocus(w, { ask:S.rirAsk }).open.indexOf(b.dataset.v) < 0) S.rirAsk = null; S.sessOpen = b.dataset.v; S.setEdit = null; render(); showOpen(b.dataset.v); },
+  // « Voir le mouvement » : fenêtre ouverte depuis la séance ; la pause fige l'alternance des photos sans redessiner
+  'move-open'(b){ S.move = b.dataset.v; render(); },
+  'move-close'(){ S.move = null; render(); },
+  'move-pause'(b){ const m = b.closest('.mv'); if (!m) return; const p = m.classList.toggle('paused'); b.setAttribute('aria-pressed', String(p)); const t = b.querySelector('.sr'); if (t) t.textContent = (p ? 'Reprendre l’animation' : 'Mettre en pause l’animation') + ' : '; },
+  'set-edit'(b){ S.setEdit = { ex:b.dataset.ex, i:+b.dataset.i }; render(); showCurrent(); },
+  'set-save'(){ S.setEdit = null; render(); },
+  'set-undo'(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const s = st && st.sets[+b.dataset.i]; if (s) s.done = false; S.setEdit = null; put(w.id, w); render(); },
+  check(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.done = !st.done; if (st.done) forgetOpen(w); put(w.id, w); render(); if (st.done) showCurrent(); },
   unskip(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.skip = false; if (!st.sets.length) { const it = itemsOf(w).find(x => x.ex === b.dataset.ex); for (let i = 0; i < (it ? it.sets : 3); i++) st.sets.push({ kg:null, reps:null, done:false }); } put(w.id, w); render(); },
   addset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const last = st.sets[st.sets.length - 1]; st.sets.push({ kg: last ? last.kg : null, reps:null, done:false }); put(w.id, w); render(); },
   rmset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st.sets.length > 1) st.sets.pop(); put(w.id, w); render(); },
   clevel(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st) { st.level = b.dataset.v; put(w.id, w); render(); } },
-  rir(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const v = +b.dataset.v; st.rir = st.rir === v ? null : v; put(w.id, w); render(); },
+  rir(b){ if (S.rirAsk === b.dataset.ex) { answerRir(b.dataset.ex, +b.dataset.v); return; } const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const v = +b.dataset.v; st.rir = st.rir === v ? null : v; put(w.id, w); render(); },
+  'rir-skip'(b){ answerRir(b.dataset.ex, null); },
   knee(b){ const w = activeWorkout(); if (!w) return; const v = +b.dataset.v; w.knee = w.knee === v ? null : v; put(w.id, w); render(); },
   stairs(b){ const d = today(); const id = 'k_' + d; const v = +b.dataset.v; const cur = S.docs.get(id); if (cur && cur.stairs === v) del(id); else put(id, { date:d, stairs:v }); render(); },
   sleepq(b){ const d = today(); const id = 'b_' + d; const cur = Object.assign({ date:d }, S.docs.get(id) || {}); const v = +b.dataset.v; cur.sleepQ = cur.sleepQ === v ? null : v; put(id, cur); render(); },
@@ -535,8 +588,9 @@ document.addEventListener('input', e => {
 });
 // Photo d'exercice pas encore gardée et pas de connexion : message à la place des photos
 document.addEventListener('error', e => {
-  const box = e.target.closest && e.target.closest('.photos'); if (!box) return;
-  box.hidden = true; const m = box.nextElementSibling; if (m && m.classList.contains('photos-off')) m.hidden = false;
+  const box = e.target.closest && e.target.closest('.photos, .mv-photos'); if (!box) return;
+  box.hidden = true; const par = box.parentElement; const m = par && par.querySelector('.photos-off'); if (m) m.hidden = false;
+  const cap = par && par.querySelector('.mv-cap'); if (cap) cap.hidden = true;
 }, true);
 // Calendrier : glisser vers la gauche (mois suivant) ou vers la droite (mois précédent)
 let swipe = null;

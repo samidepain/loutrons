@@ -136,6 +136,26 @@ export function itemsOf(w){
   if (w.items) return w.items;
   return Object.keys(w.ex || {}).map(k => { const e = exDef(k); return Object.assign(e ? snapItem(e, {}) : { name:k, kind:'load', sets:3, lo:8, hi:12 }, { ex:k }); });
 }
+// Séance en cours : exercices ouverts (un groupe : un exercice seul ou un superset), série en cours, question des reps en réserve en attente.
+// ui : { open: exercice ouvert à la main, ask: exercice qui attend ses reps en réserve }
+export function sessionFocus(w, ui){
+  const items = itemsOf(w); const u = ui || {}; const st = k => (w.ex || {})[k];
+  const passed = it => !st(it.ex) || !!st(it.ex).skip;
+  const finished = it => { const s = st(it.ex); if (!s) return false; return it.kind === 'check' ? !!s.done : s.sets.length > 0 && s.sets.every(x => x.done); };
+  const groups = []; items.forEach(it => { const g = groups[groups.length - 1]; if (it.ss && g && g[0].ss === it.ss) g.push(it); else groups.push([it]); });
+  const groupOf = k => groups.find(g => g.some(it => it.ex === k));
+  const ask = u.ask && groupOf(u.ask) && finished(groupOf(u.ask).find(it => it.ex === u.ask)) ? u.ask : null;
+  const g = ask ? groupOf(ask) : (u.open && groupOf(u.open)) || groups.find(gr => gr.some(it => !passed(it) && !finished(it)));
+  if (!g) return { open: [], turn: null, ask: null };
+  let turn = null;
+  if (!ask) {
+    const todo = g.filter(it => !passed(it) && !finished(it));
+    const doneN = it => it.kind === 'check' ? 0 : st(it.ex).sets.filter(x => x.done).length;
+    const next = todo.reduce((m, it) => !m || doneN(it) < doneN(m) ? it : m, null);
+    if (next) turn = { ex: next.ex, i: next.kind === 'check' || next.kind === 'cardio' ? 0 : st(next.ex).sets.findIndex(x => !x.done) };
+  }
+  return { open: g.map(it => it.ex), turn, ask };
+}
 export function snapItem(e, it){
   return { ex:e.id, name:e.name, kind:e.kind, cat:e.cat || 'iso', step:e.step || 2.5,
     sets: it.sets || e.sets || 3, lo: it.lo || e.lo || 8, hi: it.hi || e.hi || 12, rest: it.rest || e.rest || 90,

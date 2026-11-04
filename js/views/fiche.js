@@ -5,16 +5,8 @@ import { S } from '../store.js';
 import { bodyweight, excluded, exDef, history } from '../data.js';
 import { exerciseProgress } from '../engine.js';
 import { chart } from '../chart.js';
-import { bodyMap, musclesForMap } from '../bodymap.js';
+import { movementBlock } from './movement.js';
 
-// Photos du domaine public (Free Exercise DB), dans photos/ : chargées seulement quand on les affiche, puis gardées pour le hors connexion
-function photos(e){
-  if (!e.photo) return '';
-  const fig = (n, t) => '<figure><img src="photos/' + esc(e.photo) + '-' + n + '.jpg" width="360" height="240" loading="lazy" alt="' + esc(e.name) + ' : position ' + (n ? 'd’arrivée' : 'de départ') + '"><figcaption>' + t + '</figcaption></figure>';
-  return '<div class="photos">' + fig(0, 'Départ') + fig(1, 'Arrivée') + '</div><p class="photos-off muted small" hidden>Les photos s’affichent avec une connexion internet.</p>';
-}
-// Photos puis silhouette : utilisé dans la fiche et dans les consignes pendant la séance
-export function exVisual(e){ const m = musclesForMap(e); return photos(e) + (m ? bodyMap(m) : ''); }
 function presc(e){
   if (e.kind === 'load' || e.kind === 'bw') return e.sets + ' × ' + e.lo + '-' + e.hi + (e.uni ? ' par côté' : '') + ' · repos ' + fmtRest(e.rest) + ' · palier ' + fmtKg(e.step) + ' kg';
   if (e.kind === 'cardio') return e.lo + ' min' + (e.levels && e.levels.length > 1 ? ' · ' + e.levels.length + ' allures' : '');
@@ -48,7 +40,7 @@ export function viewFiche(){
   const suivi = e.kind === 'load' || e.kind === 'bw' || e.kind === 'cardio';
   if (suivi && pr.last.length) h += progressPart(e, pr);
   else if (suivi) h += '<p class="muted small">Pas encore fait : tes progrès apparaîtront ici.</p>';
-  h += exVisual(e);
+  h += movementBlock(e);
   if (e.cue) h += '<div class="stack" style="gap:4px"><h3>Consignes</h3><p>' + esc(e.cue) + '</p></div>';
   if (excluded().indexOf(e.id) >= 0) h += '<p class="muted small">Exercice masqué : il n’est plus proposé quand tu ajoutes ou remplaces un exercice.</p>';
   h += '<button type="button" class="btn" data-act="edit-ex" data-v="' + esc(e.id) + '">Modifier l’exercice</button>';
