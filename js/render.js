@@ -53,7 +53,7 @@ function paint(){
   foodAfterRender();
 }
 // Apparence : automatique (réglage du téléphone), clair ou sombre. Gardée aussi dans localStorage pour s'appliquer dès l'ouverture.
-const THEME_COLORS = { light:'#FAF5EC', dark:'#120F10' };
+const THEME_COLORS = { light:'#FFFFFF', dark:'#000000' };
 export function applyTheme(t){
   const forced = t === 'light' || t === 'dark'; const root = document.documentElement;
   if (forced) root.dataset.theme = t; else delete root.dataset.theme;

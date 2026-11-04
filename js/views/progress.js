@@ -24,14 +24,14 @@ function viewProgress(){
 
   const fat = fatigueCheck();
   if (fat) h += emile('<p>Baisse de force sur ' + fat.drops.length + ' exercices cette semaine. Regarde l’onglet Aujourd’hui pour avancer la décharge.</p>', { title:'Fatigue probable', tone:'warn', key:'fatigue-p:' + mondayOf(today()) });
-  h += '<section class="card"><h3>Bilans de bloc</h3><p class="muted small">Un bloc = 6 semaines. Le bilan compare le début et la fin du bloc et propose des pistes.</p><div class="row">';
+  h += '<section class="card"><h3>Bilans de bloc</h3><p class="muted small">Le bilan compare le début et la fin de chaque bloc de 6 semaines.</p><div class="row">';
   for (let bk = 1; bk <= wk.block; bk++) h += '<button type="button" class="btn" data-act="bilan" data-v="' + bk + '">Bloc ' + bk + (bk === wk.block ? ' (en cours)' : '') + '</button>';
   h += '</div></section>';
 
   // Séries par muscle
   const mon = mondayOf(d); const doneW = muscleDone(mon, addDays(mon, 6)); const lastW = muscleDone(addDays(mon, -7), addDays(mon, -1)); const plan = musclePlanned();
   const maxV = Math.max(20, ...MUSCLES.map(x => Math.max(doneW[x], plan[x], lastW[x])));
-  h += '<section class="card"><div class="stack"><h3>Séries par muscle cette semaine</h3><p class="muted small">Une série compte pour 1 sur le muscle principal et pour 0,5 sur les muscles secondaires (comptage fractionné de Pelland et al., 2026). Plus de séries donne plus de masse musculaire avec des gains de plus en plus faibles, sans seuil obligatoire.</p></div>';
+  h += '<section class="card"><div class="stack"><h3>Séries par muscle cette semaine</h3><p class="muted small">Une série compte 1 sur le muscle principal, 0,5 sur les secondaires (Pelland et al., 2026) : plus de séries rapporte plus, mais de moins en moins.</p></div>';
   h += '<div class="legend"><span><i style="background:var(--accent)"></i>Fait cette semaine</span><span><i style="background:var(--court)"></i>Prévu par ton planning</span></div>';
   MUSCLES.forEach(x => {
     h += '<div class="mrow"><span>' + esc(x) + '</span><span class="mbar"><i style="width:' + (doneW[x] / maxV * 100).toFixed(1) + '%"></i><b style="left:' + (plan[x] / maxV * 100).toFixed(1) + '%"></b></span><span class="v num">' + fmtKg(doneW[x]) + ' / ' + fmtKg(plan[x]) + '</span></div>';
@@ -74,7 +74,7 @@ function viewProgress(){
   if (!jumpsOn()) return h;
   const tests = []; S.docs.forEach((o, id) => { if (id.indexOf('t_') === 0) tests.push(Object.assign({ id }, o)); });
   tests.sort((a, b) => a.date < b.date ? -1 : 1);
-  h += '<section class="card"><h3>Tests de détente</h3><p class="muted small">Un test par bloc, pendant la semaine de décharge : il s’affiche au début de ta séance jambes. ' + esc(JUMP_PROTOCOL) + '</p>' + (testForBlock(wk.block) ? '<p class="small">Test du bloc ' + wk.block + ' fait.</p>' : '<p class="small">Prochain test : semaine du ' + esc(withDot(fmtDate(addDays(blockRange(wk.block).from, 35)))) + '</p>') +
+  h += '<section class="card"><h3>Tests de détente</h3><p class="muted small">Un test par bloc, en semaine de décharge, au début de ta séance jambes. ' + esc(JUMP_PROTOCOL) + '</p>' + (testForBlock(wk.block) ? '<p class="small">Test du bloc ' + wk.block + ' fait.</p>' : '<p class="small">Prochain test : semaine du ' + esc(withDot(fmtDate(addDays(blockRange(wk.block).from, 35)))) + '</p>') +
     chart([{ pts: tests.map(t => ({ x: parseIso(t.date).getTime(), y: t.cm })) }], { label:'Détente verticale', empty:'Aucun test pour l’instant.' }) +
     '<div class="row"><input class="plain" type="date" id="test-date" value="' + today() + '" aria-label="Date du test" style="width:auto"><input class="plain" id="test-cm" inputmode="decimal" placeholder="Hauteur en cm" aria-label="Hauteur en cm" style="flex:1;min-width:120px;width:auto"><button type="button" class="btn primary" data-act="add-test">Ajouter</button></div>';
   if (tests.length) h += '<div class="scroll"><table class="tbl"><tbody>' + tests.slice().reverse().map(t => '<tr><td>' + esc(fmtDate(t.date)) + '</td><td class="num">' + fmtKg(t.cm) + ' cm</td><td style="text-align:right"><button type="button" class="link" data-act="del-test" data-v="' + t.id + '">' + (S.confirm === t.id ? 'Confirmer' : 'Supprimer') + '</button></td></tr>').join('') + '</tbody></table></div>';
@@ -88,7 +88,7 @@ export function viewBilan(block){
   const avgF = R.forces.length ? R.forces.reduce((a, f) => a + f.pct, 0) / R.forces.length : null;
   h += '<div class="stats"><div class="stat"><span class="v num">' + R.done.length + '<span class="small muted">/' + R.planned + '</span></span><span class="l">séances faites</span></div><div class="stat"><span class="v num">' + (avgF == null ? '—' : (avgF >= 0 ? '+' : '') + fmtKg(Math.round(avgF * 10) / 10) + '%') + '</span><span class="l">force moyenne</span></div>' + (jumpsOn() ? '<div class="stat"><span class="v num">' + (R.test ? fmtKg(R.test.cm) : '—') + '</span><span class="l">détente (cm)</span></div>' : '<div class="stat"><span class="v num">' + R.weeks + '</span><span class="l">semaine' + (R.weeks > 1 ? 's' : '') + '</span></div>') + '</div>';
   h += emile((R.tips.length ? R.tips.map(t => '<div class="alert ' + (t[0] === 'bad' ? '' : t[0]) + '" style="font-weight:500">' + esc(t[1]) + '</div>').join('') : '<p class="small">Pas encore assez de données : continue de noter tes séances' + (kneeOn() ? ', ton genou' : '') + ', ton poids et ton sommeil.</p>') + '<p class="muted small">Ce sont des pistes calculées à partir de tes données, à ajuster avec ton ressenti.</p>', { title:'Pistes pour la suite', key:'bilan:' + block });
-  h += '<section class="card"><h3>Force par exercice</h3><p class="muted small">Force estimée (Epley) à la première et à la dernière séance du bloc, hors décharge. Il faut au moins 2 séances par exercice.</p>';
+  h += '<section class="card"><h3>Force par exercice</h3><p class="muted small">Force estimée (Epley) entre la première et la dernière séance du bloc, hors décharge, dès 2 séances par exercice.</p>';
   h += R.forces.length ? '<div class="scroll"><table class="tbl"><thead><tr><th>Exercice</th><th>Début</th><th>Fin</th><th>Écart</th></tr></thead><tbody>' + R.forces.map(f => '<tr><td>' + esc(f.name) + '</td><td class="num">' + fmtKg(Math.round(f.from)) + (f.unit === 'reps' ? ' reps' : '') + '</td><td class="num">' + fmtKg(Math.round(f.to)) + (f.unit === 'reps' ? ' reps' : '') + '</td><td class="num" style="color:var(--' + (f.pct >= 1 ? 'good' : f.pct <= -2.5 ? 'bad' : 'muted') + ')">' + (f.pct >= 0 ? '+' : '') + fmtKg(Math.round(f.pct * 10) / 10) + ' %</td></tr>').join('') + '</tbody></table></div>' : '<p class="empty">Pas encore 2 séances sur le même exercice dans ce bloc.</p>';
   h += '</section>';
   const maxV = Math.max(20, ...MUSCLES.map(m => Math.max(R.avg[m], R.mp[m])));

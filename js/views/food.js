@@ -89,7 +89,7 @@ function viewFoodAdd(){
     h += R.items.map((it, i) => '<div class="row" style="flex-wrap:nowrap"><span class="small" style="flex:1;min-width:0">' + esc(it.name) + '</span><label class="fld" style="width:96px;flex:none"><input data-ri="' + i + '" inputmode="decimal" value="' + esc(it.g == null ? '' : fmtKg(it.g)) + '" aria-label="Quantité de ' + esc(it.name) + ' en grammes"><span>g</span></label><button type="button" class="btn sm" data-act="rec-rm" data-i="' + i + '" aria-label="Retirer ' + esc(it.name) + '">✕</button></div>').join('');
     h += '<input class="plain" type="search" id="rec-q" data-rq="1" placeholder="Ajouter un ingrédient : riz, poulet, crème…" aria-label="Chercher un ingrédient" value="' + esc(R.q || '') + '" autocomplete="off">';
     h += '<div class="stack" id="rec-list">' + recList() + '</div><div id="rec-prev">' + recPreview() + '</div>';
-    h += '<p class="muted small">Pèse les ingrédients comme tu les utilises. Si tu pèses le plat cuit, les valeurs pour 100 g tiennent compte de l’eau perdue ou absorbée à la cuisson ; sinon, l’appli additionne les ingrédients.</p>';
+    h += '<p class="muted small">Pèse les ingrédients comme tu les utilises ; le poids du plat cuit, facultatif, corrige l’eau perdue ou absorbée à la cuisson.</p>';
     return h + '<button type="button" class="btn primary big" data-act="rec-save">Enregistrer la recette</button></section>';
   }
   if (F.mode === 'portion') {
@@ -100,7 +100,7 @@ function viewFoodAdd(){
     const dish = f.src === 'rec' || f.src === 'recipe';
     h += '<div class="chips" role="group">' + (f.serving ? '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + f.serving + '">' + esc(f.portion || '1 portion') + ' (' + fmtKg(f.serving) + ' g)</button>' : '') + (dish ? [200, 300, 400] : [50, 100, 150, 200]).map(x => '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + x + '">' + x + ' g</button>').join('') + '</div>';
     const rf = f.src === 'rec' && !f.items ? recipeByKey(f.key) : f;
-    if (rf && rf.items) h += '<details class="cue"><summary>Recette type pour ' + esc(rf.portion) + '</summary><p>' + rf.items.map(i => i[1] + ' g ' + esc(i[0])).join(' · ') + '</p><p class="muted small">Valeurs calculées à partir des ingrédients de la table Ciqual. Ta recette peut différer : ajuste la quantité, ou crée ta propre recette.</p></details>';
+    if (rf && rf.items) h += '<details class="cue"><summary>Recette type pour ' + esc(rf.portion) + '</summary><p>' + rf.items.map(i => i[1] + ' g ' + esc(i[0])).join(' · ') + '</p><p class="muted small">Valeurs calculées avec la table Ciqual : ajuste la quantité si ta recette diffère.</p></details>';
     // Ta recette (trouvée dans tes aliments ou dans les récents) : on peut la modifier
     const docId = f.docId || (f.key.indexOf('own:') === 0 ? 'f_own' + f.key.slice(4) : null);
     if (f.src === 'recipe' && docId && S.docs.get(docId)) h += '<button type="button" class="link" data-act="rec-edit" data-v="' + esc(docId) + '" style="align-self:flex-start">Modifier la recette</button>';

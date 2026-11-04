@@ -19,7 +19,7 @@ export function activitiesCard(){
   if (!S.loaded) return '';
   const d = today(); const e = dayEnergy(d);
   let h = '<section class="card"><div class="row between"><h3>Tes activités</h3>' + (e.kcal ? '<span class="muted small num">' + kcalText(e.kcal) + '</span>' : '') + '</div>';
-  if (!e.items.length) h += '<p class="muted small">Course, vélo, natation, marche ou sport : note-les ici pour estimer ta dépense du jour. Ta séance de muscu s’ajoute toute seule.</p>';
+  if (!e.items.length) h += '<p class="muted small">Note ici tes autres sports pour estimer ta dépense du jour : ta séance de muscu s’ajoute toute seule.</p>';
   e.items.forEach(i => {
     const det = i.kind === 'session' ? i.min + ' min · séance ' + EFFORT[i.effort].label.toLowerCase()
       : i.kind === 'planned' ? (i.active ? 'en cours' : 'prévue') + ' · environ ' + i.min + ' min' : actDetail(i.a);
@@ -42,7 +42,7 @@ export function waterCard(){
   h += '<div class="row"><button type="button" class="btn" data-act="water" data-v="-1" aria-label="Retirer un verre"' + (ml ? '' : ' disabled') + '>−</button><button type="button" class="btn primary" data-act="water" data-v="1" style="flex:1">+ 1 verre (' + g + ' mL)</button></div>';
   h += '<details class="cue"><summary>Autre quantité, taille du verre</summary><div class="row"><input class="n" id="water-ml" inputmode="numeric" placeholder="mL" aria-label="Quantité en mL" style="width:96px"><button type="button" class="btn" data-act="water-ml">Ajouter</button>';
   h += '<label class="row" style="gap:6px;margin-left:auto"><span class="small muted">Verre</span><select id="glass">' + [150, 200, 250, 330, 500].map(v => '<option value="' + v + '"' + (v === g ? ' selected' : '') + '>' + v + ' mL</option>').join('') + '</select></label></div></details>';
-  h += '<p class="muted small">Repère : ' + liters(goal - sport) + ' L de boissons par jour' + (sport > 0 ? ', plus ' + liters(sport) + ' L pour ton sport du jour' : '') + '. Davantage s’il fait chaud.</p>';
+  h += '<p class="muted small">Repère : ' + liters(goal - sport) + ' L de boissons par jour' + (sport > 0 ? ', plus ' + liters(sport) + ' L pour ton sport' : '') + ', davantage s’il fait chaud.</p>';
   return h + '</section>';
 }
 
@@ -62,7 +62,7 @@ export function viewActivity(){
   if (A.type === 'sport') {
     h += '<div class="stack" style="gap:6px"><span class="label">Sport</span><div class="chips" role="group">' + Object.keys(SPORTS).map(k => '<button type="button" class="chip txt' + (A.sport === k ? ' on' : '') + '" data-act="act-sport" data-v="' + k + '" aria-pressed="' + (A.sport === k) + '">' + SPORTS[k].label + '</button>').join('') + '</div>';
     h += '<div class="chips" role="group">' + [['train', 'Entraînement ou loisir'], ['match', 'Match']].map(o => '<button type="button" class="chip txt' + (A.level === o[0] ? ' on' : '') + '" data-act="act-level" data-v="' + o[0] + '" aria-pressed="' + (A.level === o[0]) + '">' + o[1] + '</button>').join('') + '</div>';
-    h += '<p class="muted small">Ton sport n’est pas dans la liste ? Choisis « Autre » et indique les calories actives de ta montre, si tu en as une.</p></div>';
+    h += '<p class="muted small">Ton sport n’est pas dans la liste ? Choisis « Autre ».</p></div>';
   }
   if (A.type === 'other') h += '<label class="f"><span>Activité</span><input data-ac="name" value="' + esc(A.name || '') + '" placeholder="ex. escalade, yoga, ski"></label>';
   h += '<div class="fields"><label class="f"><span>Durée (min)</span><input class="n" data-ac="min" inputmode="numeric" value="' + esc(A.min == null ? '' : A.min) + '" placeholder="ex. 45"></label>';

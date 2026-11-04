@@ -8,7 +8,7 @@
 npm test
 ```
 
-Tous les tests doivent passer (89 avec la version 2.5). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
+Tous les tests doivent passer (95 avec la version 2.6). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
 
 ## 2. Servir l'appli
 
@@ -74,6 +74,16 @@ Le dossier `.playwright-mcp/` est exclu de Git.
 ## 4. Petit écran
 
 On refait le rendu à 320 × 568. Il ne doit y avoir ni défilement horizontal (`scrollWidth > innerWidth` doit valoir faux) ni bouton coupé.
+
+Ce test ne voit pas un texte qui sort de sa case sans élargir la page (grands chiffres d'une case `.stat`, nom long dans un bloc). On cherche donc aussi les éléments dont le contenu dépasse, en essayant des valeurs longues réalistes (« +12,5% », « 125-170 g », « 10,5 / 12,5 », un nom de séance d'un seul mot long) :
+
+```js
+async (page) => page.evaluate(() => [...document.querySelectorAll('#app *')]
+  .filter(e => e.offsetParent && e.children.length === 0 && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX === 'visible')
+  .map(e => e.className + ' « ' + e.textContent.trim().slice(0, 30) + ' »'))
+```
+
+Les écrans à vérifier comprennent le bilan de bloc (Progrès › Résumé › Bloc), qui a les plus grands chiffres.
 
 ## 5. Interactions
 

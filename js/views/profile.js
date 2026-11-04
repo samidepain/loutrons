@@ -22,7 +22,7 @@ export function viewProfile(){
   h += '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>';
   h += '<div class="fields"><label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>';
   h += '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label></div>';
-  h += '<p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est enregistré à la date du jour, comme dans « Corps et sommeil ». Tout est facultatif, sauf le prénom ou pseudo.</p></section>';
+  h += '<p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est noté à la date du jour ; seul le prénom ou pseudo est obligatoire.</p></section>';
   h += goalProfileCard();
   const t = s.theme || 'auto';
   h += '<section class="card"><h3>Apparence</h3><div class="chips" role="group">' + [['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(o => '<button type="button" class="chip txt' + (t === o[0] ? ' on' : '') + '" data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (t === o[0]) + '">' + o[1] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
@@ -36,10 +36,10 @@ export function viewSciencePage(){
 }
 function viewSettingsCards(){
   const s = settings();
-  let h = '<section class="card"><h3>Début du programme</h3><p class="muted small">Sert à calculer la semaine du bloc de 6 semaines (5 de progression, 1 de décharge). Choisis le lundi de ta première semaine.</p><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></section>';
+  let h = '<section class="card"><h3>Début du programme</h3><p class="muted small">Choisis le lundi de ta première semaine : il fixe tes blocs de 6 semaines.</p><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></section>';
   h += optionsCard();
   const hid = excluded().map(exDef).filter(Boolean);
-  h += '<section class="card"><h3>Exercices masqués</h3><p class="muted small">Ils ne sont plus proposés quand tu ajoutes ou remplaces un exercice. Les séances qui les contiennent ne changent pas.</p>';
+  h += '<section class="card"><h3>Exercices masqués</h3><p class="muted small">Ils ne sont plus proposés, mais les séances qui les contiennent ne changent pas.</p>';
   h += hid.length ? hid.map(e => '<div class="row between"><span>' + esc(e.name) + '</span><button type="button" class="btn sm" data-act="ex-unhide" data-v="' + esc(e.id) + '">Afficher à nouveau</button></div>').join('') : '<p class="small">Aucun. Pour masquer un exercice, ouvre-le dans Entraînement › Exercices.</p>';
   h += '</section>';
   h += '<section class="card"><h3>Tes données</h3><p class="small">Tes séances sont enregistrées seulement sur cet appareil. Exporte-les régulièrement.</p>';

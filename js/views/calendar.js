@@ -41,7 +41,7 @@ export function calendarCard(){
     const mon = mondayOf(today()); const n = workouts().filter(w => w.date >= mon && w.date <= addDays(mon, 6) && w.status === 'terminée').length;
     let h = '<section class="card cal"><div class="row between"><div class="stack" style="gap:2px"><h3>Ta semaine</h3><span class="muted small">' + n + ' séance' + (n > 1 ? 's faites' : ' faite') + '</span></div><button type="button" class="link" data-act="cal-month">Voir le mois</button></div><div class="cal-week">';
     for (let i = 0; i < 7; i++) h += cell(addDays(mon, i), false);
-    return h + '</div><p class="muted small">Touche un jour pour voir ce qui a été fait ou ce qui est prévu.</p></section>';
+    return h + '</div><p class="muted small">Touche un jour pour voir le détail.</p></section>';
   }
   const ym = S.calMonth;
   let h = '<section class="card cal"><div class="row between"><button type="button" class="btn sm" data-act="cal-prev" aria-label="Mois précédent">‹</button><h3 class="cal-title" aria-live="polite">' + esc(capFirst(fmtMonth(ym))) + '</h3><button type="button" class="btn sm" data-act="cal-next" aria-label="Mois suivant">›</button></div>';

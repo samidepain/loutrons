@@ -72,13 +72,13 @@ export function viewToday(){
 
   // Corps et sommeil
   const b = S.docs.get('b_' + d) || {};
-  h += '<section class="card"><div class="stack"><h3>Corps et sommeil</h3><p class="muted small">Le poids sert aussi à calculer la charge réelle des tractions. Nuit de moins de 6 h : l’appli te conseille de garder 1 rep de plus en réserve.</p></div>';
+  h += '<section class="card"><div class="stack"><h3>Corps et sommeil</h3><p class="muted small">Nuit de moins de 6 h : garde 1 rep de plus en réserve.</p></div>';
   h += '<div class="fields"><label class="f"><span>Poids (kg)</span><input class="n" id="b-weight" data-b="weight" inputmode="decimal" value="' + esc(b.weight == null ? '' : fmtKg(num(b.weight))) + '" placeholder="' + esc(bodyweight() ? fmtKg(bodyweight()) : 'ex. 75') + '"' + (S.loaded ? '' : ' disabled') + '></label><label class="f"><span>Sommeil (h)</span><input class="n" id="b-sleep" data-b="sleep" inputmode="decimal" value="' + esc(b.sleep == null ? '' : fmtKg(num(b.sleep))) + '" placeholder="ex. 7,5"' + (S.loaded ? '' : ' disabled') + '></label></div>';
   h += '<div class="stack" style="gap:6px"><span class="label">Qualité du sommeil</span><div class="chips">' + [1,2,3,4,5].map(v => '<button type="button" class="chip" data-act="sleepq" data-v="' + v + '"' + (S.loaded ? '' : ' disabled') + ' aria-pressed="' + (b.sleepQ === v) + '"' + (b.sleepQ === v ? ' style="background:var(--ink);color:var(--bg);border-color:var(--ink)"' : '') + '>' + v + '</button>').join('') + '</div><span class="muted small">1 = très mauvaise, 5 = excellente</span></div></section>';
 
   // Genou
   const k = S.docs.get('k_' + d);
-  if (kneeOn()) h += '<section class="card"><div class="stack"><h3>Genou ce matin</h3><p class="muted small">Douleur en montant les escaliers, de 0 à 10. Au-dessus de 3, l’appli suspend les sauts et maintient les charges.</p></div>' + kneeChips(k ? k.stairs : null, 'stairs', !S.loaded) + '</section>';
+  if (kneeOn()) h += '<section class="card"><div class="stack"><h3>Genou ce matin</h3><p class="muted small">Douleur en montant les escaliers, de 0 à 10 : au-dessus de 3, sauts suspendus et charges maintenues.</p></div>' + kneeChips(k ? k.stairs : null, 'stairs', !S.loaded) + '</section>';
 
   h += '<section class="card"><h3>Cette semaine</h3>';
   if (sportOn() && jumpsOn()) h += '<label class="toggle"><input type="checkbox" id="busy-week" data-act="busy"' + (wk.busy ? ' checked' : '') + (S.loaded ? '' : ' disabled') + '><span><b>Semaine chargée en ' + esc(lowFirst(sportInfo().name)) + '</b><br><span class="muted small">Séance ou match en plus : pas de sauts en salle cette semaine.</span></span></label>';

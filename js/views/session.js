@@ -12,7 +12,7 @@ import { emile } from '../emile.js';
 export function viewSession(){
   const w = S.loaded && activeWorkout();
   if (!w && S.loaded && !allTpl().length) return noTplCard();
-  if (!w) return '<section class="card"><h2>Pas de séance en cours</h2><p class="muted">Choisis la séance à faire. Les objectifs de chaque exercice sont calculés à partir de tes dernières séances.</p><div class="row">' +
+  if (!w) return '<section class="card"><h2>Pas de séance en cours</h2><p class="muted">Choisis la séance à faire : les objectifs viennent de tes dernières séances.</p><div class="row">' +
     allTpl().map(t => '<button type="button" class="btn primary" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
   const items = itemsOf(w);
   let total = 0, done = 0;

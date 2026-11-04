@@ -1,5 +1,5 @@
 // Écran Entraînement (hors séance en cours) : ton programme, ses séances, les exercices, le planning.
-import { esc, fmtDateLong, fmtKg, lowFirst, num, WEEKDAYS, withDot } from '../util.js';
+import { capFirst, esc, fmtDateLong, fmtKg, lowFirst, num, WEEKDAYS, withDot } from '../util.js';
 import { DAY_ORDER, DAY_SHORT, KINDS, MUSCLES, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
 import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, planDay, programOf, searchEx, settings, sportInfo, sportOn, startDate, tplEst, tplItems } from '../data.js';
@@ -24,7 +24,7 @@ function programCard(){
   return h + '<button type="button" class="btn" data-act="prog-change">Changer de programme</button></section>';
 }
 export function noTplCard(){
-  return '<section class="card"><h2>Crée ta première séance</h2><p class="muted">Donne-lui un nom, puis ajoute les exercices que tu veux. S’il en manque un, tu peux le créer depuis la liste.</p><button type="button" class="btn primary big" data-act="go-new-tpl">Créer une séance</button></section>';
+  return '<section class="card"><h2>Crée ta première séance</h2><p class="muted">Donne-lui un nom, puis ajoute tes exercices : s’il en manque un, crée-le depuis la liste.</p><button type="button" class="btn primary big" data-act="go-new-tpl">Créer une séance</button></section>';
 }
 function viewTemplates(){
   let h = programCard() + '<button type="button" class="btn primary" data-act="new-tpl">+ Créer une séance</button>';
@@ -38,7 +38,7 @@ function viewTemplates(){
 }
 function viewExercises(){
   const n = allEx().filter(e => e.kind !== 'plyo' || jumpsOn()).length;
-  let h = '<button type="button" class="btn primary" data-act="new-ex">+ Ajouter un exercice</button><p class="muted small">' + n + ' exercices. Touche un exercice pour voir sa fiche : photos, muscles travaillés et consignes.</p>';
+  let h = '<button type="button" class="btn primary" data-act="new-ex">+ Ajouter un exercice</button><p class="muted small">' + n + ' exercices : touche-en un pour voir sa fiche.</p>';
   h += '<input class="plain" type="search" id="ex-q" data-xq="1" placeholder="Rechercher : nom, muscle, « DC », « squat »…" aria-label="Rechercher un exercice" value="' + esc(S.exQ || '') + '" autocomplete="off" enterkeyhint="search">';
   return h + '<div class="stack" id="ex-list" style="gap:16px">' + exerciseList() + '</div>';
 }
@@ -58,11 +58,11 @@ export function exerciseList(){
 }
 function viewPlanning(){
   const tpls = allTpl(); const g = programOf() || {};
-  let h = '<section class="card"><h3>Planning de la semaine</h3><p class="muted small">Sert au rappel du jour, à la séance proposée et aux séries prévues par muscle. Tu peux toujours faire une autre séance n’importe quel jour.</p>';
+  let h = '<section class="card"><h3>Planning de la semaine</h3><p class="muted small">Sert au rappel du jour et aux séries prévues ; tu peux toujours faire une autre séance.</p>';
   if (!tpls.length) h += '<p class="small">Crée d’abord tes séances dans l’onglet Séances, puis choisis-les ici.</p>';
   DAY_ORDER.forEach(wd => {
     const p = planDay(wd);
-    h += '<label class="f"><span>' + esc(WEEKDAYS[wd]) + (p.label !== 'Repos' ? ' · ' + esc(p.label) : '') + '</span><select data-plan="' + wd + '">' +
+    h += '<label class="f"><span>' + esc(capFirst(WEEKDAYS[wd])) + (p.label !== 'Repos' ? ' · ' + esc(p.label) : '') + '</span><select data-plan="' + wd + '">' +
       tpls.map(t => '<option value="s:' + esc(t.id) + '"' + (p.s === t.id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') +
       '<option value="l:Repos"' + (p.s ? '' : ' selected') + '>Pas de séance</option></select></label>';
   });
