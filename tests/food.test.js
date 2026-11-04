@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { norm } from '../js/util.js';
-import { fromCiqual, fromOff, recentFoods, scale, searchFoods, totals, validBarcode } from '../js/food.js';
+import { fromCiqual, fromOff, fullDay, recentFoods, scale, searchFoods, totals, validBarcode } from '../js/food.js';
 import { donnees, reglages, docs } from './aide.js';
 
 // Réponse d'Open Food Facts (extrait de /api/v2/product/3017620422003.json)
@@ -27,6 +27,37 @@ test('produit sans calories en kcal : converties depuis les kJ ; produit absent 
   assert.equal(fromOff({ status: 0 }, '123'), null);
   assert.equal(fromOff({ status: 1, product: { product_name: 'Mystère', nutriments: {} } }, '123'), null);
   assert.equal(fromOff({ status: 1, product: { nutriments: { 'energy-kcal_100g': 100 } } }, '42').name, 'Produit 42');
+});
+
+test('calories invraisemblables d’Open Food Facts (kJ notés en kcal) : corrigées et signalées ; sinon rien ne change', () => {
+  const off = n => ({ status: 1, product: { product_name: 'Produit', nutriments: n } });
+  const tartiner = { proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9, fiber_100g: 0 };
+  // 2 252 kJ notés aussi en kcal : on garde les kJ convertis, qui collent aux nutriments
+  const a = fromOff(off(Object.assign({ 'energy-kcal_100g': 2252, 'energy-kj_100g': 2252 }, tartiner)), '1');
+  assert.deepEqual([a.per100.kcal, a.fixed], [538, 'kcal']);
+  // kcal et kJ tous deux multipliés par 4,184 : seules les kcal ramenées en kJ collent aux nutriments
+  const b = fromOff(off(Object.assign({ 'energy-kcal_100g': 2252, 'energy-kj_100g': 9422 }, tartiner)), '2');
+  assert.deepEqual([b.per100.kcal, b.fixed], [538, 'kcal']);
+  // Boisson : 180 « kcal » pour 10,6 g de sucres, avec 180 kJ : 43 kcal
+  const c = fromOff(off({ 'energy-kcal_100g': 180, 'energy-kj_100g': 180, proteins_100g: 0, carbohydrates_100g: 10.6, fat_100g: 0 }), '3');
+  assert.deepEqual([c.per100.kcal, c.fixed], [43, 'kcal']);
+  // Sans nutriments : plus de 900 kcal pour 100 g est impossible ; avec des kJ plausibles, on les prend
+  assert.deepEqual([fromOff(off({ 'energy-kcal_100g': 1500, 'energy-kj_100g': 1500 }), '4').per100.kcal, fromOff(off({ 'energy-kcal_100g': 1500, 'energy-kj_100g': 1500 }), '4').fixed], [359, 'kcal']);
+  assert.equal(fromOff(off({ 'energy-kcal_100g': 1500 }), '5'), null);
+  // Valeurs justes, alcool (7 kcal par gramme, absent des nutriments) : rien n'est changé ni signalé
+  assert.equal(fromOff(nutella, '6').fixed, undefined);
+  const liqueur = fromOff(off({ 'energy-kcal_100g': 225, 'energy-kj_100g': 941, proteins_100g: 0, carbohydrates_100g: 26, fat_100g: 0 }), '7');
+  assert.deepEqual([liqueur.per100.kcal, liqueur.fixed], [225, undefined]);
+  // Calories absentes, converties depuis les kJ : conversion normale, rien à signaler
+  assert.equal(fromOff(off({ 'energy-kj_100g': 184 }), '8').fixed, undefined);
+});
+
+test('journée complète : au moins 2 repas notés (règle de l’appli)', () => {
+  const it = meal => ({ meal, g: 100, per100: { kcal: 100 } });
+  assert.equal(fullDay({ items: [it('breakfast')] }), false);
+  assert.equal(fullDay({ items: [it('lunch'), it('lunch')] }), false);
+  assert.equal(fullDay({ items: [it('lunch'), it('snack')] }), true);
+  assert.equal(fullDay({ items: [] }), false);
 });
 
 test('quantité et totaux : une valeur inconnue reste inconnue et est signalée', () => {

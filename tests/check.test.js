@@ -69,11 +69,19 @@ test('date du point : 14 jours après le début de l’objectif ou le dernier po
   donnees(docs(reglages(Object.assign({}, corps, nutri({ checks: [{ date: '2026-11-02', status: 'ontrack', applied: false }] }))), ...b));
   assert.equal(nextCheck().date, '2026-11-16');
   // 10 jours notés à 3 500 kcal pour un objectif de 2 490 : rien n'est changé
-  const repas = [];
-  for (let i = 1; i <= 10; i++) { const d = '2026-10-' + (19 + i); repas.push(['m_' + d, { date: d, items: [{ id: 'i' + i, meal: 'lunch', key: 'own:x', name: 'Repas', g: 100, per100: { kcal: 3500 } }] }]); }
+  const repas = [], cafes = [];
+  const item = (id, meal, kcal) => ({ id, meal, key: 'own:x', name: 'Repas', g: 100, per100: { kcal } });
+  for (let i = 1; i <= 10; i++) {
+    const d = '2026-10-' + (19 + i);
+    repas.push(['m_' + d, { date: d, items: [item('l' + i, 'lunch', 1750), item('d' + i, 'dinner', 1750)] }]);
+    cafes.push(['m_' + d, { date: d, items: [item('c' + i, 'breakfast', 30)] }]);
+  }
   donnees(docs(reglages(Object.assign({}, corps, nutri())), ...b, ...repas));
   const j = checkDue();
   assert.deepEqual([j.status, j.intake.days, Math.round(j.intake.avg)], ['offplan', 10, 3500]);
+  // Un seul repas noté (un café) : le jour ne compte pas, la moyenne n'est pas faussée
+  donnees(docs(reglages(Object.assign({}, corps, nutri())), ...b, ...cafes));
+  assert.deepEqual([checkDue().status, checkDue().intake.days], ['change', 0]);
   // Moins de 18 ans : pas de point
   jour('2026-11-02');
   donnees(docs(reglages(Object.assign({}, corps, { birth: '2010-01-01' }, nutri())), ...b));

@@ -5,7 +5,7 @@ import { bodyDocs, bodyweight, settings } from '../data.js';
 import { ACTIVITY, adjustFor, CHECK, GAIN, LOSS, planFor, weightTrend, withExtra } from '../nutrition.js';
 import { dayEnergy } from '../energy.js';
 import { emile, hey } from '../emile.js';
-import { dayDoc, totals } from '../food.js';
+import { dayDoc, fullDay, totals } from '../food.js';
 
 export const nutritionOf = () => settings().nutrition || {};
 // Données de la personne : réglages et dernière pesée, ou ce qui est saisi à l'accueil
@@ -26,7 +26,7 @@ export function nextCheck(){
 // Ce qui a été mangé d'après le journal, sur les jours notés (sans aujourd'hui, pas fini), comparé aux besoins de ces jours-là
 function intakeBetween(from, to){
   let days = 0, kcal = 0, target = 0;
-  for (let d = from; d <= to; d = addDays(d, 1)) { const doc = dayDoc(d); if (!doc.items.length) continue; days++; kcal += totals(doc.items).kcal; target += dayPlan(d).kcal; }
+  for (let d = from; d <= to; d = addDays(d, 1)) { const doc = dayDoc(d); if (!fullDay(doc)) continue; days++; kcal += totals(doc.items).kcal; target += dayPlan(d).kcal; }
   return days ? { days, avg: kcal / days, target: target / days } : { days: 0 };
 }
 export function checkDue(){

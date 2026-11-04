@@ -159,7 +159,7 @@ async function lookupBarcode(raw){
     const j = r.status === 404 ? { status: 0 } : await r.json();
     const f = fromOff(j, code);
     if (!f) { notFound(j && j.status === 1 ? 'incomplete' : 'unknown'); return; }
-    put('f_' + code, { src:'off', code, name:f.name, brand:f.brand, per100:f.per100, serving:f.serving, fetched: today() });
+    put('f_' + code, Object.assign({ src:'off', code, name:f.name, brand:f.brand, per100:f.per100, serving:f.serving, fetched: today() }, f.fixed ? { fixed:f.fixed } : {}));
     pickFood(f);
   } catch (e) { if (S.food === F) notFound(navigator.onLine ? 'error' : 'offline'); }
 }

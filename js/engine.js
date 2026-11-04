@@ -99,7 +99,8 @@ export function initItem(w, it, wk){
   if (e.kind === 'cardio') sets.push({ min:null, km:null, done:false });
   else if (e.kind !== 'check') { const n = t.sets == null ? e.sets : t.sets; for (let i = 0; i < n; i++) sets.push({ kg: e.kind === 'plyo' ? null : (t.kg == null ? null : t.kg), reps:null, done:false }); }
   w.ex[it.ex] = { sets, done:false, rir:null, skip: t.type === 'skip' || t.type === 'opt' };
-  if (e.kind === 'cardio') { const lv = e.levels || []; const last = lastCardio(it.ex, w.id); w.ex[it.ex].level = last && lv.some(l => l[0] === last.level) ? last.level : (lv[Math.floor((lv.length - 1) / 2)] || [null])[0]; }
+  // Allure de la dernière fois ; sinon « mod » (allure moyenne), ou celle du milieu de la liste
+  if (e.kind === 'cardio') { const lv = e.levels || []; const last = lastCardio(it.ex, w.id); w.ex[it.ex].level = last && lv.some(l => l[0] === last.level) ? last.level : (lv.find(l => l[0] === 'mod') || lv[Math.floor((lv.length - 1) / 2)] || [null])[0]; }
 }
 // Dernière séance où ce cardio a été fait : { date, min, km, level }
 export function lastCardio(exId, excludeId){

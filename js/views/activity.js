@@ -62,13 +62,15 @@ export function viewActivity(){
   if (A.type === 'sport') {
     h += '<div class="stack" style="gap:6px"><span class="label">Sport</span><div class="chips" role="group">' + Object.keys(SPORTS).map(k => '<button type="button" class="chip txt' + (A.sport === k ? ' on' : '') + '" data-act="act-sport" data-v="' + k + '" aria-pressed="' + (A.sport === k) + '">' + SPORTS[k].label + '</button>').join('') + '</div>';
     h += '<div class="chips" role="group">' + [['train', 'Entraînement ou loisir'], ['match', 'Match']].map(o => '<button type="button" class="chip txt' + (A.level === o[0] ? ' on' : '') + '" data-act="act-level" data-v="' + o[0] + '" aria-pressed="' + (A.level === o[0]) + '">' + o[1] + '</button>').join('') + '</div>';
-    h += '<p class="muted small">Ton sport n’est pas dans la liste ? Choisis « Autre » et indique les calories de ta montre, si tu en as une.</p></div>';
+    h += '<p class="muted small">Ton sport n’est pas dans la liste ? Choisis « Autre » et indique les calories actives de ta montre, si tu en as une.</p></div>';
   }
   if (A.type === 'other') h += '<label class="f"><span>Activité</span><input data-ac="name" value="' + esc(A.name || '') + '" placeholder="ex. escalade, yoga, ski"></label>';
   h += '<div class="fields"><label class="f"><span>Durée (min)</span><input class="n" data-ac="min" inputmode="numeric" value="' + esc(A.min == null ? '' : A.min) + '" placeholder="ex. 45"></label>';
   if (A.type === 'run') h += '<label class="f"><span>Distance (km)</span><input class="n" data-ac="km" inputmode="decimal" value="' + esc(A.km == null ? '' : A.km) + '" placeholder="ex. 8"></label>';
-  if (A.type === 'other') h += '<label class="f"><span>Calories (kcal)</span><input class="n" data-ac="kcal" inputmode="numeric" value="' + esc(A.kcal == null ? '' : A.kcal) + '" placeholder="facultatif"></label>';
+  if (A.type === 'other') h += '<label class="f"><span>Calories actives</span><input class="n" data-ac="kcal" inputmode="numeric" value="' + esc(A.kcal == null ? '' : A.kcal) + '" placeholder="facultatif"></label>';
   h += '<label class="f"><span>Date</span><input type="date" data-ac="date" value="' + esc(A.date) + '" max="' + today() + '"></label></div>';
+  // Les montres affichent les calories totales et les calories actives : le total compterait deux fois la dépense au repos
+  if (A.type === 'other') h += '<p class="muted small">Sur ta montre, prends les calories actives, pas le total : ta dépense au repos est déjà dans tes besoins.</p>';
   h += '<div id="act-prev">' + actPreview() + '</div>';
   h += '<button type="button" class="btn primary big" data-act="act-save">' + (A.edit ? 'Enregistrer' : 'Ajouter') + '</button>';
   if (A.edit) h += S.confirm === 'act-del' ? '<div class="row"><span class="small">Supprimer cette activité ?</span><button type="button" class="btn danger" data-act="act-del-yes">Supprimer</button><button type="button" class="btn ghost" data-act="cancel-confirm">Garder</button></div>'

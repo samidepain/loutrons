@@ -35,3 +35,13 @@ test('cardio : durée prévue, allure de la dernière fois, rien dans le volume 
   assert.equal(w.ex.ex_rower.level, 'fast');
   assert.deepEqual(w.ex.ex_rower.sets, [{ min: null, km: null, done: false }]);
 });
+
+test('vélo d’appartement : paliers du Compendium 2024 de 50 à 229 W ; première fois : allure « Modéré »', () => {
+  ['ex_bike', 'ex_recumbent'].forEach(id => assert.deepEqual(BASE_EX[id].levels.map(l => [l[0], l[3]]), [['easy', 4.0], ['mod', 6.0], ['firm', 8.0], ['hard', 10.3], ['fast', 10.8]]));
+  donnees(docs(reglages()));
+  const w = { id: 'w_x', targets: {}, ex: {} };
+  initItem(w, { ex: 'ex_bike' }, { deload: false });
+  assert.equal(w.ex.ex_bike.level, 'mod');
+  initItem(w, { ex: 'ex_elliptical' }, { deload: false });
+  assert.equal(w.ex.ex_elliptical.level, 'mod');
+});

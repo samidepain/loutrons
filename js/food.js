@@ -15,15 +15,36 @@ const numOrNull = v => { const n = typeof v === 'string' ? Number(v.replace(',',
 export function fromOff(json, code){
   const p = json && json.status === 1 && json.product; if (!p) return null;
   const n = p.nutriments || {};
-  let kcal = numOrNull(n['energy-kcal_100g']);
-  if (kcal == null && numOrNull(n['energy-kj_100g']) != null) kcal = Math.round(n['energy-kj_100g'] / 4.184);
+  const per100 = { kcal:null, p:numOrNull(n.proteins_100g), c:numOrNull(n.carbohydrates_100g), s:numOrNull(n.sugars_100g), f:numOrNull(n.fat_100g), sf:numOrNull(n['saturated-fat_100g']), fib:numOrNull(n.fiber_100g), salt:numOrNull(n.salt_100g) };
+  const kj = numOrNull(n['energy-kj_100g']); let kcal = numOrNull(n['energy-kcal_100g']); let fixed = null;
+  if (kcal == null && kj != null) kcal = Math.round(kj / 4.184);
+  else if (kcal != null) { const k = plausibleKcal(kcal, kj, per100); if (k == null) return null; if (k !== kcal) { kcal = k; fixed = 'kcal'; } }
   if (kcal == null) return null;
-  const per100 = { kcal, p:numOrNull(n.proteins_100g), c:numOrNull(n.carbohydrates_100g), s:numOrNull(n.sugars_100g), f:numOrNull(n.fat_100g), sf:numOrNull(n['saturated-fat_100g']), fib:numOrNull(n.fiber_100g), salt:numOrNull(n.salt_100g) };
+  per100.kcal = kcal;
   const name = String(p.product_name_fr || p.product_name || '').trim() || 'Produit ' + code;
   const brand = String(p.brands || '').split(',')[0].trim();
   const serving = numOrNull(p.serving_quantity);
-  return { key:'off:' + code, src:'off', code: String(code), name, brand, per100, serving: serving && serving > 0 && serving < 2000 ? serving : null };
+  const out = { key:'off:' + code, src:'off', code: String(code), name, brand, per100, serving: serving && serving > 0 && serving < 2000 ? serving : null };
+  if (fixed) out.fixed = fixed;
+  return out;
 }
+// Open Food Facts est rempli par des bénévoles : des kJ sont parfois notés à la place des kcal (4,184 fois trop).
+// Repères : 900 kcal pour 100 g au plus (lipides purs) ; calories recalculées depuis les nutriments (règlement UE 1169/2011 :
+// 4 kcal par g de protéines et de glucides, 9 de lipides, 2 de fibres), à 20 % ou 20 kcal près. L'alcool (7 kcal par g)
+// et les édulcorants éloignent les calories des nutriments : on ne corrige que si une autre valeur colle aux nutriments.
+// Renvoie les calories à garder, ou null si elles sont impossibles et sans correction possible.
+function plausibleKcal(kcal, kj, v){
+  const est = v.p != null && v.c != null && v.f != null ? 4 * v.p + 4 * v.c + 9 * v.f + 2 * (v.fib || 0) : null;
+  const near = x => est == null || Math.abs(x - est) <= Math.max(20, 0.2 * est);
+  if (kcal <= 900 && near(kcal)) return kcal;
+  const fromKj = kj != null ? kj / 4.184 : null;
+  if (fromKj != null && fromKj <= 900 && near(fromKj)) return Math.round(fromKj);
+  if (est != null && near(kcal / 4.184)) return Math.round(kcal / 4.184);
+  return kcal <= 900 ? kcal : null;
+}
+// Journée assez notée pour compter dans une moyenne : au moins 2 repas (règle de l'appli), pour qu'un café seul ne fasse pas croire
+// qu'on a très peu mangé
+export const fullDay = doc => new Set((doc.items || []).map(i => i.meal)).size >= 2;
 // Aliment de la table Ciqual : [code, nom, kcal, p, c, s, f, sf, fib, salt] (null : valeur inconnue)
 export const fromCiqual = r => ({ key:'ciq:' + r[0], src:'ciq', name:r[1], brand:'', per100:{ kcal:r[2], p:r[3], c:r[4], s:r[5], f:r[6], sf:r[7], fib:r[8], salt:r[9] }, serving:null });
 // Valeurs pour une quantité en grammes ; une valeur inconnue reste inconnue

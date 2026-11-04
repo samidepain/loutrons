@@ -12,7 +12,7 @@ const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fm
 const mealName = m => (MEALS.find(x => x[0] === m) || ['', ''])[1];
 const dayLabel = d => d === today() ? 'Aujourd’hui' : d === addDays(today(), -1) ? 'Hier' : capFirst(fmtDateLong(d));
 // Aliment d'un document f_ (produit scanné ou aliment créé)
-export function foodFromDoc(id, o){ return { key: o.code ? 'off:' + o.code : 'own:' + id.slice(5), src: o.src || 'own', code: o.code || null, name: o.name, brand: o.brand || '', per100: o.per100, serving: o.serving || null, portion: o.src === 'recipe' ? '1 portion' : null, docId: id }; }
+export function foodFromDoc(id, o){ return { key: o.code ? 'off:' + o.code : 'own:' + id.slice(5), src: o.src || 'own', code: o.code || null, name: o.name, brand: o.brand || '', per100: o.per100, serving: o.serving || null, portion: o.src === 'recipe' ? '1 portion' : null, fixed: o.fixed || null, docId: id }; }
 // Aliments affichés dans la dernière liste, pour retrouver celui qu'on touche
 export const shown = new Map();
 
@@ -95,6 +95,7 @@ function viewFoodAdd(){
   if (F.mode === 'portion') {
     const f = F.sel; const g = num(F.g);
     let h = head(F.edit ? 'Modifier' : 'Quantité', F.edit ? 'fd-cancel' : 'fd-back') + '<section class="card"><div class="stack" style="gap:2px"><h2>' + esc(f.name) + '</h2><span class="muted small">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal pour 100 g</span></div>';
+    if (f.fixed === 'kcal') h += '<p class="alert info">Calories corrigées : la fiche d’Open Food Facts donnait sans doute des kilojoules. Vérifie sur l’emballage.</p>';
     h += '<label class="f"><span>Quantité (g)</span><input class="n" id="fd-g" data-fg="1" inputmode="decimal" value="' + esc(F.g == null ? '' : fmtKg(num(F.g))) + '"></label>';
     const dish = f.src === 'rec' || f.src === 'recipe';
     h += '<div class="chips" role="group">' + (f.serving ? '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + f.serving + '">' + esc(f.portion || '1 portion') + ' (' + fmtKg(f.serving) + ' g)</button>' : '') + (dish ? [200, 300, 400] : [50, 100, 150, 200]).map(x => '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + x + '">' + x + ' g</button>').join('') + '</div>';
