@@ -19,7 +19,7 @@ export function viewToday(){
   const ws = workouts(); const aw = S.loaded && activeWorkout();
   const doneToday = ws.filter(w => w.date === d && w.status === 'terminée');
   const who = String(settings().name || '').trim();
-  let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' : '') + esc(fmtDateLong(d)) + '</span>';
+  let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' + esc(fmtDateLong(d)) : esc(capFirst(fmtDateLong(d)))) + '</span>';
   h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span>' : '') + '</div></div>';
   h += calendarCard();
   if (S.loaded && backupDue()) {

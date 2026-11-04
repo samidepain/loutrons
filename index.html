@@ -93,6 +93,8 @@ button{cursor:pointer}
 .pill.court{background:var(--court-soft);color:var(--court)}
 
 main{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:16px calc(var(--tabs-h) + 96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
+/* Minuteur affiché (jusqu'à 2 lignes, environ 120 px) : plus de place en bas de page, pour ne pas cacher le dernier bouton */
+body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px + env(safe-area-inset-bottom,0px))}
 .card{background:var(--surface);border:none;border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .card.flat{background:transparent;border:none;padding:0}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -178,6 +180,8 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 .target{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border-radius:12px;padding:10px 12px}
 .target .tl{flex:none}
 .target p{font-size:15px;min-width:0}
+/* Pastilles neutres posées dans la case grise : fond de l'écran pour garder leur forme */
+.target .pill:not(.good):not(.warn):not(.bad):not(.acc){background:var(--bg)}
 .last{font-size:15px;color:var(--muted)}
 .last b{color:var(--ink);font-weight:600}
 .sets{display:flex;flex-direction:column;gap:6px}
@@ -196,9 +200,9 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 @media (max-width:360px){
   .setrow{grid-template-columns:20px minmax(0,1fr) minmax(0,1fr) 44px;gap:6px}
   .setrow.plyo{grid-template-columns:20px minmax(0,1fr) 44px}
-  .fld{padding:0 6px;gap:3px}
+  .fld{padding:0 6px;gap:2px}
   .fld input{font-size:19px;min-height:44px}
-  .fld span{font-size:12px}
+  .fld span{font-size:13px}
   .chk{width:44px}
   .ex .exname{font-size:19px}
   .group{padding:6px}
@@ -266,6 +270,7 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .restbar :focus-visible{outline-color:var(--on-accent)}
 .restbar.end .restbar-in{background:var(--good);color:#fff}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs-h) + 84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:15px;max-width:calc(100% - 32px);text-align:center}
+#restbar:not([hidden]) ~ .toast{bottom:calc(var(--tabs-h) + 140px + env(safe-area-inset-bottom,0px))}
 .empty{color:var(--muted);font-size:15px;padding:8px 0}
 /* Fiche d'exercice : photos du mouvement (départ, arrivée) et silhouette des muscles travaillés */
 input[type=search]{-webkit-appearance:none;appearance:none}

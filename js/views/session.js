@@ -23,7 +23,7 @@ export function viewSession(){
   const b = S.docs.get('b_' + w.date) || {};
   if (num(b.sleep) != null && num(b.sleep) < 6) h += emile('<p>Nuit courte (' + fmtKg(num(b.sleep)) + ' h) : vise les objectifs, mais garde 1 rep de plus en réserve et ne force pas de record aujourd’hui.</p>', { tone:'warn', key:'sleep:' + w.id });
   if (w.lower && jumpsOn() && testDue(w.date)) {
-    h += '<section class="card" style="border-color:var(--court)"><div class="stack" style="gap:4px"><h3>Test de détente du bloc ' + weekInfo(w.date).block + '</h3><p class="small">' + esc(JUMP_PROTOCOL) + '</p></div>';
+    h += '<section class="card plan"><div class="stack" style="gap:4px"><h3>Test de détente du bloc ' + weekInfo(w.date).block + '</h3><p class="small">' + esc(JUMP_PROTOCOL) + '</p></div>';
     h += '<div class="fields">' + [0,1,2].map(i => '<label class="f"><span>Essai ' + (i + 1) + ' (cm)</span><input class="n" id="jump-' + i + '" inputmode="decimal" placeholder="cm"></label>').join('') + '</div>';
     const prevT = testForBlock(weekInfo(w.date).block - 1);
     h += (prevT ? '<p class="muted small">Bloc précédent : ' + fmtKg(prevT.cm) + ' cm.</p>' : '') + '<button type="button" class="btn primary" data-act="save-jump">Enregistrer le test</button></section>';
