@@ -114,6 +114,31 @@ export function lastCardio(exId, excludeId){
   });
   return best;
 }
+// Progrès d'un exercice pour sa fiche : meilleure série (force estimée d'Epley, poids du corps compris s'il le faut)
+// et 5 dernières séances, de la plus récente à la plus ancienne. Cardio : pas de meilleure série, durée, distance et allure.
+export function exerciseProgress(id){
+  const e = exDef(id); const kind = e ? e.kind : null;
+  if (kind === 'cardio') {
+    const cid = canon(id); const out = [];
+    workouts().forEach(w => { if (!w.ex) return; Object.keys(w.ex).forEach(k => { if (canon(k) !== cid) return; const st = w.ex[k]; const s = (st.sets || []).find(x => x.done && num(x.min) > 0); if (s) out.push({ date:w.date, at:w.startedAt || 0, min:num(s.min), km:num(s.km), level:st.level }); }); });
+    out.sort((a, b) => a.date === b.date ? b.at - a.at : (a.date < b.date ? 1 : -1));
+    return { kind, best: null, last: out.slice(0, 5).map(x => ({ date:x.date, min:x.min, km:x.km, level:x.level })) };
+  }
+  const h = history(id, null); const last = h.slice(0, 5).map(x => ({ date:x.date, sets:x.sets, rir:x.rir, deload:x.deload }));
+  // sauts, tests : pas de charge à comparer
+  if (kind !== 'load' && kind !== 'bw') return { kind, best: null, last };
+  const sc = setScore(kind); let best = null;
+  h.forEach(x => x.sets.forEach(s => { if (!best || sc(s) > sc(best)) best = { kg:s.kg, reps:s.reps, date:x.date }; }));
+  const bw = bodyweight(); const forte = best && (kind === 'load' || bw) ? Math.round(e1rm(kind === 'bw' ? bw + best.kg : best.kg, best.reps) * 10) / 10 : null;
+  return { kind, best: best && { kg:best.kg, reps:best.reps, e1rm:forte, date:best.date }, last };
+}
+// Note d'une série pour trouver la meilleure : force estimée (Epley), poids du corps compris au poids du corps ;
+// au poids du corps sans poids noté, le lest d'abord, puis les reps
+export function setScore(kind){
+  const bw = kind === 'bw' ? bodyweight() : null;
+  if (kind === 'bw' && !bw) return s => s.kg * 1000 + s.reps;
+  return s => e1rm(kind === 'bw' ? bw + s.kg : s.kg, s.reps);
+}
 export function findPRs(w){
   const out = []; const bw = bodyweight();
   itemsOf(w).forEach(it => {

@@ -1,87 +1,104 @@
-// Écran Aujourd’hui.
+// Écran Aujourd’hui : en haut la séance du jour, la semaine et l'alimentation ; dessous un conseil d'Émile à la fois,
+// puis le suivi du jour en lignes compactes (eau, poids et sommeil, activités, genou).
 import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nSeries, num, parseIso, today, withDot } from '../util.js';
-import { DAY_ORDER, DAY_SHORT } from '../library.js';
 import { S } from '../store.js';
-import { activeWorkout, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, planDay, settings, sportInfo, sportOn, testForBlock, tplDef, tplEst, weekGoal, weekInfo, wName, workouts } from '../data.js';
+import { activeWorkout, activities, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, planDay, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, wName, workouts } from '../data.js';
 import { fatigueCheck } from '../engine.js';
 import { useShare } from '../backup.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
 import { calendarCard } from './calendar.js';
-import { checkCard, goalTodayCard } from './goal.js';
-import { emile, hey } from '../emile.js';
-import { activitiesCard, waterCard } from './activity.js';
-import { EFFORT, effortOf, sessionKcal, sessionMin } from '../energy.js';
+import { checkCard, foodTodayCard } from './goal.js';
+import { emile, emileQueue, hey } from '../emile.js';
+import { activitiesLine, lineCard, waterLine } from './activity.js';
+import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
 
-export function viewToday(){
-  const d = today(); const wd = parseIso(d).getDay(); const plan = planDay(wd);
-  const wk = weekInfo(d); const goal = weekGoal(wk);
-  const ws = workouts(); const aw = S.loaded && activeWorkout();
-  const doneToday = ws.filter(w => w.date === d && w.status === 'terminée');
-  const who = String(settings().name || '').trim();
-  let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' + esc(fmtDateLong(d)) : esc(capFirst(fmtDateLong(d)))) + '</span>';
-  h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span>' : '') + '</div></div>';
-  h += calendarCard();
-  if (S.loaded && backupDue()) {
-    const le = settings().lastExport;
-    h += emile('<p>' + esc(hey(le ? withDot('Ta dernière sauvegarde date du ' + fmtDate(le)) : 'Tu n’as pas encore sauvegardé tes données.')) + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>'
-      + '<button type="button" class="btn primary" data-act="export" data-v="json">Exporter maintenant</button>' + (useShare('json') ? '<p class="muted small">Choisis ensuite «&nbsp;Enregistrer dans Fichiers&nbsp;».</p>' : ''), { title:'Sauvegarde', tone:'warn', key:'backup:' + mondayOf(d) });
+// Choix de l'effort d'une séance terminée (il règle sa dépense)
+function effortChoice(sw){
+  const ef = effortOf(sw); const kc = sessionKcal(sw, bodyweight());
+  return '<div class="stack" style="gap:6px"><span class="label">Effort de la séance</span><div class="chips" role="group">' + Object.keys(EFFORT).map(k => '<button type="button" class="chip txt' + (ef === k ? ' on' : '') + '" data-act="effort" data-v="' + k + '" data-w="' + esc(sw.id) + '" aria-pressed="' + (ef === k) + '">' + EFFORT[k].label + '</button>').join('') + '</div>'
+    + '<p class="small muted">' + esc(EFFORT[ef].desc) + '. ' + (kc == null ? 'Indique ton poids pour estimer les calories.' : 'Environ ' + Math.round(kc / 10) * 10 + ' kcal dépensées en ' + sessionMin(sw) + ' min.') + '</p></div>';
+}
+
+// Séance du jour : en cours, faite, prévue, ou jour de repos ou de sport
+function planCard(d, plan, aw, doneToday, tpls){
+  const autre = tpls.length ? '<button type="button" class="link" data-act="go-seances">Faire une autre séance ›</button>' : '';
+  if (aw) return '<section class="card plan"><span class="label">Séance en cours</span><div class="name">' + esc(wName(aw)) + '</div><button type="button" class="btn primary big" data-act="tab" data-v="training">Reprendre ' + esc(wName(aw)) + '</button></section>';
+  if (doneToday.length) {
+    const sw = (S.summary && doneToday.find(w => w.id === S.summary.id)) || doneToday[doneToday.length - 1];
+    return '<section class="card plan"><span class="label">Séance faite</span><div class="name">' + esc(wName(sw)) + '</div><p class="muted">' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' + effortChoice(sw) + autre + '</section>';
   }
-  h += checkCard();
+  if (plan.s) {
+    const t = tplDef(plan.s);
+    return '<section class="card plan"><span class="label">Aujourd’hui</span><div class="name">' + esc(t.name) + '</div><p>' + esc(t.focus || '') + ' · environ ' + tplEst(t) + ' min</p>' + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '')
+      + '<button type="button" class="btn primary big" data-act="start" data-v="' + plan.s + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button></section>';
+  }
+  let next = null; for (let i = 1; i <= 7 && !next; i++) { const dd = addDays(d, i); const p = planDay(parseIso(dd).getDay()); if (p.s) next = { d:dd, t:tplDef(p.s) }; }
+  // Jour de sport prévu (module sport) et pas encore noté : un geste pour le noter
+  const sp = S.loaded && sportPlanned(d); const noter = sp && !activities(d).some(a => a.type === 'sport');
+  return '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (plan.note ? '<p class="muted">' + esc(plan.note) + '</p>' : '') + (next ? '<p class="small">Prochaine séance : <b>' + esc(next.t.name) + '</b>, ' + esc(withDot(fmtDateLong(next.d))) + '</p>' : '')
+    + (noter ? '<button type="button" class="btn" data-act="act-add" data-v="' + sp + '">+ ' + esc(sp === 'match' ? 'Noter le match' : 'Noter le ' + lowFirst(sportInfo().name)) + '</button>' : '') + autre + '</section>';
+}
+
+// Conseils d'Émile du jour, du plus important au moins important (rang 1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : semaine)
+function emileCards(d, wk, goal){
+  const q = [];
   if (S.summary) {
     const sw = S.docs.get(S.summary.id);
     let b = sw ? '<p class="muted">' + esc(wName(sw)) + ' · ' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' : '';
     b += S.summary.prs.length ? '<p>' + esc(hey('Bien joué : ' + (S.summary.prs.length > 1 ? 'de nouveaux records !' : 'un nouveau record !'))) + '</p><div class="stack" style="gap:4px">' + S.summary.prs.map(p => '<p class="small">' + esc(p) + '</p>').join('') + '</div>'
       : '<p class="small">' + esc(hey('Pas de record cette fois. La régularité compte plus que chaque séance.')) + '</p>';
-    if (sw) {
-      const ef = effortOf(sw); const kc = sessionKcal(sw, bodyweight());
-      b += '<div class="stack" style="gap:6px"><span class="label">Effort de la séance</span><div class="chips" role="group">' + Object.keys(EFFORT).map(k => '<button type="button" class="chip txt' + (ef === k ? ' on' : '') + '" data-act="effort" data-v="' + k + '" aria-pressed="' + (ef === k) + '">' + EFFORT[k].label + '</button>').join('') + '</div>'
-        + '<p class="small muted">' + esc(EFFORT[ef].desc) + '. ' + (kc == null ? 'Indique ton poids pour estimer les calories.' : 'Environ ' + Math.round(kc / 10) * 10 + ' kcal dépensées en ' + sessionMin(sw) + ' min.') + '</p></div>';
-    }
-    h += emile(b, { title:'Séance enregistrée', tone:'good', close:'close-summary' });
+    q.push({ rank:1, html: emile(b, { title:'Séance enregistrée', tone:'good', close:'close-summary' }) });
   }
+  q.push({ rank:1, html: checkCard() });
   if (S.loaded) {
-    const fat = fatigueCheck();
-    if (fat) h += emile('<p>' + esc(hey('Ta force baisse sur ' + fat.drops.length + ' exercices sur ' + fat.compared + ' cette semaine : ' + fat.drops.join(', ') + '.')) + (fat.avgSleep != null && fat.avgSleep < 7 ? ' Ton sommeil moyen ces derniers jours est de ' + fmtKg(Math.round(fat.avgSleep * 10) / 10) + ' h.' : '') + ' Avancer la semaine de décharge peut t’aider à récupérer.</p><div class="row"><button type="button" class="btn primary" data-act="fatigue-deload">Avancer la décharge</button><button type="button" class="btn" data-act="fatigue-ignore">Ignorer cette semaine</button></div>', { title:'Fatigue probable', tone:'warn' , close:'fatigue-ignore' });
-    if (jumpsOn() && wk.bw === 6 && !testForBlock(wk.block)) h += emile('<p>Test de détente cette semaine : il s’affichera au début de ta prochaine séance jambes. La décharge te laisse reposé, c’est le bon moment.</p>', { key:'jumps:' + wk.block + ':6' });
-    else if (jumpsOn() && wk.bw === 5) h += emile('<p>Test de détente la semaine prochaine, pendant la décharge.</p>', { key:'jumps:' + wk.block + ':5' });
     const bb = wk.bw === 6 ? wk.block : (wk.bw === 1 && wk.block > 1 ? wk.block - 1 : 0);
-    if (bb) h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>Bilan du bloc ' + bb + '</h3><span class="muted small">Force, régularité, volume, genou, poids, sommeil et détente, avec des pistes pour la suite.</span></div><button type="button" class="btn" data-act="bilan" data-v="' + bb + '">Voir</button></div></section>';
+    if (bb) q.push({ rank:1, html: emile('<p>' + esc(hey('Ton bilan du bloc ' + bb + ' est prêt : force, régularité et volume, avec des pistes pour la suite.')) + '</p><button type="button" class="btn" data-act="bilan" data-v="' + bb + '">Voir le bilan</button>', { title:'Bilan du bloc ' + bb, key:'bilan:' + bb }) });
+    const fat = fatigueCheck();
+    if (fat) q.push({ rank:2, html: emile('<p>' + esc(hey('Ta force baisse sur ' + fat.drops.length + ' exercices sur ' + fat.compared + ' cette semaine : ' + fat.drops.join(', ') + '.')) + (fat.avgSleep != null && fat.avgSleep < 7 ? ' Ton sommeil moyen ces derniers jours est de ' + fmtKg(Math.round(fat.avgSleep * 10) / 10) + ' h.' : '') + ' Avancer la semaine de décharge peut t’aider à récupérer.</p><div class="row"><button type="button" class="btn primary" data-act="fatigue-deload">Avancer la décharge</button><button type="button" class="btn" data-act="fatigue-ignore">Ignorer cette semaine</button></div>', { title:'Fatigue probable', tone:'warn', close:'fatigue-ignore' }) });
+    if (kneeAlert()) q.push({ rank:2, html: emile('<p>Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts, charges maintenues sur les exercices qui sollicitent le genou. Si ça ne redescend pas, consulte un kiné ou un médecin du sport.</p>', { title:'Genou', tone:'bad', key:'knee:' + kneeEntries().filter(k => k.v > 3).map(k => k.date).sort().pop() }) });
+    if (backupDue()) {
+      const le = settings().lastExport;
+      q.push({ rank:3, html: emile('<p>' + esc(hey(le ? withDot('Ta dernière sauvegarde date du ' + fmtDate(le)) : 'Tu n’as pas encore sauvegardé tes données.')) + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>'
+        + '<button type="button" class="btn primary" data-act="export" data-v="json">Exporter maintenant</button>' + (useShare('json') ? '<p class="muted small">Choisis ensuite «&nbsp;Enregistrer dans Fichiers&nbsp;».</p>' : ''), { title:'Sauvegarde', tone:'warn', key:'backup:' + mondayOf(d) }) });
+    }
+    if (jumpsOn() && wk.bw === 6 && !testForBlock(wk.block)) q.push({ rank:4, html: emile('<p>Test de détente cette semaine : il s’affichera au début de ta prochaine séance jambes. La décharge te laisse reposé, c’est le bon moment.</p>', { key:'jumps:' + wk.block + ':6' }) });
+    else if (jumpsOn() && wk.bw === 5) q.push({ rank:4, html: emile('<p>Test de détente la semaine prochaine, pendant la décharge.</p>', { key:'jumps:' + wk.block + ':5' }) });
   }
-  if (S.loaded && kneeAlert()) h += emile('<p>Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts, charges maintenues sur les exercices qui sollicitent le genou. Si ça ne redescend pas, consulte un kiné ou un médecin du sport.</p>', { title:'Genou', tone:'bad', key:'knee:' + kneeEntries().filter(k => k.v > 3).map(k => k.date).sort().pop() });
-  h += emile('<p>' + esc(goal.d) + '</p>', { title: goal.t, key:'week:' + mondayOf(d) + ':' + goal.t });
+  q.push({ rank:5, html: emile('<p>' + esc(goal.d) + '</p>', { title: goal.t, key:'week:' + mondayOf(d) + ':' + goal.t }) });
+  const f = emileQueue(q);
+  if (!f.rest.length) return f.first;
+  const n = f.rest.length;
+  return f.first + (S.emileMore ? f.rest.join('') : '') + '<button type="button" class="link emile-more" data-act="emile-more" aria-expanded="' + !!S.emileMore + '">' + (S.emileMore ? 'Masquer les autres conseils' : n + (n > 1 ? ' autres conseils' : ' autre conseil')) + '</button>';
+}
 
-  if (aw) {
-    h += '<section class="card plan"><span class="label">Séance en cours</span><div class="name">' + esc(wName(aw)) + '</div><button type="button" class="btn primary big" data-act="tab" data-v="training">Reprendre la séance</button></section>';
-  } else if (plan.s) {
-    const t = tplDef(plan.s);
-    h += '<section class="card plan"><span class="label">' + (doneToday.length ? 'Au programme' : 'Rappel : séance aujourd’hui') + '</span><div class="name">' + esc(t.name) + '</div><p>' + esc(t.focus || '') + ' · environ ' + tplEst(t) + ' min</p>' + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
-    if (doneToday.some(w => w.tpl === plan.s || w.sess === plan.s)) h += '<div class="alert good">Séance faite aujourd’hui.</div>';
-    else h += '<button type="button" class="btn primary big" data-act="start" data-v="' + plan.s + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>';
-    h += '</section>';
-  } else {
-    let next = null; for (let i = 1; i <= 7 && !next; i++) { const dd = addDays(d, i); const p = planDay(parseIso(dd).getDay()); if (p.s) next = { d:dd, t:tplDef(p.s) }; }
-    h += '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (plan.note ? '<p class="muted">' + esc(plan.note) + '</p>' : '') + (next ? '<p class="small">Prochaine séance : <b>' + esc(next.t.name) + '</b>, ' + esc(withDot(fmtDateLong(next.d))) + '</p>' : '') + '</section>';
-  }
-  h += goalTodayCard();
-  h += activitiesCard() + waterCard();
-  // Choisir une autre séance
-  const tpls = allTpl();
+export function viewToday(){
+  const d = today(); const plan = planDay(parseIso(d).getDay());
+  const wk = weekInfo(d); const goal = weekGoal(wk);
+  const aw = S.loaded && activeWorkout(); const tpls = allTpl();
+  const doneToday = workouts().filter(w => w.date === d && w.status === 'terminée');
+  const who = String(settings().name || '').trim();
+  let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' + esc(fmtDateLong(d)) : esc(capFirst(fmtDateLong(d)))) + '</span>';
+  h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span>' : '') + '</div></div>';
+  h += planCard(d, plan, aw, doneToday, tpls);
   if (S.loaded && !tpls.length) h += noTplCard();
-  else h += '<section class="card"><h3>Faire une autre séance</h3><p class="muted small">N’importe quel jour, les objectifs sont calculés pareil.</p><div class="row">' + tpls.map(t => '<button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
+  h += calendarCard();
+  h += foodTodayCard();
+  h += emileCards(d, wk, goal);
+  if (!S.loaded) return h;
 
-  // Corps et sommeil
+  // Ton suivi du jour
+  h += '<h2>Ton suivi du jour</h2>' + waterLine();
   const b = S.docs.get('b_' + d) || {};
-  h += '<section class="card"><div class="stack"><h3>Corps et sommeil</h3><p class="muted small">Nuit de moins de 6 h : garde 1 rep de plus en réserve.</p></div>';
-  h += '<div class="fields"><label class="f"><span>Poids (kg)</span><input class="n" id="b-weight" data-b="weight" inputmode="decimal" value="' + esc(b.weight == null ? '' : fmtKg(num(b.weight))) + '" placeholder="' + esc(bodyweight() ? fmtKg(bodyweight()) : 'ex. 75') + '"' + (S.loaded ? '' : ' disabled') + '></label><label class="f"><span>Sommeil (h)</span><input class="n" id="b-sleep" data-b="sleep" inputmode="decimal" value="' + esc(b.sleep == null ? '' : fmtKg(num(b.sleep))) + '" placeholder="ex. 7,5"' + (S.loaded ? '' : ' disabled') + '></label></div>';
-  h += '<div class="stack" style="gap:6px"><span class="label">Qualité du sommeil</span><div class="chips">' + [1,2,3,4,5].map(v => '<button type="button" class="chip" data-act="sleepq" data-v="' + v + '"' + (S.loaded ? '' : ' disabled') + ' aria-pressed="' + (b.sleepQ === v) + '"' + (b.sleepQ === v ? ' style="background:var(--ink);color:var(--bg);border-color:var(--ink)"' : '') + '>' + v + '</button>').join('') + '</div><span class="muted small">1 = très mauvaise, 5 = excellente</span></div></section>';
-
-  // Genou
-  const k = S.docs.get('k_' + d);
-  if (kneeOn()) h += '<section class="card"><div class="stack"><h3>Genou ce matin</h3><p class="muted small">Douleur en montant les escaliers, de 0 à 10 : au-dessus de 3, sauts suspendus et charges maintenues.</p></div>' + kneeChips(k ? k.stairs : null, 'stairs', !S.loaded) + '</section>';
-
-  h += '<section class="card"><h3>Cette semaine</h3>';
-  if (sportOn() && jumpsOn()) h += '<label class="toggle"><input type="checkbox" id="busy-week" data-act="busy"' + (wk.busy ? ' checked' : '') + (S.loaded ? '' : ' disabled') + '><span><b>Semaine chargée en ' + esc(lowFirst(sportInfo().name)) + '</b><br><span class="muted small">Séance ou match en plus : pas de sauts en salle cette semaine.</span></span></label>';
-  h += '<label class="toggle"><input type="checkbox" id="deload-week" data-act="deload"' + (wk.forced ? ' checked' : '') + (S.loaded && wk.bw !== 6 ? '' : ' disabled') + '><span><b>Décharge anticipée</b><br><span class="muted small">' + (wk.bw === 6 ? 'C’est déjà ta semaine de décharge.' : 'Fatigue accumulée' + (kneeOn() ? ' ou genou qui réagit' : '') + ' : mêmes charges, environ 1/3 de séries en moins.') + '</span></span></label></section>';
+  const corps = [b.weight != null ? fmtKg(num(b.weight)) + ' kg' : '', b.sleep != null ? fmtKg(num(b.sleep)) + ' h' : ''].filter(Boolean).join(' · ') || 'À noter';
+  let cb = '<p class="muted small">Nuit de moins de 6 h : garde 1 rep de plus en réserve.</p>';
+  cb += '<div class="fields"><label class="f"><span>Poids (kg)</span><input class="n" id="b-weight" data-b="weight" inputmode="decimal" value="' + esc(b.weight == null ? '' : fmtKg(num(b.weight))) + '" placeholder="' + esc(bodyweight() ? fmtKg(bodyweight()) : 'ex. 75') + '"></label><label class="f"><span>Sommeil (h)</span><input class="n" id="b-sleep" data-b="sleep" inputmode="decimal" value="' + esc(b.sleep == null ? '' : fmtKg(num(b.sleep))) + '" placeholder="ex. 7,5"></label></div>';
+  cb += '<div class="stack" style="gap:6px"><span class="label">Qualité du sommeil</span><div class="chips">' + [1,2,3,4,5].map(v => '<button type="button" class="chip" data-act="sleepq" data-v="' + v + '" aria-pressed="' + (b.sleepQ === v) + '"' + (b.sleepQ === v ? ' style="background:var(--ink);color:var(--bg);border-color:var(--ink)"' : '') + '>' + v + '</button>').join('') + '</div><span class="muted small">1 = très mauvaise, 5 = excellente</span></div>';
+  h += lineCard('corps', 'Poids et sommeil', corps, '', cb);
+  h += activitiesLine();
+  if (kneeOn()) {
+    const k = S.docs.get('k_' + d);
+    h += lineCard('genou', 'Genou ce matin', k ? k.stairs + '/10' : 'À noter', '', '<p class="muted small">Douleur en montant les escaliers, de 0 à 10 : au-dessus de 3, sauts suspendus et charges maintenues.</p>' + kneeChips(k ? k.stairs : null, 'stairs', false));
+  }
   return h;
 }

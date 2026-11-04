@@ -22,6 +22,7 @@ export function screenOf(){
     if (S.fiche) return { key:'fiche-' + S.fiche, level:1, from:v };
     return { key:'prog-' + S.progTab, level:0, tab:v, sub:PTABS.indexOf(S.progTab) };
   }
+  if (v === 'progress' && S.fiche) return { key:'fiche-' + S.fiche, level:1, from:v };
   if (v === 'progress') return { key:'progress-' + S.progressTab, level:0, tab:v, sub:PRTABS.indexOf(S.progressTab) };
   if (v === 'food' && S.food) return { key:'food-' + S.food.mode, level:FOOD_LEVEL[S.food.mode] || 0, sheet:'food' };
   if (v === 'food') return { key:'food', level:0, tab:v, sub:S.foodDay || '9999' };

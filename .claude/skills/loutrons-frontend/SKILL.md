@@ -100,6 +100,12 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
   - Aujourd'hui, Entraînement, Alimentation (seulement si le suivi est activé) et Progrès ;
   - le profil s'ouvre avec le rond en haut à droite ;
   - un nouvel écran trouve sa place dans cette structure, il n'ajoute pas d'onglet.
+- **Où sont les choses** (version 2.8) :
+  - **Aujourd'hui**, dans l'ordre : salut et date ; la séance du jour (prévue, en cours, faite, ou jour de repos ou de sport) ; « Ta semaine » ; « Ton alimentation » si le suivi est activé ; un seul conseil d'Émile ; « Ton suivi du jour » en lignes compactes (eau, poids et sommeil, activités, genou). Le haut tient sans défilement à 390 × 844 : ne rien ajouter au-dessus du conseil d'Émile ;
+  - **Entraînement › Séances** : « Ton programme » (changer de programme, changer les jours) et les séances ; **› Exercices** : la liste, et les exercices masqués tout en bas ; **› Planning** : « Tes jours », « Cette semaine » (semaine chargée, décharge anticipée), « Réglages de l'entraînement » (début du programme, options genou, détente et sport, jours de sport) ;
+  - **Profil** : toi, ton alimentation, apparence, tes données, La science, et une ligne vers les réglages de l'entraînement ;
+  - **fiche d'un exercice** : ouverte depuis Entraînement › Exercices ou Progrès › « Tes exercices » ; `S.ficheFrom` (`'exercices' | 'progress'`) nomme le retour.
+- **États d'affichage d'Aujourd'hui** (non enregistrés) : `S.todayOpen` (ligne compacte ouverte, une seule) et `S.emileMore` (autres conseils affichés).
 
 ## 5. Identité graphique
 
@@ -120,6 +126,7 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | `--court`, `--court-soft` | repère secondaire neutre (gris) : `.pill.court`, `.chip.sec.on`, barre de l'eau, repère des barres | `#D4D4D4`, `#1F1F1F` | `#3D3D3D`, `#EDEDED` |
 | `--good`, `--warn`, `--bad` (+ `-soft`) | réussite, prudence, alerte | | `--good` `#186B3C` en clair |
 | `--shade` | voile sous un écran ou une fenêtre | | |
+| `--fam-salle`, `--fam-cardio`, `--fam-collectif`, `--fam-autre` | couleur d'une famille d'activité dans le calendrier (points `.mk`) | `#FF7A1A`, `#4DA3FF`, `#B48CFF`, `#D4D4D4` | `#A84300`, `#1F6FD1`, `#7B3FD6`, `#3D3D3D` |
 
 - L'orange signale **ce qu'on peut faire ou ce qui est en cours**. On n'en met pas partout : un écran a une seule action principale `.btn.primary`.
 - Le gris neutre (`--court`) sert aux repères secondaires. Les liens et consignes à déplier sont en `--accent-ink`.
@@ -153,7 +160,8 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
   - il appelle la personne « loutron », « loutronne » ou par son prénom (`hey()`, `callName()`) ;
   - ses conseils sont calculés par des règles et restent courts ;
   - il a une croix pour fermer, avec une clé qui décrit la situation : `emile(body, { key })` ;
-  - les objectifs de chaque exercice restent des calculs sans signature.
+  - les objectifs de chaque exercice restent des calculs sans signature ;
+  - sur Aujourd'hui, un seul conseil à la fois : `emileQueue([{ rank, html }])` garde le plus important (1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : message de la semaine) et range les autres derrière « N autres conseils ».
 
 ## 6. Composants existants (`index.html`)
 
@@ -171,6 +179,8 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | Saisie pendant la séance | `.setrow` > `.sn`, `.fld` (champ et unité), `.chk` |
 | Case à cocher avec explication | `label.toggle` |
 | Petite information d'état | `.pill` (`.good`, `.warn`, `.bad`, `.acc`, `.court`) |
+| Ligne compacte d'Aujourd'hui (nom, valeur, geste rapide, détail ouvert sur place) | `lineCard(clé, nom, valeur, bouton, détail)` dans `js/views/activity.js` : `section.card.line` > `.line-row` > `button.line-h[data-act="today-open"]` |
+| Familles d'un jour dans le calendrier | `.mks` > `i.mk.fam-<famille>.<état>` (`done` plein, `planned` anneau, `active` point entouré), d'après `dayFamilies(day)` |
 | Message dans la page | `.alert` (`.warn`, `.good`, `.info`) |
 | Conseil | `emile(html, { title, tone, key })` |
 | Confirmation brève après une action | `toast('…')` (`js/util.js`) |

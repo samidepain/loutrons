@@ -20,3 +20,9 @@ export function emile(body, opts){
     + '<div class="row between"><span class="who">Émile</span>' + x + '</div>'
     + (o.title ? '<h3>' + esc(o.title) + '</h3>' : '') + body + '</div></div>';
 }
+// File des conseils du jour : on retire ceux qui sont fermés (texte vide), on garde le plus petit rang d'abord
+// (ordre de la liste à rang égal) ; le premier s'affiche, les autres derrière « N autres conseils »
+export function emileQueue(items){
+  const q = items.filter(x => x.html).sort((a, b) => a.rank - b.rank).map(x => x.html);
+  return { first: q[0] || '', rest: q.slice(1) };
+}

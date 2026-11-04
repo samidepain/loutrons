@@ -1,8 +1,8 @@
 // Écran Entraînement (hors séance en cours) : ton programme, ses séances, les exercices, le planning.
-import { capFirst, esc, fmtDateLong, fmtKg, lowFirst, num, WEEKDAYS, withDot } from '../util.js';
+import { capFirst, esc, fmtDateLong, fmtKg, lowFirst, num, today, WEEKDAYS, withDot } from '../util.js';
 import { DAY_ORDER, DAY_SHORT, KINDS, MUSCLES, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
-import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, planDay, programOf, searchEx, settings, sportInfo, sportOn, startDate, tplEst, tplItems } from '../data.js';
+import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, planDay, programOf, searchEx, settings, sportInfo, sportOn, startDate, tplEst, tplItems, weekInfo } from '../data.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
 
@@ -21,7 +21,7 @@ function programCard(){
     ? '<div class="row"><input class="plain" id="prog-name" value="' + esc(g.name || '') + '" aria-label="Nom du programme" style="flex:1;width:auto;min-width:0"><button type="button" class="btn primary" data-act="prog-rename-save">Enregistrer</button></div>'
     : '<div class="row between"><h2>' + esc(g.name || 'Mon programme') + '</h2><button type="button" class="link" data-act="prog-rename">Renommer</button></div>';
   h += '<p class="muted small">' + esc(base ? base.desc : 'Ton propre programme : crée tes séances et mets-y les exercices que tu veux.') + '</p>';
-  return h + '<button type="button" class="btn" data-act="prog-change">Changer de programme</button></section>';
+  return h + '<div class="row"><button type="button" class="btn" data-act="prog-change">Changer de programme</button><button type="button" class="btn" data-act="ptab" data-v="planning">Changer les jours</button></div></section>';
 }
 export function noTplCard(){
   return '<section class="card"><h2>Crée ta première séance</h2><p class="muted">Donne-lui un nom, puis ajoute tes exercices : s’il en manque un, crée-le depuis la liste.</p><button type="button" class="btn primary big" data-act="go-new-tpl">Créer une séance</button></section>';
@@ -32,7 +32,7 @@ function viewTemplates(){
     const its = tplItems(t);
     h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>' + esc(t.name) + '</h3><span class="muted small">' + esc(t.focus || '') + (t.focus ? ' · ' : '') + its.length + ' exercices · environ ' + tplEst(t) + ' min' + (t.edited ? ' · modifiée' : '') + (!t.builtin ? ' · perso' : '') + '</span></div></div>';
     h += '<p class="small muted">' + esc(its.map(it => { const e = exDef(it.ex); return e ? e.name : '?'; }).join(' · ')) + '</p>';
-    h += '<div class="row"><button type="button" class="btn sm" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier</button><button type="button" class="btn sm" data-act="start" data-v="' + esc(t.id) + '">Commencer</button></div></section>';
+    h += '<div class="row"><button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '">Commencer</button><button type="button" class="btn" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier</button></div></section>';
   });
   return h;
 }
@@ -54,11 +54,15 @@ export function exerciseList(){
   const groups = {};
   list.forEach(e => { const g = hid.indexOf(e.id) >= 0 ? 'Masqués' : e.kind === 'plyo' ? 'Pliométrie' : e.kind === 'cardio' ? 'Cardio' : ((e.muscles.p || [])[0] || 'Autres'); (groups[g] = groups[g] || []).push(e); });
   return [...MUSCLES, 'Cardio', 'Pliométrie', 'Autres', 'Masqués'].filter(g => groups[g]).map(g =>
-    '<section class="card"><h3>' + esc(g) + ' <span class="muted small">' + groups[g].length + '</span></h3>' + (g === 'Masqués' ? '<p class="muted small">Plus proposés quand tu ajoutes ou remplaces un exercice.</p>' : '') + groups[g].map(e => exRow(e, false)).join('') + '</section>').join('');
+    g === 'Masqués'
+      // exercices masqués, tout en bas : on peut les réafficher d'ici (anciennement dans le profil)
+      ? '<section class="card"><h3>Exercices masqués <span class="muted small">' + groups[g].length + '</span></h3><p class="muted small">Ils ne sont plus proposés, mais les séances qui les contiennent ne changent pas.</p>' + groups[g].map(e => '<div class="pick static"><span class="n">' + esc(e.name) + '</span><button type="button" class="btn" data-act="ex-unhide" data-v="' + esc(e.id) + '">Réafficher</button></div>').join('') + '</section>'
+      : '<section class="card"><h3>' + esc(g) + ' <span class="muted small">' + groups[g].length + '</span></h3>' + groups[g].map(e => exRow(e, false)).join('') + '</section>').join('');
 }
+// Planning : tes jours, cette semaine (semaine chargée, décharge anticipée), réglages de l'entraînement (début, options, jours de sport)
 function viewPlanning(){
   const tpls = allTpl(); const g = programOf() || {};
-  let h = '<section class="card"><h3>Planning de la semaine</h3><p class="muted small">Sert au rappel du jour et aux séries prévues ; tu peux toujours faire une autre séance.</p>';
+  let h = '<section class="card"><h3>Tes jours</h3><p class="muted small">Sert au rappel du jour et aux séries prévues ; tu peux toujours faire une autre séance.</p>';
   if (!tpls.length) h += '<p class="small">Crée d’abord tes séances dans l’onglet Séances, puis choisis-les ici.</p>';
   DAY_ORDER.forEach(wd => {
     const p = planDay(wd);
@@ -66,7 +70,29 @@ function viewPlanning(){
       tpls.map(t => '<option value="s:' + esc(t.id) + '"' + (p.s === t.id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') +
       '<option value="l:Repos"' + (p.s ? '' : ' selected') + '>Pas de séance</option></select></label>';
   });
-  if (sportOn()) h += '<p class="muted small">Les jours de ' + esc(lowFirst(sportInfo().name)) + ' et de match se règlent dans ton profil.</p>';
   if (PROGRAMS[g.base]) h += '<button type="button" class="link" data-act="reset-plan">Revenir au planning d’origine</button>';
+  return h + '</section>' + weekCard() + settingsCard();
+}
+// Cette semaine : semaine chargée en sport (si sport et détente), décharge anticipée (déplacé d'Aujourd'hui)
+function weekCard(){
+  const wk = weekInfo(today());
+  let h = '<section class="card"><h3>Cette semaine</h3>';
+  if (sportOn() && jumpsOn()) h += '<label class="toggle"><input type="checkbox" id="busy-week" data-act="busy"' + (wk.busy ? ' checked' : '') + '><span><b>Semaine chargée en ' + esc(lowFirst(sportInfo().name)) + '</b><br><span class="muted small">Séance ou match en plus : pas de sauts en salle cette semaine.</span></span></label>';
+  h += '<label class="toggle"><input type="checkbox" id="deload-week" data-act="deload"' + (wk.forced ? ' checked' : '') + (wk.bw !== 6 ? '' : ' disabled') + '><span><b>Décharge anticipée</b><br><span class="muted small">' + (wk.bw === 6 ? 'C’est déjà ta semaine de décharge.' : 'Fatigue accumulée' + (kneeOn() ? ' ou genou qui réagit' : '') + ' : mêmes charges, environ 1/3 de séries en moins.') + '</span></span></label>';
+  return h + '</section>';
+}
+// Réglages de l'entraînement : début du programme, options, sport et jours (déplacés du profil)
+function settingsCard(){
+  const m = mods(); const sp = sportInfo(); const raw = settings().sport || {};
+  const tog = (k, title, desc) => '<label class="toggle"><input type="checkbox" id="mod-' + k + '" data-act="mod" data-v="' + k + '"' + (m[k] ? ' checked' : '') + '><span><b>' + title + '</b><br><span class="muted small">' + desc + '</span></span></label>';
+  let h = '<section class="card"><h3>Réglages de l’entraînement</h3><label class="f"><span>Début du programme</span><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></label><p class="muted small">Choisis le lundi de ta première semaine : il fixe tes blocs de 6 semaines.</p>';
+  h += '<p class="muted small">Options, désactivées au départ : active seulement ce qui te sert.</p>';
+  h += tog('knee', 'Suivi d’une douleur au genou', 'Douleur le matin et pendant les séances jambes. Au-dessus de 3/10, pas de sauts et pas de hausse de charge sur les exercices qui sollicitent le genou.');
+  h += tog('jumps', 'Détente et sauts', 'Exercices de pliométrie dans les séances et un test de détente pendant chaque semaine de décharge.');
+  h += tog('sport', 'Sport collectif à côté', 'Tes jours d’entraînement et de match apparaissent dans ta semaine.' + (m.jumps ? ' Tu peux aussi signaler une semaine chargée : pas de sauts en salle.' : ''));
+  if (m.sport) {
+    const days = k => '<div class="days" role="group">' + DAY_ORDER.map(wd => '<button type="button" class="chip txt' + (sp[k].indexOf(wd) >= 0 ? ' on' : '') + '" data-act="sport-day" data-k="' + k + '" data-v="' + wd + '" aria-pressed="' + (sp[k].indexOf(wd) >= 0) + '">' + DAY_SHORT[wd] + '</button>').join('') + '</div>';
+    h += '<div class="stack"><label class="f"><span>Ton sport</span><input id="set-sport" value="' + esc(raw.name || '') + '" placeholder="ex. Basket, foot, hand"></label><span class="label">Jours d’entraînement</span>' + days('train') + '<span class="label">Jours de match</span>' + days('match') + '</div>';
+  }
   return h + '</section>';
 }

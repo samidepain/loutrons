@@ -168,6 +168,13 @@ const A = {
   // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
   tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
     render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
+  // Aujourd'hui : ouvrir ou fermer une ligne compacte, afficher les autres conseils d'Émile, liens vers Séances et Alimentation
+  'today-open'(b){ S.todayOpen = S.todayOpen === b.dataset.v ? null : b.dataset.v; render(); },
+  'emile-more'(){ S.emileMore = !S.emileMore; render(); },
+  'go-seances'(){ S.progTab = 'seances'; A.tab({ dataset:{ v:'training' } }); },
+  'go-food'(){ A.tab({ dataset:{ v:'food' } }); },
+  // Profil : vers les réglages de l'entraînement (Entraînement › Planning)
+  'go-planning'(){ S.progTab = 'planning'; A.tab({ dataset:{ v:'training' } }); },
   // Premier lancement et programme
   'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
@@ -329,7 +336,8 @@ const A = {
     d[b.dataset.v] = today(); putSettings({ dismissed: d }); render();
   },
   // Effort de la séance qui vient de se terminer : sa dépense est recalculée
-  effort(b){ const w = S.summary && S.docs.get(S.summary.id); if (!w || !EFFORT[b.dataset.v]) return; w.effort = b.dataset.v; w.kcal = computeSessionKcal(w, bodyweight()); put(S.summary.id, w); render(); },
+  // La séance visée est celle du bouton (carte « Séance faite »), même après une relance de l'appli
+  effort(b){ const id = b.dataset.w || (S.summary && S.summary.id); const w = id && S.docs.get(id); if (!w || !EFFORT[b.dataset.v]) return; w.effort = b.dataset.v; w.kcal = computeSessionKcal(w, bodyweight()); put(id, w); render(); },
   'adj-yes'(){ S.adjOk = true; render(); },
   'adj-no'(){ recordCheck('notfollowed'); toast('Objectif gardé : je referai le point dans 2 semaines.'); },
   'adj-apply'(){ const c = checkDue(); if (!c || c.status !== 'change') return; recordCheck('change', true); toast('Nouvel objectif : ' + fmtInt(c.kcal) + ' kcal par jour.'); },
@@ -448,8 +456,9 @@ const A = {
   'draft-cancel'(){ const after = S.draft && S.draft.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null; if (after) S.picker = after.picker; render(); },
   // Exercices
   'new-ex'(){ S.draft = { kind:'ex', isNew:true, id:null, data:blankEx() }; render(); window.scrollTo(0, 0); },
-  'ex-fiche'(b){ S.fiche = b.dataset.v; render(); window.scrollTo(0, 0); },
-  'fiche-close'(){ S.fiche = null; render(); },
+  // Fiche d'un exercice, ouverte depuis Entraînement › Exercices ou depuis Progrès (le retour nomme l'écran d'origine)
+  'ex-fiche'(b){ S.fiche = b.dataset.v; S.ficheFrom = S.view === 'progress' ? 'progress' : 'exercices'; render(); window.scrollTo(0, 0); },
+  'fiche-close'(){ S.fiche = null; S.ficheFrom = null; render(); },
   'edit-ex'(b){ const e = exDef(b.dataset.v); if (!e) return; const d = clone(e); delete d.id; delete d.custom; S.draft = { kind:'ex', isNew:false, id:e.id, data:d }; render(); window.scrollTo(0, 0); },
   'e-kind'(b){ S.draft.data.kind = b.dataset.v; if (b.dataset.v === 'plyo' && !S.draft.data.unit) S.draft.data.unit = 'sauts'; render(); },
   'e-cat'(b){ S.draft.data.cat = b.dataset.v; render(); },
@@ -542,7 +551,6 @@ document.addEventListener('change', e => {
   if (t.matches('input[type=checkbox][data-act]')) { const fn = A[t.dataset.act]; if (fn) fn(t); return; }
   if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; render(); return; }
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
-  if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
   if (t.id === 'glass') { putSettings({ glass: num(t.value) }); render(); toast('Verre de ' + t.value + ' mL.'); return; }
   if (t.matches('[data-n]')) { nField(t.dataset.n, t.value); return; }
   // Accueil, écran 3 : données demandées pour le calcul, vérifiées puis prises en compte

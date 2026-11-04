@@ -27,14 +27,16 @@ const ICONS = {
 // L'onglet Alimentation n'apparaît que si la personne suit son alimentation
 const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['food','Alimentation'],['progress','Progrès']];
 const tabsShown = () => TABS.filter(t => t[0] !== 'food' || (S.loaded && nutritionOf().on));
+// Roue dentée dessinée par l'appli : un anneau en tirets (les dents) et un petit cercle au centre
+const GEAR = '<svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke-width="4" stroke-dasharray="3.3 2.2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/></svg>';
 function sessionDueToday(){ if (!S.loaded) return false; const d = today(); const p = planDay(parseIso(d).getDay()); return !!p.s && !workouts().some(w => w.date === d && w.status === 'terminée'); }
 export function renderTabs(){
   const aw = S.loaded && activeWorkout(); const due = sessionDueToday();
   $('#tabs').innerHTML = tabsShown().map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
-  // Rond du profil : l'initiale du prénom ou pseudo, sinon un pictogramme
+  // Rond du profil : l'initiale du prénom ou pseudo, sinon un pictogramme, avec une petite roue dentée (il mène aussi aux réglages)
   const me = $('#me'); const name = String(settings().name || '').trim();
   me.hidden = !S.loaded || !!(S.setup && S.setup.mode === 'welcome');
-  me.innerHTML = name ? esc(name.charAt(0).toUpperCase()) : ICONS.person;
+  me.innerHTML = (name ? esc(name.charAt(0).toUpperCase()) : ICONS.person) + GEAR;
   me.classList.toggle('on', S.view === 'profile' || S.view === 'science');
 }
 export function render(){
@@ -46,7 +48,7 @@ function paint(){
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
   $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.bilan ? viewBilan(S.bilan) : S.act ? viewActivity()
-    : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? viewProgressPage()
+    : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : viewProgressPage())
     : v === 'food' && nutritionOf().on ? viewFood()
     : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : viewToday();
   if (v === 'training' && aw) ensureTick();

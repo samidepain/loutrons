@@ -1,9 +1,9 @@
 // Écrans Progrès et Bilan de bloc.
-import { addDays, e1rm, esc, fmtDate, fmtKg, mondayOf, num, parseIso, today, withDot } from '../util.js';
+import { addDays, esc, fmtDate, fmtKg, mondayOf, num, parseIso, today, withDot } from '../util.js';
 import { DAY_ORDER, JUMP_PROTOCOL, MUSCLES } from '../library.js';
 import { S } from '../store.js';
-import { allEx, allTpl, blockRange, bodyDocs, bodyweight, canon, exDef, history, jumpsOn, kneeEntries, kneeOn, planDay, settings, testForBlock, weekInfo, workouts } from '../data.js';
-import { blockReport, fatigueCheck, muscleDone, musclePlanned } from '../engine.js';
+import { allEx, blockRange, bodyDocs, bodyweight, canon, history, jumpsOn, kneeEntries, kneeOn, planDay, settings, testForBlock, weekInfo, workouts } from '../data.js';
+import { blockReport, exerciseProgress, fatigueCheck, muscleDone, musclePlanned, setScore } from '../engine.js';
 import { chart } from '../chart.js';
 import { viewHistory } from './history.js';
 import { emile } from '../emile.js';
@@ -38,23 +38,15 @@ function viewProgress(){
   });
   h += '<p class="muted small">Semaine dernière : ' + MUSCLES.filter(x => lastW[x] > 0).map(x => x + ' ' + fmtKg(lastW[x])).join(' · ') + (MUSCLES.some(x => lastW[x] > 0) ? '' : 'aucune série enregistrée') + '.</p></section>';
 
-  // Par exercice
+  // Tes exercices : ceux déjà faits, du plus récent au plus ancien, avec leur dernière meilleure série ; une ligne ouvre la fiche (progrès, courbe)
   const used = new Set(); workouts().forEach(w => Object.keys(w.ex || {}).forEach(k => used.add(canon(k))));
-  const exList = allEx().filter(e => (e.kind === 'load' || e.kind === 'bw') && (used.has(e.id) || allTpl().some(t => t.items.some(it => canon(it.ex) === e.id))));
-  const ex = exDef(S.progEx) || exList[0];
-  if (ex) {
-    const hist = history(ex.id, null).slice().reverse(); const bw = bodyweight();
-    h += '<section class="card"><h3>Par exercice</h3><label class="f"><span>Exercice</span><select id="prog-ex">' + exList.map(e => '<option value="' + esc(e.id) + '"' + (e.id === ex.id ? ' selected' : '') + '>' + esc(e.name) + '</option>').join('') + '</select></label>';
-    const tot = kg => ex.kind === 'bw' ? (bw || 0) + kg : kg;
-    if (ex.kind === 'load' || bw) {
-      const pts = hist.map(x => ({ x: parseIso(x.date).getTime(), y: Math.round(Math.max.apply(null, x.sets.map(s => e1rm(tot(s.kg), s.reps))) * 10) / 10 }));
-      h += '<p class="muted small">Force estimée (1RM, formule d’Epley) de ta meilleure série' + (ex.kind === 'bw' ? ', poids du corps compris' : '') + '.</p>' + chart([{ pts }], { label:'Force estimée', empty:'Fais cet exercice une première fois pour voir ta courbe.' });
-    } else {
-      const pts = hist.map(x => ({ x: parseIso(x.date).getTime(), y: x.sets.reduce((a, s) => a + s.reps, 0) }));
-      h += '<p class="muted small">Total de reps par séance. Note ton poids de corps pour voir la force estimée.</p>' + chart([{ pts }], { label:'Total de reps', empty:'Fais cet exercice une première fois pour voir ta courbe.' });
-    }
-    if (hist.length) h += '<div class="scroll"><table class="tbl"><thead><tr><th>Date</th><th>Séries</th><th>Réserve</th></tr></thead><tbody>' + hist.slice().reverse().slice(0, 8).map(x => '<tr><td>' + esc(fmtDate(x.date)) + (x.deload ? ' <span class="pill court">déch.</span>' : '') + '</td><td>' + x.sets.map(s => (ex.kind === 'bw' && !s.kg ? 'PdC' : fmtKg(s.kg)) + '×' + s.reps).join(' · ') + '</td><td class="num">' + (x.rir == null ? '—' : (x.rir >= 4 ? '4+' : x.rir)) + '</td></tr>').join('') + '</tbody></table></div>';
-    h += '</section>';
+  const mine = allEx().filter(e => used.has(e.id) && (e.kind === 'load' || e.kind === 'bw' || e.kind === 'cardio')).map(e => ({ e, p: exerciseProgress(e.id) })).filter(x => x.p.last.length)
+    .sort((a, b) => a.p.last[0].date < b.p.last[0].date ? 1 : a.p.last[0].date > b.p.last[0].date ? -1 : 0);
+  if (mine.length) {
+    // même règle que la meilleure série de la fiche (poids du corps compris s'il est noté)
+    const bestOf = (kind, x) => { const sc = setScore(kind); return x.sets.reduce((m, s) => !m || sc(s) > sc(m) ? s : m, null); };
+    const detail = (e, l) => e.kind === 'cardio' ? l.min + ' min' + (l.km ? ' · ' + fmtKg(l.km) + ' km' : '') : (s => (e.kind === 'bw' && !s.kg ? 'PdC' : fmtKg(s.kg) + ' kg') + ' × ' + s.reps)(bestOf(e.kind, l));
+    h += '<section class="card"><h3>Tes exercices</h3>' + mine.map(x => '<button type="button" class="pick" data-act="ex-fiche" data-v="' + esc(x.e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(x.e.name) + '</span><span class="m">' + esc(detail(x.e, x.p.last[0]) + ' · ' + fmtDate(x.p.last[0].date)) + '</span></span><span aria-hidden="true">›</span></button>').join('') + '</section>';
   }
 
   // Corps

@@ -15,10 +15,20 @@ export function actDetail(a){
   return [min, more].filter(Boolean).join(' · ');
 }
 
-export function activitiesCard(){
+// Ligne compacte d'Aujourd'hui : nom, valeur résumée et geste rapide ; on la touche pour l'ouvrir sur place.
+// Une seule ligne ouverte à la fois (S.todayOpen), gardée quand l'écran se redessine.
+const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+export function lineCard(key, name, value, quick, body){
+  const open = S.todayOpen === key;
+  return '<section class="card line"><div class="line-row"><button type="button" class="line-h" data-act="today-open" data-v="' + key + '" aria-expanded="' + open + '"' + (open ? ' aria-controls="line-' + key + '"' : '') + '><span class="n">' + esc(name) + '</span><span class="v">' + esc(value) + '</span>' + CHEVRON + '</button>' + (quick || '') + '</div>'
+    + (open ? '<div class="line-body" id="line-' + key + '">' + body + '</div>' : '') + '</section>';
+}
+
+export function activitiesLine(){
   if (!S.loaded) return '';
-  const d = today(); const e = dayEnergy(d);
-  let h = '<section class="card"><div class="row between"><h3>Tes activités</h3>' + (e.kcal ? '<span class="muted small num">' + kcalText(e.kcal) + '</span>' : '') + '</div>';
+  const d = today(); const e = dayEnergy(d); const acts = e.items.filter(i => i.kind === 'activity'); const last = acts[acts.length - 1];
+  const value = last ? last.name + (num(last.a.min) ? ' · ' + num(last.a.min) + ' min' : '') + (acts.length > 1 ? ' · +' + (acts.length - 1) : '') : 'Aucune';
+  let h = e.kcal ? '<p class="muted small num">Dépense du jour : ' + kcalText(e.kcal) + '</p>' : '';
   if (!e.items.length) h += '<p class="muted small">Note ici tes autres sports pour estimer ta dépense du jour : ta séance de muscu s’ajoute toute seule.</p>';
   e.items.forEach(i => {
     const det = i.kind === 'session' ? i.min + ' min · séance ' + EFFORT[i.effort].label.toLowerCase()
@@ -29,28 +39,26 @@ export function activitiesCard(){
   // Sport collectif prévu aujourd'hui et pas encore noté : un geste pour l'ajouter
   const sp = sportPlanned(d);
   if (sp && !e.items.some(i => i.kind === 'activity' && i.a.type === 'sport')) h += '<button type="button" class="btn" data-act="act-add" data-v="' + sp + '">+ ' + esc(sp === 'match' ? 'Le match prévu aujourd’hui' : capFirst(sportInfo().name) + ' prévu aujourd’hui') + '</button>';
-  h += '<button type="button" class="btn" data-act="act-add">+ Ajouter une activité</button>';
-  if (!bodyweight() && e.items.some(i => i.kcal == null)) h += '<p class="muted small">Indique ton poids dans « Corps et sommeil » pour estimer les calories.</p>';
-  return h + '</section>';
+  if (!bodyweight() && e.items.some(i => i.kcal == null)) h += '<p class="muted small">Indique ton poids dans « Poids et sommeil » pour estimer les calories.</p>';
+  return lineCard('activites', 'Activités', value, '<button type="button" class="btn" data-act="act-add">+ Ajouter</button>', h);
 }
 
-export function waterCard(){
+export function waterLine(){
   if (!S.loaded) return '';
   const d = today(); const ml = waterOf(d); const goal = waterGoal(d); const g = glassOf(); const sport = goal - Math.round(waterBase(settings().sex) / 100) * 100;
-  let h = '<section class="card"><div class="row between"><h3>Eau</h3><span class="num"><b>' + liters(ml) + '</b> / ' + liters(goal) + ' L</span></div>';
-  h += '<div class="mbar big water" role="img" aria-label="' + esc(liters(ml) + ' L bus sur ' + liters(goal) + ' L') + '"><i style="width:' + Math.min(100, ml / goal * 100).toFixed(1) + '%"></i></div>';
-  h += '<div class="row"><button type="button" class="btn" data-act="water" data-v="-1" aria-label="Retirer un verre"' + (ml ? '' : ' disabled') + '>−</button><button type="button" class="btn primary" data-act="water" data-v="1" style="flex:1">+ 1 verre (' + g + ' mL)</button></div>';
+  let h = '<div class="mbar big water" role="img" aria-label="' + esc(liters(ml) + ' L bus sur ' + liters(goal) + ' L') + '"><i style="width:' + Math.min(100, ml / goal * 100).toFixed(1) + '%"></i></div>';
+  h += '<div class="row"><button type="button" class="btn" data-act="water" data-v="-1"' + (ml ? '' : ' disabled') + '>− 1 verre</button><span class="muted small">Verre de ' + g + ' mL</span></div>';
   h += '<details class="cue"><summary>Autre quantité, taille du verre</summary><div class="row"><input class="n" id="water-ml" inputmode="numeric" placeholder="mL" aria-label="Quantité en mL" style="width:96px"><button type="button" class="btn" data-act="water-ml">Ajouter</button>';
   h += '<label class="row" style="gap:6px;margin-left:auto"><span class="small muted">Verre</span><select id="glass">' + [150, 200, 250, 330, 500].map(v => '<option value="' + v + '"' + (v === g ? ' selected' : '') + '>' + v + ' mL</option>').join('') + '</select></label></div></details>';
   h += '<p class="muted small">Repère : ' + liters(goal - sport) + ' L de boissons par jour' + (sport > 0 ? ', plus ' + liters(sport) + ' L pour ton sport' : '') + ', davantage s’il fait chaud.</p>';
-  return h + '</section>';
+  return lineCard('eau', 'Eau', liters(ml) + ' / ' + liters(goal) + ' L', '<button type="button" class="btn" data-act="water" data-v="1">+ 1 verre</button>', h);
 }
 
 // Fenêtre d'ajout ou de modification. S.act : { type, date, min, km, level, sport, name, kcal, edit }
 export const actDoc = A => ({ type:A.type, min:num(A.min), km:num(A.km), level:A.level || null, sport:A.sport || null, name:String(A.name || '').trim(), kcal:num(A.kcal) });
 export function actPreview(){
   const A = S.act; const a = actDoc(A); const kc = activityKcal(a, bodyweight());
-  if (kc == null) return '<p class="muted small">' + (!bodyweight() && A.type !== 'other' ? 'Indique ton poids dans « Corps et sommeil » pour estimer les calories.' : A.type === 'other' ? 'Sans calories indiquées, l’activité est notée sans dépense.' : 'Complète les champs pour estimer la dépense.') + '</p>';
+  if (kc == null) return '<p class="muted small">' + (!bodyweight() && A.type !== 'other' ? 'Indique ton poids dans « Poids et sommeil » pour estimer les calories.' : A.type === 'other' ? 'Sans calories indiquées, l’activité est notée sans dépense.' : 'Complète les champs pour estimer la dépense.') + '</p>';
   return '<p><b class="num">' + kcalText(kc) + '</b> dépensées' + (a.min > 0 ? ' · environ ' + liters(WATER.perHour * a.min / 60) + ' L d’eau en plus' : '') + '</p>';
 }
 export function viewActivity(){

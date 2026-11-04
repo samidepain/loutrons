@@ -142,6 +142,17 @@ function checkSummary(n){
   if (n.adjust) h += '<button type="button" class="link" data-act="adj-reset" style="align-self:flex-start">Annuler les corrections</button>';
   return h + '</div>';
 }
+// Aujourd'hui : ce qu'il reste à manger aujourd'hui (séances et activités comprises), en un coup d'œil
+export function foodTodayCard(){
+  const n = nutritionOf(); if (!S.loaded || !n.on) return '';
+  const pl = dayPlan(today());
+  if (pl.status === 'missing' || !(pl.kcal > 0)) return '<section class="card food-today"><h3>Ton alimentation</h3><button type="button" class="link" data-act="goal-edit">Complète ton profil pour calculer tes besoins ›</button></section>';
+  const t = totals(dayDoc(today()).items); const rest = pl.kcal - t.kcal; const prot = pl.protein[0] - t.p;
+  const msg = rest > 0 ? 'Il te reste ' + fmtInt(rest) + ' kcal' + (prot > 0 ? ' et ' + fmtInt(prot) + ' g de protéines' : '') + '.' : 'Objectif du jour atteint' + (prot > 0 ? ' ; il te manque ' + fmtInt(prot) + ' g de protéines.' : '.');
+  return '<section class="card food-today"><div class="row between"><h3>Ton alimentation</h3><span class="muted small num">' + fmtInt(t.kcal) + ' / ' + fmtInt(pl.kcal) + ' kcal</span></div><p>' + esc(msg) + '</p>'
+    + '<div class="mbar" role="img" aria-label="' + esc(fmtInt(t.kcal) + ' kcal sur ' + fmtInt(pl.kcal)) + '"><i style="width:' + Math.min(100, t.kcal / pl.kcal * 100).toFixed(1) + '%"></i></div>'
+    + '<button type="button" class="btn" data-act="go-food">Noter un repas</button></section>';
+}
 // Carte d'Aujourd'hui : objectif, rythme et besoins du jour
 export function goalTodayCard(){
   const n = nutritionOf(); if (!S.loaded || !n.on) return '';

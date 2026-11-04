@@ -8,7 +8,7 @@
 npm test
 ```
 
-Tous les tests doivent passer (95 avec la version 2.6). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
+Tous les tests doivent passer (110 avec la version 2.8). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
 
 ## 2. Servir l'appli
 
@@ -179,6 +179,8 @@ async (page) => {
   return ok;
 }
 ```
+
+Après ce test, le service worker reste inscrit dans le navigateur de test. Tant que le numéro de version ne change pas, il continue de servir les fichiers de ce moment-là, même si on les corrige ensuite : on le désinscrit et on vide ses caches avant de reprendre les contrôles (`navigator.serviceWorker.getRegistrations()`, puis `unregister()` ; `caches.keys()`, puis `caches.delete()`).
 
 L'appli doit s'ouvrir et l'écran modifié s'afficher. Une fonction qui a besoin du réseau (scan d'un nouveau produit, photo jamais vue) dit ce qui manque, sans erreur.
 

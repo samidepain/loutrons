@@ -1,8 +1,7 @@
-// Écran Profil : ce qui te concerne, apparence, options, sauvegarde, et « La science ».
+// Écran Profil : ce qui te concerne, ton alimentation, apparence, sauvegarde, et « La science » ; les réglages de l'entraînement sont dans Entraînement › Planning.
 import { esc, fmtDate, fmtDateLong, fmtKg, num, today, withDot } from '../util.js';
-import { DAY_ORDER, DAY_SHORT } from '../library.js';
 import { S } from '../store.js';
-import { bodyDocs, excluded, exDef, jumpsOn, kneeOn, mods, settings, sportInfo, startDate } from '../data.js';
+import { bodyDocs, jumpsOn, kneeOn, settings } from '../data.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
 import { goalProfileCard } from './goal.js';
@@ -26,6 +25,7 @@ export function viewProfile(){
   h += goalProfileCard();
   const t = s.theme || 'auto';
   h += '<section class="card"><h3>Apparence</h3><div class="chips" role="group">' + [['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(o => '<button type="button" class="chip txt' + (t === o[0] ? ' on' : '') + '" data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (t === o[0]) + '">' + o[1] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
+  h += '<button type="button" class="pick" data-act="go-planning"><span class="stack" style="gap:2px"><span class="n">Réglages de l’entraînement</span><span class="m">Début du programme, options genou, détente et sport, exercices masqués : dans Entraînement</span></span><span aria-hidden="true">›</span></button>';
   h += viewSettingsCards();
   h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>La science</h3><span class="muted small">Comment l’appli fixe tes objectifs, et ses sources.</span></div><button type="button" class="btn" data-act="science">Lire</button></div></section>';
   h += '<p class="muted small" style="text-align:center">Loutrons · version ' + esc(VERSION) + '</p>';
@@ -36,12 +36,7 @@ export function viewSciencePage(){
 }
 function viewSettingsCards(){
   const s = settings();
-  let h = '<section class="card"><h3>Début du programme</h3><p class="muted small">Choisis le lundi de ta première semaine : il fixe tes blocs de 6 semaines.</p><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></section>';
-  h += optionsCard();
-  const hid = excluded().map(exDef).filter(Boolean);
-  h += '<section class="card"><h3>Exercices masqués</h3><p class="muted small">Ils ne sont plus proposés, mais les séances qui les contiennent ne changent pas.</p>';
-  h += hid.length ? hid.map(e => '<div class="row between"><span>' + esc(e.name) + '</span><button type="button" class="btn sm" data-act="ex-unhide" data-v="' + esc(e.id) + '">Afficher à nouveau</button></div>').join('') : '<p class="small">Aucun. Pour masquer un exercice, ouvre-le dans Entraînement › Exercices.</p>';
-  h += '</section>';
+  let h = '';
   h += '<section class="card"><h3>Tes données</h3><p class="small">Tes séances sont enregistrées seulement sur cet appareil. Exporte-les régulièrement.</p>';
   h += '<p class="small"><b>' + (s.lastExport ? esc(withDot('Dernière sauvegarde : ' + fmtDateLong(s.lastExport))) : 'Aucune sauvegarde pour l’instant.') + '</b> Seul l’export JSON compte comme sauvegarde.</p>';
   h += '<div class="row"><button type="button" class="btn" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
@@ -49,19 +44,6 @@ function viewSettingsCards(){
   h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
   h += '</section>';
   return h;
-}
-function optionsCard(){
-  const m = mods(); const sp = sportInfo(); const raw = settings().sport || {};
-  const tog = (k, title, desc) => '<label class="toggle"><input type="checkbox" id="mod-' + k + '" data-act="mod" data-v="' + k + '"' + (m[k] ? ' checked' : '') + '><span><b>' + title + '</b><br><span class="muted small">' + desc + '</span></span></label>';
-  let h = '<section class="card"><h3>Options</h3><p class="muted small">Désactivées au départ : active seulement ce qui te sert.</p>';
-  h += tog('knee', 'Suivi d’une douleur au genou', 'Douleur le matin et pendant les séances jambes. Au-dessus de 3/10, pas de sauts et pas de hausse de charge sur les exercices qui sollicitent le genou.');
-  h += tog('jumps', 'Détente et sauts', 'Exercices de pliométrie dans les séances et un test de détente pendant chaque semaine de décharge.');
-  h += tog('sport', 'Sport collectif à côté', 'Tes jours d’entraînement et de match apparaissent dans ta semaine.' + (m.jumps ? ' Tu peux aussi signaler une semaine chargée : pas de sauts en salle.' : ''));
-  if (m.sport) {
-    const days = k => '<div class="days" role="group">' + DAY_ORDER.map(wd => '<button type="button" class="chip txt' + (sp[k].indexOf(wd) >= 0 ? ' on' : '') + '" data-act="sport-day" data-k="' + k + '" data-v="' + wd + '" aria-pressed="' + (sp[k].indexOf(wd) >= 0) + '">' + DAY_SHORT[wd] + '</button>').join('') + '</div>';
-    h += '<div class="stack"><label class="f"><span>Ton sport</span><input id="set-sport" value="' + esc(raw.name || '') + '" placeholder="ex. Basket, foot, hand"></label><span class="label">Jours d’entraînement</span>' + days('train') + '<span class="label">Jours de match</span>' + days('match') + '</div>';
-  }
-  return h + '</section>';
 }
 function viewScience(){
   const sec = (t, p, src) => '<div class="stack"><h3>' + t + '</h3><p>' + p + '</p>' + (src ? '<p class="src">' + src + '</p>' : '') + '</div>';
