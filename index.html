@@ -398,6 +398,20 @@ details.cue[open]{display:flex;flex-direction:column;gap:10px}
 .pick.static:active{background:var(--surface-2)}
 .pick.static.planned{border:1px dashed var(--muted)}
 .mrow.fd{grid-template-columns:72px minmax(0,1fr) 104px}
+/* Raccourci du journal (habituel, repas passé, repas enregistré) : nom et détail, puis « + » rond qui ajoute d'un geste */
+.quick{display:flex;align-items:center;gap:8px}
+.quick > .pick{flex:1;min-width:0}
+.quick .ql{display:flex;flex-direction:column;gap:2px;min-width:0}
+.quick .n{overflow-wrap:anywhere}
+button.plus{flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--surface-2);color:var(--accent-ink);font-size:26px;font-weight:700;line-height:1;transition:transform .14s}
+button.plus:active{transform:scale(.93)}
+.meal > .link{align-self:flex-start}
+.qgroup{gap:8px}
+/* Repas enregistré : ses aliments, une ligne chacun (nom à gauche, quantité et kcal à droite) */
+.sm-list{gap:6px}
+.sm-item{display:flex;justify-content:space-between;gap:12px}
+.sm-item > span:first-child{min-width:0;overflow-wrap:anywhere}
+.sm-item .num{flex:none;white-space:nowrap}
 .pick .num{font-weight:700;white-space:nowrap}
 .scan{position:relative;border-radius:var(--r);overflow:hidden;background:#000;aspect-ratio:4/3}
 .scan video{width:100%;height:100%;object-fit:cover;display:block}

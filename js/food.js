@@ -1,7 +1,7 @@
 // Journal des repas : aliments (table Ciqual, Open Food Facts, aliments créés), repas du jour et totaux. Sans affichage.
 // Documents : m_<date> (repas du jour : { date, items: [{ id, meal, key, name, brand, g, per100 }] }),
 // f_<code> (produit scanné, gardé sur le téléphone) et f_own<id> (aliment créé). Valeurs pour 100 g : { kcal, p, c, s, f, sf, fib, salt }.
-import { norm } from './util.js';
+import { addDays, norm, parseIso, rid, WEEKDAYS } from './util.js';
 import { S } from './store.js';
 
 export const MEALS = [['breakfast', 'Petit-déjeuner'], ['lunch', 'Déjeuner'], ['dinner', 'Dîner'], ['snack', 'Collations']];
@@ -57,6 +57,50 @@ export function totals(items){
 }
 export const dayDoc = day => S.docs.get('m_' + day) || { date: day, items: [] };
 export function myFoods(){ const out = []; S.docs.forEach((o, id) => { if (id.indexOf('f_') === 0) out.push(Object.assign({ id }, o)); }); return out; }
+// Jours du journal (documents m_) de from (inclus) à to (exclu), du plus récent au plus ancien ; une date mal formée (sauvegarde importée) est ignorée
+const isoDate = d => typeof d === 'string' && d.length === 10 && /^\d{4}-\d{2}-\d{2}/.test(d);
+const journalDays = (from, to) => { const out = []; S.docs.forEach((o, id) => { if (id.indexOf('m_') === 0 && isoDate(o.date) && o.date >= from && o.date < to) out.push(o); }); return out.sort((a, b) => a.date < b.date ? 1 : -1); };
+// Un aliment tel qu'il est noté dans une entrée du journal ou un repas enregistré
+const foodOf = it => ({ key: it.key, src: it.src || it.key.split(':')[0], name: it.name, brand: it.brand || '', g: it.g, serving: it.serving || null, portion: it.portion || null, per100: it.per100 });
+// Tes habituels à un repas : les aliments notés à ce repas dans les 60 jours avant le jour affiché (règle de l'appli), classés par
+// nombre de fois puis du plus récent, avec la dernière quantité ; ceux déjà notés à ce repas ce jour-là sont retirés
+export function habitualFoods(meal, day, limit){
+  const already = new Set(dayDoc(day).items.filter(i => i.meal === meal).map(i => i.key)); const seen = new Map();
+  journalDays(addDays(day, -60), day).forEach(d => (d.items || []).slice().reverse().forEach(i => {
+    if (i.meal !== meal || already.has(i.key)) return;
+    const s = seen.get(i.key); if (s) s.count++; else seen.set(i.key, Object.assign(foodOf(i), { count: 1, last: d.date }));
+  }));
+  return [...seen.values()].sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0)).slice(0, limit || 8).map(({ last, ...f }) => f);
+}
+// Repas passés : les jours avant le jour affiché, dans les span derniers jours, où ce repas a au moins un aliment (« Comme hier »)
+export function pastMeals(meal, day, span, max){
+  return journalDays(addDays(day, -(span || 14)), day).map(d => ({ date: d.date, items: (d.items || []).filter(i => i.meal === meal) })).filter(d => d.items.length).slice(0, max || 3);
+}
+// « hier » pour la veille du jour affiché, sinon le jour de la semaine (« lundi »)
+export const mealLabel = (date, day) => date === addDays(day, -1) ? 'hier' : WEEKDAYS[parseIso(date).getDay()];
+// Repas enregistrés (documents q_) : ceux de ce moment de la journée d'abord, puis les autres, chacun par nom
+export function savedMeals(meal){
+  const out = []; S.docs.forEach((o, id) => { if (id.indexOf('q_') === 0 && o && Array.isArray(o.items)) out.push(Object.assign({ id }, o)); });
+  return out.sort((a, b) => (a.meal === meal ? 0 : 1) - (b.meal === meal ? 0 : 1) || String(a.name).localeCompare(String(b.name), 'fr'));
+}
+// Aliment gardé sur le téléphone (produit scanné f_<code>, aliment ou recette créés f_own<id>), avec ses valeurs actuelles
+function storedFood(key){
+  const id = key.indexOf('off:') === 0 ? 'f_' + key.slice(4) : key.indexOf('own:') === 0 ? 'f_own' + key.slice(4) : null;
+  const o = id && S.docs.get(id); if (!o || !o.per100) return null;
+  return { name: o.name, brand: o.brand || '', per100: o.per100, serving: o.serving || null, portion: o.src === 'recipe' ? '1 portion' : null };
+}
+// Nouvelles entrées du journal copiées d'autres (repas passé, repas enregistré, habituel) : nouvel identifiant, repas demandé,
+// mêmes quantités ; valeurs actuelles d'un aliment gardé sur le téléphone, sinon celles copiées (table Ciqual, recettes types)
+export function copyEntries(items, meal){
+  return items.map(it => {
+    const f = storedFood(it.key) || it;
+    const e = { id: rid(), meal, key: it.key, name: f.name, brand: f.brand || '', g: it.g, per100: f.per100 };
+    if (f.serving || it.serving) e.serving = f.serving || it.serving;
+    if (f.portion || it.portion) e.portion = f.portion || it.portion;
+    if (it.src === 'rec' || it.src === 'recipe') e.src = it.src;
+    return e;
+  });
+}
 // Aliments mangés récemment, du plus récent au plus ancien, sans doublon ; g : dernière quantité notée
 export function recentFoods(limit){
   const days = []; S.docs.forEach((o, id) => { if (id.indexOf('m_') === 0) days.push(o); });

@@ -106,7 +106,8 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
   - **Profil** : toi, ton alimentation, apparence, tes données, La science, et une ligne vers les réglages de l'entraînement ;
   - **fiche d'un exercice** : ouverte depuis Entraînement › Exercices ou Progrès › « Tes exercices » ; `S.ficheFrom` (`'exercices' | 'progress'`) nomme le retour.
   - **séance en cours** (Entraînement) : un seul exercice ouvert (ou un superset), les autres repliés en lignes ; `sessionFocus(w, { open, ask })` (`js/data.js`) dit lesquels sont ouverts, quelle série est en cours et si la question des reps en réserve attend ;
-  - **« Voir le mouvement »** : fenêtre (`S.move`, `sheet:'move'`) ouverte depuis l'exercice ouvert ; le même bloc est dans la fiche.
+  - **« Voir le mouvement »** : fenêtre (`S.move`, `sheet:'move'`) ouverte depuis l'exercice ouvert ; le même bloc est dans la fiche ;
+  - **Alimentation** (version 2.11) : un repas vide montre « Comme hier » et son premier habituel ; la fenêtre d'ajout, recherche vide, montre « Refaire un repas », « Tes repas », « Tes habituels au … » et « Récents » ; « Enregistrer ce repas » (2 aliments au moins) ouvre `S.food.mode = 'save-meal'`, le détail d'un repas enregistré `S.food.mode = 'meal'`.
 - **États d'affichage d'Aujourd'hui** (non enregistrés) : `S.todayOpen` (ligne compacte ouverte, une seule) et `S.emileMore` (autres conseils affichés).
 - **États d'affichage de la séance** (non enregistrés, remis à zéro au début, à la fin et à l'abandon) : `S.sessOpen` (exercice ouvert à la main), `S.rirAsk` (exercice qui attend ses reps en réserve), `S.setEdit` (`{ ex, i }`, série faite en correction), `S.move` (exercice de « Voir le mouvement »). Après une validation, `showCurrent()` (`actions.js`) garde `#cur` visible au-dessus du minuteur.
 
@@ -184,6 +185,8 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | Séries faites et à venir | `.set-line` : `.done` (bouton, `data-act="set-edit"` pour corriger) ou `.next` (grisée) ; `.sn`, `.sl-v`, `.sl-ok` |
 | Question des reps en réserve | `.cur-set.rir-ask` > `.rir-q`, `.chips` en grille de 5 > `.rir-c` (puce, et `.vise` sous la valeur visée), `button.link` « Passer la question » |
 | Photos du mouvement et silhouette en grand | `movementBlock(e, { cue })` (`js/views/movement.js`) : `.mv` > `button.mv-photos` (alternance en CSS, `.mv.paused` la fige), `.mv-cap`, puis `bodyMap(m)` (`.bodymap.big` et `.legend.big`) ; moins d'animations : `.photos` côte à côte |
+| Raccourci qui ajoute d'un geste (habituel, repas passé, repas enregistré) | `.quick` > `.pick` (`.ql` > `.n` + `.m` ; `data-act="fd-open"` ou `fd-saved` pour un aliment ou un repas enregistré, `.pick.static` pour un repas passé) + `button.plus` rond de 44 px (`aria-label` « Ajouter … ») ; groupes de la fenêtre : `.qgroup` > `.label` ; `quickFood()`, `quickPast()` dans `js/views/food.js` |
+| Aliments d'un repas enregistré | `.sm-list` > `p.sm-item` (nom, puis quantité et kcal) |
 | Saisie du cardio pendant la séance | `.setrow.cardio` > `.sn`, `.fld` (champ et unité) |
 | Case à cocher avec explication | `label.toggle` |
 | Petite information d'état | `.pill` (`.good`, `.warn`, `.bad`, `.acc`, `.court`) |

@@ -4,7 +4,7 @@ import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
 import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, upNext, weekInfo } from './data.js';
 import { findPRs, initItem } from './engine.js';
-import { downloadFile, exportFile, useShare } from './backup.js';
+import { downloadFile, exportFile, importable, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
 import { applyTheme, render } from './render.js';
 import { screenOf } from './nav.js';
@@ -14,7 +14,7 @@ import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
 import { checkDue, nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
-import { dayDoc, fromOff, recentFoods, validBarcode } from './food.js';
+import { copyEntries, dayDoc, fromOff, habitualFoods, mealLabel, MEALS, recentFoods, validBarcode } from './food.js';
 import { foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
 import { ownRecipe } from './recipes.js';
 import { activityKcal, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, waterOf } from './energy.js';
@@ -161,7 +161,17 @@ function nField(k, v){
   if (k === 'by') { if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { render(); return; } nSave({ by: v }, true); }
 }
 // Journal des repas : une entrée garde les valeurs pour 100 g de l'aliment, pour que l'historique ne change pas
-function addEntry(day, entry){ const d = dayDoc(day); put('m_' + day, Object.assign({}, d, { date: day, items: (d.items || []).concat([entry]) })); }
+function addEntry(day, entry){ addEntries(day, [entry]); }
+function addEntries(day, entries){ const d = dayDoc(day); put('m_' + day, Object.assign({}, d, { date: day, items: (d.items || []).concat(entries) })); }
+// Raccourcis du journal : jour et repas visés (la fenêtre d'ajout ouverte, sinon le jour affiché et le repas du raccourci)
+const quickTarget = m => S.food ? { day: S.food.day, meal: S.food.meal } : { day: S.foodDay || today(), meal: m };
+// Aliment d'un raccourci : un habituel de ce repas (dernière quantité), sinon un récent
+const quickFoodOf = (key, m, day, l) => (l !== 'rec' && habitualFoods(m, day, 60).find(f => f.key === key)) || recentFoods(200).find(f => f.key === key) || null;
+const mealLow = m => ((MEALS.find(x => x[0] === m) || ['', ''])[1]);
+// « Ajouté : 1 aliment », « Ajoutés : 3 aliments » (accord indépendant du nom des aliments et du repas)
+const added = n => (n > 1 ? 'Ajoutés : ' : 'Ajouté : ') + n + ' aliment' + (n > 1 ? 's' : '');
+// Nom d'un repas enregistré : obligatoire, 40 caractères au plus
+function savedName(){ const i = $('#sm-name'); const v = i ? i.value.trim() : ''; if (!v || v.length > 40) { toast('Donne un nom à ce repas.'); if (i) i.focus(); return ''; } return v; }
 function pickFood(f){
   const last = recentFoods(200).find(r => r.key === f.key);
   Object.assign(S.food, { mode:'portion', sel:f, g: last ? last.g : f.serving || 100, msg:null }); S.confirm = null;
@@ -259,6 +269,45 @@ const A = {
   fday(b){ const d = addDays(S.foodDay || today(), +b.dataset.v); S.foodDay = d >= today() ? null : d; render(); },
   'fd-add'(b){ S.food = { mode:'search', meal:b.dataset.v, day:S.foodDay || today(), q:'' }; render(); window.scrollTo(0, 0); },
   'fd-cancel'(){ S.food = null; S.confirm = null; render(); },
+  // « + » d'un habituel ou d'un récent : ajouté d'un geste avec la dernière quantité
+  'fd-plus'(b){
+    const t = quickTarget(b.dataset.m); const f = quickFoodOf(b.dataset.v, b.dataset.m, t.day, b.dataset.l); if (!f) return;
+    addEntries(t.day, copyEntries([f], t.meal)); S.food = null; render(); toast(withDot('Ajouté : ' + f.name));
+  },
+  // « + » d'un repas passé : tout le repas copié, mêmes quantités
+  'fd-again'(b){
+    const t = quickTarget(b.dataset.m); const items = dayDoc(b.dataset.d).items.filter(i => i.meal === b.dataset.m); if (!items.length) return;
+    addEntries(t.day, copyEntries(items, t.meal)); S.food = null; render();
+    const lab = mealLabel(b.dataset.d, t.day);
+    toast(added(items.length) + ' (' + mealLow(b.dataset.m).toLowerCase() + ' ' + (lab === 'hier' ? 'd’hier' : 'de ' + lab) + ')');
+  },
+  // « + » d'un repas enregistré : tous ses aliments, dans le repas choisi en haut de la fenêtre
+  'fd-meal-add'(b){
+    const q = S.docs.get(b.dataset.v); if (!q || !q.items || !q.items.length) return; const t = quickTarget(q.meal);
+    addEntries(t.day, copyEntries(q.items, t.meal)); S.food = null; render(); toast(added(q.items.length) + ' (« ' + q.name + ' »)');
+  },
+  // Repas enregistrés : enregistrer un repas du journal (2 aliments au moins), détail, renommer, supprimer
+  'fd-save-meal'(b){
+    const m = b.dataset.m; const day = S.foodDay || today(); if (dayDoc(day).items.filter(i => i.meal === m).length < 2) return;
+    S.food = { mode:'save-meal', meal:m, day, q:'' }; S.confirm = null; render(); window.scrollTo(0, 0);
+  },
+  'fd-save-meal-ok'(){
+    const F = S.food; const name = savedName(); if (!F || !name) return;
+    const items = dayDoc(F.day).items.filter(i => i.meal === F.meal).map(({ id, meal, ...rest }) => rest);
+    put('q_' + rid(), { name, meal:F.meal, items, at:today() }); S.food = null; render(); toast('Repas enregistré.');
+  },
+  'fd-saved'(b){ Object.assign(S.food, { mode:'meal', qid:b.dataset.v, renaming:false }); S.confirm = null; render(); window.scrollTo(0, 0); },
+  'fd-saved-rename'(){ S.food.renaming = true; render(); const i = $('#sm-name'); if (i) i.focus(); },
+  'fd-saved-rename-ok'(){ const name = savedName(); const q = S.docs.get(S.food.qid); if (!name || !q) return; put(S.food.qid, Object.assign({}, q, { name })); S.food.renaming = false; render(); },
+  'fd-saved-del'(){ S.confirm = 'q-del'; render(); },
+  'fd-saved-del-yes'(){ del(S.food.qid); S.confirm = null; Object.assign(S.food, { mode:'search', qid:null }); render(); toast('Repas supprimé.'); },
+  // Nom d'un habituel ou d'un récent touché : écran « Quantité » déjà rempli
+  'fd-open'(b){
+    const t = quickTarget(b.dataset.m); const f = quickFoodOf(b.dataset.v, b.dataset.m, t.day, b.dataset.l); if (!f) return;
+    // Ouvert depuis le journal (pas de fenêtre d'ajout) : « ‹ Retour » ramène au journal
+    const fromDay = !S.food;
+    S.food = Object.assign(S.food || { q:'' }, { mode:'portion', meal:t.meal, day:t.day, sel:f, g:f.g, msg:null }, fromDay ? { fromDay:true } : {}); S.confirm = null; render(); window.scrollTo(0, 0);
+  },
   'fd-back'(){ if (S.food.edit) { S.food = null; } else { S.food.mode = 'search'; S.food.msg = null; } render(); },
   'fd-meal'(b){ S.food.meal = b.dataset.v; render(); },
   'fd-pick'(b){ const f = shown.get(b.dataset.v); if (f) pickFood(f); },
@@ -631,7 +680,7 @@ document.addEventListener('change', e => {
     r.onload = () => {
       try {
         const j = JSON.parse(r.result); const docs = j && j.docs; if (!docs || typeof docs !== 'object') throw new Error('format');
-        let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_|m_|f_|a_|e_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
+        let n = 0; Object.keys(docs).forEach(id => { if (importable(id)) { put(id, docs[id]); n++; } });
         // Exports version 2 ou plus anciens : réglages complétés comme au chargement
         upgradeLegacy(); applyTheme(settings().theme);
         if (S.setup && S.setup.mode === 'welcome' && !needsSetup()) S.setup = null;

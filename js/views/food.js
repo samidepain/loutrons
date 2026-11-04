@@ -1,7 +1,7 @@
 // Écran Alimentation : journal du jour par repas, et ajout d'un aliment (recherche, code-barres, quantité, création).
-import { addDays, capFirst, esc, fmtDateLong, fmtInt, fmtKg, num, today } from '../util.js';
+import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtInt, fmtKg, num, today } from '../util.js';
 import { S } from '../store.js';
-import { dayDoc, LIMITS, loadCiqual, MEALS, myFoods, recentFoods, scale, searchFoods, totals } from '../food.js';
+import { dayDoc, habitualFoods, LIMITS, loadCiqual, mealLabel, MEALS, myFoods, pastMeals, recentFoods, savedMeals, scale, searchFoods, totals } from '../food.js';
 import { startScanner } from '../scanner.js';
 import { emile, hey } from '../emile.js';
 import { dayPlan } from './goal.js';
@@ -11,6 +11,46 @@ const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment', rec:
 const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fmtInt(x);
 const mealName = m => (MEALS.find(x => x[0] === m) || ['', ''])[1];
 const dayLabel = d => d === today() ? 'Aujourd’hui' : d === addDays(today(), -1) ? 'Hier' : capFirst(fmtDateLong(d));
+// Raccourcis : une ligne avec le nom et le détail, et un « + » rond qui ajoute d'un geste. Aliment : toucher le nom ouvre « Quantité ».
+const kcalOf = items => fmtInt(totals(items).kcal) + ' kcal';
+const names = items => items.slice(0, 3).map(i => i.name).join(', ') + (items.length > 3 ? '…' : '');
+const plusBtn = (act, attrs, label) => '<button type="button" class="plus" data-act="' + act + '"' + attrs + ' aria-label="' + esc(label) + '">+</button>';
+// fromRecent : aliment de la liste « Récents » (dernière quantité tous repas confondus), sinon un habituel de ce repas
+export function quickFood(f, meal, fromRecent){
+  const at = ' data-v="' + esc(f.key) + '" data-m="' + meal + '"' + (fromRecent ? ' data-l="rec"' : '');
+  return '<div class="quick"><button type="button" class="pick" data-act="fd-open"' + at + '><span class="ql"><span class="n">' + esc(f.name) + '</span><span class="m">' + fmtKg(f.g) + ' g · ' + kcalOf([f]) + '</span></span></button>' + plusBtn('fd-plus', at, 'Ajouter ' + f.name) + '</div>';
+}
+// Repas passé : « Comme hier » dans le journal, « Hier » ou « Lundi 2 nov. » dans la fenêtre d'ajout
+export function quickPast(p, meal, title, day){
+  const lab = mealLabel(p.date, day);
+  return '<div class="quick"><div class="pick static"><span class="ql"><span class="n">' + esc(title) + '</span><span class="m">' + esc(names(p.items)) + ' · ' + kcalOf(p.items) + '</span></span></div>'
+    + plusBtn('fd-again', ' data-d="' + esc(p.date) + '" data-m="' + meal + '"', 'Ajouter le repas ' + (lab === 'hier' ? 'd’hier' : 'de ' + lab)) + '</div>';
+}
+// Repas enregistré : toucher le nom ouvre son détail, « + » ajoute tous ses aliments
+function quickSaved(q, meal){
+  const n = q.items.length;
+  return '<div class="quick"><button type="button" class="pick" data-act="fd-saved" data-v="' + esc(q.id) + '"><span class="ql"><span class="n">' + esc(q.name) + '</span><span class="m">' + n + ' aliment' + (n > 1 ? 's' : '') + ' · ' + kcalOf(q.items) + '</span></span></button>'
+    + plusBtn('fd-meal-add', ' data-v="' + esc(q.id) + '" data-m="' + meal + '"', 'Ajouter le repas ' + q.name) + '</div>';
+}
+const HAB = { breakfast:'au petit-déjeuner', lunch:'au déjeuner', dinner:'au dîner', snack:'en collation' };
+const ADD_TO = { breakfast:'au petit-déjeuner', lunch:'au déjeuner', dinner:'au dîner', snack:'aux collations' };
+const DEFAULT_NAME = { breakfast:'Mon petit-déjeuner', lunch:'Mon déjeuner', dinner:'Mon dîner', snack:'Ma collation' };
+// Repas enregistré : champ du nom (40 caractères au plus), puis ses aliments et le total
+const nameField = v => '<label class="f"><span>Nom</span><input id="sm-name" maxlength="40" autocomplete="off" value="' + esc(v) + '"></label>';
+function mealItems(items){
+  const t = totals(items);
+  return '<div class="stack sm-list">' + items.map(i => '<p class="sm-item"><span>' + esc(i.name) + '</span><span class="muted num">' + fmtKg(i.g) + ' g · ' + kcalOf([i]) + '</span></p>').join('') + '</div>'
+    + '<p class="small"><b>Total : ' + fmtInt(t.kcal) + ' kcal · ' + q1(t.p) + ' g de protéines</b></p>';
+}
+const group = (title, lines) => lines.length ? '<div class="stack qgroup"><span class="label">' + title + '</span>' + lines.join('') + '</div>' : '';
+// Fenêtre d'ajout, recherche vide : refaire un repas, tes repas, tes habituels, récents (un groupe vide n'est pas affiché)
+function quickGroups(meal, day){
+  const past = pastMeals(meal, day).map(p => { const lab = mealLabel(p.date, day); return quickPast(p, meal, lab === 'hier' ? 'Hier' : capFirst(lab) + ' ' + fmtDate(p.date), day); });
+  const saved = savedMeals(meal).map(q => quickSaved(q, meal));
+  const hab = habitualFoods(meal, day, 8); const keys = new Set(hab.map(f => f.key));
+  const rec = recentFoods(200).filter(f => !keys.has(f.key)).slice(0, 10);
+  return group('Refaire un repas', past) + group('Tes repas', saved) + group('Tes habituels ' + HAB[meal], hab.map(f => quickFood(f, meal))) + group('Récents', rec.map(f => quickFood(f, meal, true)));
+}
 // Aliment d'un document f_ (produit scanné ou aliment créé)
 export function foodFromDoc(id, o){ return { key: o.code ? 'off:' + o.code : 'own:' + id.slice(5), src: o.src || 'own', code: o.code || null, name: o.name, brand: o.brand || '', per100: o.per100, serving: o.serving || null, portion: o.src === 'recipe' ? '1 portion' : null, fixed: o.fixed || null, docId: id }; }
 // Aliments affichés dans la dernière liste, pour retrouver celui qu'on touche
@@ -50,9 +90,17 @@ export function viewFood(){
   h += '</section>';
   MEALS.forEach(([m, label]) => {
     const its = doc.items.filter(i => i.meal === m); const kc = its.reduce((a, i) => a + (scale(i.per100, i.g).kcal || 0), 0);
-    h += '<section class="card"><div class="row between"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + fmtInt(kc) + ' kcal</span>' : '') + '</div>';
+    h += '<section class="card meal" data-meal="' + m + '"><div class="row between"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + fmtInt(kc) + ' kcal</span>' : '') + '</div>';
     h += its.map(i => '<button type="button" class="pick" data-act="fd-edit" data-v="' + esc(i.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(i.name) + '</span><span class="m">' + (i.brand ? esc(i.brand) + ' · ' : '') + fmtKg(i.g) + ' g</span></span><span class="num">' + fmtInt(scale(i.per100, i.g).kcal || 0) + ' kcal</span></button>').join('');
-    h += '<button type="button" class="btn sm" data-act="fd-add" data-v="' + m + '">+ Ajouter</button></section>';
+    // Repas vide : « Comme hier » (repas passé des 7 derniers jours) et le premier habituel ; repas noté : « Enregistrer ce repas » dès 2 aliments
+    if (!its.length) {
+      const p = pastMeals(m, day, 7, 1)[0]; const hab = habitualFoods(m, day, 1)[0];
+      if (p) h += quickPast(p, m, 'Comme ' + mealLabel(p.date, day), day);
+      if (hab) h += quickFood(hab, m);
+    }
+    h += '<button type="button" class="btn sm" data-act="fd-add" data-v="' + m + '">+ Ajouter</button>';
+    if (its.length >= 2) h += '<button type="button" class="link" data-act="fd-save-meal" data-m="' + m + '">Enregistrer ce repas</button>';
+    h += '</section>';
   });
   return h + '<p class="muted small">Données : table Ciqual 2025 de l’ANSES (licence CC BY 4.0) et Open Food Facts (licence ODbL). Les besoins viennent de ton profil.</p>';
 }
@@ -94,7 +142,7 @@ function viewFoodAdd(){
   }
   if (F.mode === 'portion') {
     const f = F.sel; const g = num(F.g);
-    let h = head(F.edit ? 'Modifier' : 'Quantité', F.edit ? 'fd-cancel' : 'fd-back') + '<section class="card"><div class="stack" style="gap:2px"><h2>' + esc(f.name) + '</h2><span class="muted small">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal pour 100 g</span></div>';
+    let h = head(F.edit ? 'Modifier' : 'Quantité', F.edit || F.fromDay ? 'fd-cancel' : 'fd-back') + '<section class="card"><div class="stack" style="gap:2px"><h2>' + esc(f.name) + '</h2><span class="muted small">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal pour 100 g</span></div>';
     if (f.fixed === 'kcal') h += '<p class="alert info">Calories corrigées : la fiche d’Open Food Facts donnait sans doute des kilojoules. Vérifie sur l’emballage.</p>';
     h += '<label class="f"><span>Quantité (g)</span><input class="n" id="fd-g" data-fg="1" inputmode="decimal" value="' + esc(F.g == null ? '' : fmtKg(num(F.g))) + '"></label>';
     const dish = f.src === 'rec' || f.src === 'recipe';
@@ -107,6 +155,22 @@ function viewFoodAdd(){
     h += '<span class="label">Repas</span>' + mealChips + '<div id="fd-prev">' + preview(f, g) + '</div>';
     h += '<button type="button" class="btn primary big" data-act="fd-save">' + (F.edit ? 'Enregistrer' : 'Ajouter au journal') + '</button>';
     if (F.edit) h += S.confirm === 'fd-del' ? '<button type="button" class="btn danger" data-act="fd-del-yes">Confirmer : retirer du journal</button>' : '<button type="button" class="btn ghost" data-act="fd-del">Retirer du journal</button>';
+    return h + '</section>';
+  }
+  // Enregistrer un repas du journal, ou détail d'un repas enregistré (ajouter, renommer, supprimer)
+  if (F.mode === 'save-meal') {
+    const items = dayDoc(F.day).items.filter(i => i.meal === F.meal);
+    return head('Enregistrer ce repas') + '<section class="card">' + nameField(DEFAULT_NAME[F.meal] || 'Mon repas') + mealItems(items)
+      + '<button type="button" class="btn primary big" data-act="fd-save-meal-ok">Enregistrer le repas</button></section>';
+  }
+  if (F.mode === 'meal') {
+    const q = S.docs.get(F.qid);
+    if (!q) return head('Repas', 'fd-back') + '<p class="empty">Ce repas n’existe plus.</p>';
+    let h = head(esc(q.name), 'fd-back') + '<section class="card">';
+    if (F.renaming) h += nameField(q.name) + '<button type="button" class="btn" data-act="fd-saved-rename-ok">Enregistrer</button>';
+    h += mealItems(q.items || []) + '<button type="button" class="btn primary big" data-act="fd-meal-add" data-v="' + esc(F.qid) + '" data-m="' + esc(q.meal) + '">Ajouter ' + ADD_TO[F.meal] + '</button>';
+    if (!F.renaming) h += '<button type="button" class="btn" data-act="fd-saved-rename">Renommer</button>';
+    h += S.confirm === 'q-del' ? '<button type="button" class="btn danger" data-act="fd-saved-del-yes">Confirmer : supprimer ce repas</button>' : '<button type="button" class="btn ghost" data-act="fd-saved-del">Supprimer le repas</button>';
     return h + '</section>';
   }
   // Recherche
@@ -146,8 +210,7 @@ export function foodList(){
   const F = S.food; const q = String(F.q || '').trim(); shown.clear();
   const mine = recentFoods(200); const own = myFoods().map(o => foodFromDoc(o.id, o)).filter(f => !mine.some(m => m.key === f.key));
   if (!q) {
-    const rec = mine.slice(0, 15);
-    return rec.length ? '<span class="label">Récents</span>' + rec.map(row).join('') : '<p class="empty">Cherche un aliment par son nom, ou scanne un code-barres.</p>';
+    return quickGroups(F.meal, F.day) || '<p class="empty">Cherche un aliment par son nom, ou scanne un code-barres.</p>';
   }
   needCiqual(() => { if (S.food && S.food.mode === 'search') { const l = document.getElementById('fd-list'); if (l) l.innerHTML = foodList(); } });
   const res = searchFoods([mine.concat(own), recs || [], ciq || []], q, 40);

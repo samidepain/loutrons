@@ -7,7 +7,7 @@ import { S } from './store.js';
 import { activeWorkout } from './data.js';
 
 const PTABS = ['seances', 'exercices', 'planning'], PRTABS = ['stats', 'history'];
-const FOOD_LEVEL = { search:0, scan:1, notfound:2, portion:2, create:2, recipe:2 };
+const FOOD_LEVEL = { search:0, scan:1, notfound:2, portion:2, create:2, recipe:2, 'save-meal':0, meal:1 };
 // Écran affiché : clé, profondeur, onglet (écrans du premier niveau), écran d'origine (from), fenêtre (sheet),
 // rang parmi des écrans voisins (sub : sous-onglets, jours du journal)
 export function screenOf(){

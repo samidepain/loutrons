@@ -4,10 +4,14 @@ import { S } from './store.js';
 import { itemsOf, validSets, wName, workouts } from './data.js';
 
 const EXPORT_TYPES = { json:'application/json', csv:'text/csv' };
+// Documents repris d'un export : réglages, séances, genou, détente, poids, exercices et séances perso, repas, aliments, activités, eau,
+// repas enregistrés (q_, depuis la version 6 de l'export)
+const IDS = /^(w_|k_|t_|b_|x_|p_|m_|f_|a_|e_|q_)[A-Za-z0-9_\-.]+/;
+export const importable = id => { if (id === 'settings') return true; const m = IDS.exec(id); return !!m && m[0] === id; };
 export function exportFile(kind){
   // La sauvegarde porte déjà sa propre date : après une restauration, le rappel repart de là
   const docs = Object.fromEntries(S.docs); if (docs.settings) docs.settings = Object.assign({}, docs.settings, { lastExport: today() });
-  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:5, exportedAt:new Date().toISOString(), docs }, null, 2) : toCsv();
+  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:6, exportedAt:new Date().toISOString(), docs }, null, 2) : toCsv();
   return new File([data], 'loutrons-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
 }
 export function downloadFile(file){
