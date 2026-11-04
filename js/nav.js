@@ -84,7 +84,9 @@ function animate(kind, old, fresh){
   else if (kind === 'pop') { stack(old, fresh, 'old'); go(old.el, [tx(0), tx(W)], 380); go(fresh, [tx(-W * 0.3), tx(0)], 380); go(old.shade, [{ opacity:1 }, { opacity:0 }], 380); }
   else if (kind === 'up') { stack(old, fresh, 'new'); fresh.classList.add('nav-sheet'); go(fresh, [ty(H), ty(0)], 460); go(old.shade, [{ opacity:0 }, { opacity:1 }], 460); }
   else if (kind === 'down') { stack(old, fresh, 'old'); old.el.classList.add('nav-sheet'); go(old.el, [ty(0), ty(H)], 360); go(old.shade, [{ opacity:1 }, { opacity:0 }], 360); }
-  else { go(old.el, [{ opacity:1 }, { opacity:0 }], 110, 'ease-out'); go(fresh, [{ opacity:0, transform:'scale(.985)' }, { opacity:1, transform:'none' }], 220, 'ease-out', 70); }
+  // Fondu : l'ancien écran s'efface, puis le nouveau apparaît, sans que les deux se superposent. L'ancien reste effacé
+  // jusqu'à la fin (fill 'forwards') : sinon il réapparaît par-dessus le nouveau tant que celui-ci finit d'apparaître
+  else { anims.push(old.el.animate([{ opacity:1 }, { opacity:0 }], { duration:110, easing:'ease-out', fill:'forwards' })); go(fresh, [{ opacity:0, transform:'scale(.985)' }, { opacity:1, transform:'none' }], 220, 'ease-out', 110); }
   track(old, fresh, anims);
 }
 function track(old, fresh, anims){

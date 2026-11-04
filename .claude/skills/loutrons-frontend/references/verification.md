@@ -8,7 +8,7 @@
 npm test
 ```
 
-Les 86 tests de départ (novembre 2026) doivent tous passer. On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
+Tous les tests doivent passer (89 avec la version 2.5). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
 
 ## 2. Servir l'appli
 
@@ -23,6 +23,10 @@ for i in $(seq 50); do curl -s -o /dev/null http://127.0.0.1:8123/ && break; sle
 ```
 
 On arrête le serveur à la fin.
+
+Ce serveur n'accepte que quelques connexions en attente : si l'on coupe le cache du navigateur de test, il en refuse une partie (`ERR_CONNECTION_RESET`) et l'appli reste sur « Chargement du carnet… ». On garde donc le cache. Pour être sûr de tester les fichiers modifiés, on désinscrit le service worker et on vide ses caches, ou on sert l'appli sur un autre port : c'est un autre site, sans service worker ni données.
+
+Pour observer une animation, on la ralentit (`Animation.setPlaybackRate` par une session CDP : `page.context().newCDPSession(page)`), puis on mesure l'opacité ou on prend des captures à plusieurs instants.
 
 Pour montrer l'appli à la personne dans le navigateur intégré de Claude, `.claude/launch.json` (configuration `loutrons`) se branche sur ce serveur déjà lancé. Il ne le démarre pas lui-même : macOS refuse l'accès au dossier Documents aux programmes lancés par le navigateur intégré.
 
@@ -108,7 +112,9 @@ async (page) => {
   - champ « Début du programme » sans étiquette liée (`#start-date`, profil) ;
   - jours du calendrier dont le nom accessible ne reprend pas le texte visible (`label-content-name-mismatch`) ;
   - ordre des titres (un `h3` après le `h1`, sans `h2`) ;
-  - pas de `h1` sur Aujourd'hui.
+  - pas de `h1` sur Aujourd'hui ;
+  - séance en cours : barre d'avancement (`.bar`) avec `aria-label` sans rôle (`aria-prohibited-attr`).
+- Attendre la fin des animations et des changements de thème avant de lancer axe : pendant un fondu, il signale des contrastes insuffisants qui n'existent pas.
 - axe ne voit pas tout : il ne remplace pas la capture regardée, la lecture des textes, ni un essai avec VoiceOver sur iPhone pour un écran important.
 
 ## 7. Données de départ
@@ -135,14 +141,17 @@ Pour des données réalistes, on peut s'inspirer des aides des tests (`tests/aid
 
 ## 8. Premier lancement d'un ami (stockage vide)
 
-On efface la base et le stockage local, puis on recharge :
+On efface la base et le stockage local depuis une page du même site qui n'ouvre pas la base. Depuis l'appli, la suppression reste bloquée par sa connexion ouverte, puis elle est abandonnée au rechargement :
 
 ```js
 async (page) => {
-  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); indexedDB.deleteDatabase('carnet-muscu'); });
-  await page.reload();
+  await page.goto('http://127.0.0.1:8123/manifest.webmanifest');
+  await page.evaluate(() => new Promise(res => { localStorage.clear(); const r = indexedDB.deleteDatabase('carnet-muscu'); r.onsuccess = r.onerror = r.onblocked = res; }));
+  await page.goto('http://127.0.0.1:8123/');
 }
 ```
+
+Si des données de départ ont été injectées avec `addInitScript` (section 7), garder sa marque dans `sessionStorage`, sinon elles reviennent au chargement. Sur la page du manifeste, le navigateur demande `favicon.ico` (erreur 404) : ce n'est pas une erreur de l'appli.
 
 On attend l'écran « Étape 1 sur 3 ». On le parcourt jusqu'à « Aujourd'hui », sans voir aucune donnée ni aucun réglage d'une autre personne.
 
