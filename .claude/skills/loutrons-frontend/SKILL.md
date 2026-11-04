@@ -183,7 +183,7 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | Série en cours (une seule à l'écran, `#cur`) | `.cur-set` > `.stepper` × 2 (`.st-lab`, `button.step` − et + avec `data-act="step"` et `data-f="kg" | "reps"`, `.fld`), puis `.btn.primary.big` « Valider la série N » ; valeur ± palier avec `stepValue()` (`util.js`) |
 | Séries faites et à venir | `.set-line` : `.done` (bouton, `data-act="set-edit"` pour corriger) ou `.next` (grisée) ; `.sn`, `.sl-v`, `.sl-ok` |
 | Question des reps en réserve | `.cur-set.rir-ask` > `.rir-q`, `.chips` en grille de 5 > `.rir-c` (puce, et `.vise` sous la valeur visée), `button.link` « Passer la question » |
-| Photos du mouvement et silhouette en grand | `movementBlock(e, { cue })` (`js/views/movement.js`) : `.mv` > `button.mv-photos` (alternance en CSS, `.mv.paused` la fige), `.mv-cap`, puis `bodyMap(m, { big:true })` (`.bodymap.big` et `.legend.big`) ; moins d'animations : `.photos` côte à côte |
+| Photos du mouvement et silhouette en grand | `movementBlock(e, { cue })` (`js/views/movement.js`) : `.mv` > `button.mv-photos` (alternance en CSS, `.mv.paused` la fige), `.mv-cap`, puis `bodyMap(m)` (`.bodymap.big` et `.legend.big`) ; moins d'animations : `.photos` côte à côte |
 | Saisie du cardio pendant la séance | `.setrow.cardio` > `.sn`, `.fld` (champ et unité) |
 | Case à cocher avec explication | `label.toggle` |
 | Petite information d'état | `.pill` (`.good`, `.warn`, `.bad`, `.acc`, `.court`) |

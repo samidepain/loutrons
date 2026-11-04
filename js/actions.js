@@ -2,7 +2,7 @@
 import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, num, rid, stepValue, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
-import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
+import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, upNext, weekInfo } from './data.js';
 import { findPRs, initItem } from './engine.js';
 import { downloadFile, exportFile, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
@@ -75,6 +75,8 @@ function applyPick(exId){
     const old = w.items[P.idx]; if (!old) return;
     const it = snapItem(e, { sets: old.sets, ss: old.ss });
     w.items[P.idx] = it; delete w.ex[old.ex]; delete w.targets[old.ex]; initItem(w, it, wk);
+    // L'exercice ouvert à la main reste ouvert sous son nouveau nom
+    if (S.sessOpen === old.ex) S.sessOpen = it.ex; if (S.rirAsk === old.ex) S.rirAsk = null; if (S.setEdit && S.setEdit.ex === old.ex) S.setEdit = null;
     if (P.alsoTpl && w.tpl) {
       const t = tplDef(w.tpl);
       if (t) { const j = t.items.findIndex(x => canon(x.ex) === canon(old.ex)); if (j >= 0) { t.items[j] = { ex:e.id, sets:t.items[j].sets, lo:e.lo, hi:e.hi, rest:e.rest, ss:t.items[j].ss || null }; saveTpl(t); } }
@@ -92,10 +94,6 @@ function setField(t){
 }
 // État de l'écran de séance, remis à zéro au début, à la fin et à l'abandon d'une séance
 function resetSession(){ S.sessOpen = null; S.rirAsk = null; S.setEdit = null; S.move = null; }
-// Exercice terminé ? (toutes ses séries validées, ou coché)
-const exFinished = (it, st) => !!st && (it.kind === 'check' ? !!st.done : st.sets.length > 0 && st.sets.every(x => x.done));
-// Premier exercice à faire après celui-ci (ni terminé ni passé), pour le minuteur
-function nextExercise(w, key){ const items = itemsOf(w); const k = items.findIndex(x => x.ex === key); return items.slice(k + 1).find(x => { const st = w.ex[x.ex]; return st && !st.skip && !exFinished(x, st); }) || null; }
 const lessMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Après une validation ou l'ouverture d'un exercice : la série en cours (#cur) reste visible entre l'en-tête de la séance et le minuteur
 function showCurrent(){
@@ -108,7 +106,9 @@ function showCurrent(){
 // Exercice ouvert à la main et terminé (question des reps en réserve réglée) : on l'oublie, le suivant s'ouvre
 function forgetOpen(w){ if (S.sessOpen && !S.rirAsk && !sessionFocus(w, { open:S.sessOpen }).turn) S.sessOpen = null; }
 // Réponse à la question des reps en réserve, ou « Passer » (v = null)
-function answerRir(key, v){ const w = activeWorkout(); if (!w || !w.ex[key]) return; if (v != null) w.ex[key].rir = v; S.rirAsk = null; forgetOpen(w); put(w.id, w); render(); showCurrent(); }
+function answerRir(key, v){ const w = activeWorkout(); if (!w || !w.ex[key]) return; if (v != null) w.ex[key].rir = v; S.rirAsk = null; S.setEdit = null; forgetOpen(w); put(w.id, w); render(); showCurrent(); }
+// Exercice à la charge ou au poids du corps qui vient de se terminer sans reps en réserve notées : on pose la question
+function askRir(it, st){ if ((it.kind === 'load' || it.kind === 'bw') && st.rir == null && st.sets.length && st.sets.every(x => x.done)) S.rirAsk = it.ex; }
 // Bas des en-têtes collés en haut (barre de l'appli, et en-tête de la séance sauf sur les écrans peu hauts)
 const stickyBottom = () => Math.max(0, ...[...document.querySelectorAll('.top, .sess-head')].filter(e => getComputedStyle(e).position === 'sticky').map(e => e.getBoundingClientRect().bottom));
 // Exercice ouvert à la main : son haut sous l'en-tête de la séance
@@ -432,10 +432,11 @@ const A = {
       } else s.reps = it.lo;
       s.done = true;
       // Après la dernière série d'un exercice, le minuteur annonce l'exercice suivant
-      const left = st.sets.findIndex(x => !x.done); const after = left < 0 ? nextExercise(w, key) : null;
+      const left = st.sets.findIndex(x => !x.done);
       // Dernière série d'un exercice à la charge ou au poids du corps : la question des reps en réserve, si elles ne sont pas notées
-      if (left < 0 && (it.kind === 'load' || it.kind === 'bw') && st.rir == null) S.rirAsk = key;
+      if (left < 0) askRir(it, st);
       forgetOpen(w);
+      const after = left < 0 ? upNext(w, { open:S.sessOpen }) : null;
       const nxt = supersetNext(w, key);
       if (nxt) toast('Enchaîne : ' + nxt.name);
       else if (it.kind !== 'plyo') startRest(it.rest || 90, after ? 'Prochain : ' + after.name : it.name + (left >= 0 ? ' · série ' + (left + 1) + ' ensuite' : ' · terminé'));
@@ -460,12 +461,22 @@ const A = {
   'move-close'(){ S.move = null; render(); },
   'move-pause'(b){ const m = b.closest('.mv'); if (!m) return; const p = m.classList.toggle('paused'); b.setAttribute('aria-pressed', String(p)); const t = b.querySelector('.sr'); if (t) t.textContent = (p ? 'Reprendre l’animation' : 'Mettre en pause l’animation') + ' : '; },
   'set-edit'(b){ S.setEdit = { ex:b.dataset.ex, i:+b.dataset.i }; render(); showCurrent(); },
-  'set-save'(){ S.setEdit = null; render(); },
-  'set-undo'(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const s = st && st.sets[+b.dataset.i]; if (s) s.done = false; S.setEdit = null; put(w.id, w); render(); },
+  // Enregistrer une correction : mêmes règles qu'à la validation (reps visées si vide, 0 de lest au poids du corps, charge obligatoire)
+  'set-save'(b){
+    const w = activeWorkout(); if (!w) return; const key = b.dataset.ex; const i = +b.dataset.i; const it = itemsOf(w).find(x => x.ex === key);
+    const s = w.ex[key] && w.ex[key].sets[i]; if (!it || !s) { S.setEdit = null; render(); return; }
+    const t = w.targets[key] || {};
+    if (num(s.reps) == null) s.reps = String(Array.isArray(t.reps) && t.reps[i] != null ? t.reps[i] : it.lo);
+    if (it.kind === 'bw' && num(s.kg) == null) s.kg = '0';
+    if (it.kind === 'load' && num(s.kg) == null) { toast('Indique la charge utilisée.'); const k = document.getElementById('kg-' + key + '-' + i); if (k) k.focus(); return; }
+    S.setEdit = null; put(w.id, w); render();
+  },
+  'set-undo'(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const s = st && st.sets[+b.dataset.i]; if (s) s.done = false; if (S.rirAsk === b.dataset.ex) S.rirAsk = null; S.setEdit = null; put(w.id, w); render(); },
   check(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.done = !st.done; if (st.done) forgetOpen(w); put(w.id, w); render(); if (st.done) showCurrent(); },
-  unskip(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.skip = false; if (!st.sets.length) { const it = itemsOf(w).find(x => x.ex === b.dataset.ex); for (let i = 0; i < (it ? it.sets : 3); i++) st.sets.push({ kg:null, reps:null, done:false }); } put(w.id, w); render(); },
+  unskip(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.skip = false; if (!st.sets.length) { const it = itemsOf(w).find(x => x.ex === b.dataset.ex); for (let i = 0; i < (it ? it.sets : 3); i++) st.sets.push({ kg:null, reps:null, done:false }); } put(w.id, w); render(); showCurrent(); },
   addset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const last = st.sets[st.sets.length - 1]; st.sets.push({ kg: last ? last.kg : null, reps:null, done:false }); put(w.id, w); render(); },
-  rmset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st.sets.length > 1) st.sets.pop(); put(w.id, w); render(); },
+  // Retirer la dernière série : si l'exercice est alors terminé, la question des reps en réserve arrive comme après une validation
+  rmset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st.sets.length > 1) st.sets.pop(); const it = itemsOf(w).find(x => x.ex === b.dataset.ex); if (it) askRir(it, st); S.setEdit = null; forgetOpen(w); put(w.id, w); render(); showCurrent(); },
   clevel(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st) { st.level = b.dataset.v; put(w.id, w); render(); } },
   rir(b){ if (S.rirAsk === b.dataset.ex) { answerRir(b.dataset.ex, +b.dataset.v); return; } const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const v = +b.dataset.v; st.rir = st.rir === v ? null : v; put(w.id, w); render(); },
   'rir-skip'(b){ answerRir(b.dataset.ex, null); },

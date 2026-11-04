@@ -53,13 +53,10 @@ function figure(side, m, dx, label){
   LEFT[side].forEach(([n, d]) => { h += '<path' + cls(n) + ' d="' + d + '"/><path' + cls(n) + ' transform="' + MIRROR + '" d="' + d + '"/>'; });
   return h + '<text x="50" y="214">' + label + '</text></g>';
 }
-// muscles : { p: [...], s: [...] } ; opts.big : sur toute la largeur, noms des muscles en deux lignes (« Voir le mouvement », fiche)
-export function bodyMap(m, opts){
+// Silhouette sur toute la largeur, puis les noms des muscles en deux lignes (« Voir le mouvement », fiche). muscles : { p: [...], s: [...] }
+export function bodyMap(m){
   const p = (m.p || []).join(', '), s = (m.s || []).join(', ');
   const aria = 'Muscles travaillés : ' + (p || 'aucun') + (s ? ' ; secondaires : ' + s : '');
-  const big = !!(opts && opts.big);
-  const svg = '<svg class="bodymap' + (big ? ' big' : '') + '" viewBox="0 0 220 220" role="img" aria-label="' + esc(aria) + '">' + figure('front', m, 0, 'De face') + figure('back', m, 120, 'De dos') + '</svg>';
-  if (big) return svg + '<div class="legend big"><p><i class="lg-p"></i>Principaux : ' + esc(p || '—') + '</p>' + (s ? '<p><i class="lg-s"></i>Secondaires : ' + esc(s) + '</p>' : '') + '</div>';
-  return svg
-    + '<p class="legend"><span><i class="lg-p"></i>' + esc(p || 'principal') + '</span>' + (s ? '<span><i class="lg-s"></i>' + esc(s) + '</span>' : '') + '</p>';
+  return '<svg class="bodymap big" viewBox="0 0 220 220" role="img" aria-label="' + esc(aria) + '">' + figure('front', m, 0, 'De face') + figure('back', m, 120, 'De dos') + '</svg>'
+    + '<div class="legend big"><p><i class="lg-p"></i>Principaux : ' + esc(p || '—') + '</p>' + (s ? '<p><i class="lg-s"></i>Secondaires : ' + esc(s) + '</p>' : '') + '</div>';
 }

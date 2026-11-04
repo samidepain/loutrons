@@ -156,6 +156,12 @@ export function sessionFocus(w, ui){
   }
   return { open: g.map(it => it.ex), turn, ask };
 }
+// Exercice qui viendra ensuite (pour le minuteur) : celui de la série en cours, sans tenir compte de la question des reps en réserve ;
+// un exercice ouvert à la main et terminé est oublié, comme à l'écran
+export function upNext(w, ui){
+  let f = sessionFocus(w, { open: ui && ui.open }); if (!f.turn) f = sessionFocus(w, {});
+  return f.turn ? itemsOf(w).find(it => it.ex === f.turn.ex) || null : null;
+}
 export function snapItem(e, it){
   return { ex:e.id, name:e.name, kind:e.kind, cat:e.cat || 'iso', step:e.step || 2.5,
     sets: it.sets || e.sets || 3, lo: it.lo || e.lo || 8, hi: it.hi || e.hi || 12, rest: it.rest || e.rest || 90,

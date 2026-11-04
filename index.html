@@ -197,24 +197,18 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 .last b{color:var(--ink);font-weight:600}
 .sets{display:flex;flex-direction:column;gap:6px}
 .setrow{display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr) 48px;gap:8px;align-items:center}
-.setrow.plyo{grid-template-columns:26px minmax(0,1fr) 48px}
 .sn{font-family:var(--f-display);font-weight:800;font-stretch:100%;color:var(--muted);text-align:center;font-size:18px}
 .fld{display:flex;align-items:center;gap:6px;background:var(--surface-2);border:none;border-radius:12px;padding:0 10px;min-height:46px;min-width:0}
 .fld input{border:none;background:transparent;width:100%;min-width:0;font-family:var(--f-display);font-size:22px;font-weight:800;font-stretch:100%;font-variant-numeric:tabular-nums;padding:6px 0;outline:none}
 .fld span{font-size:13px;color:var(--muted);flex:none}
 .fld:focus-within{box-shadow:inset 0 0 0 2px var(--accent-ink)}
 .plyo-lab{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch:100%}
-.chk{width:48px;height:46px;border-radius:12px;border:2px solid var(--line);background:var(--surface-2);font-size:20px;font-weight:700;color:var(--muted)}
-.setrow.done .chk{background:var(--good);border-color:var(--good);color:#fff}
-.setrow.done .fld{background:var(--good-soft);border-color:transparent}
 /* Petits écrans (iPhone SE) : les chiffres d'Archivo sont plus larges, on resserre les colonnes pour que « 102,5 » et « 12 » tiennent, même dans un superset */
 @media (max-width:360px){
   .setrow{grid-template-columns:20px minmax(0,1fr) minmax(0,1fr) 44px;gap:6px}
-  .setrow.plyo{grid-template-columns:20px minmax(0,1fr) 44px}
   .fld{padding:0 6px;gap:2px}
   .fld input{font-size:19px;min-height:44px}
   .fld span{font-size:13px}
-  .chk{width:44px}
   .ex .exname{font-size:19px}
   .group{padding:6px}
   .group .fld input{font-size:18px}
@@ -260,7 +254,7 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 .set-line.next{color:var(--muted)}
 .set-line.next .sl-v{font-weight:400}
 @media (max-width:360px){
-  .stepper{grid-template-columns:44px 44px minmax(0,1fr) 44px;gap:6px}
+  .stepper{grid-template-columns:44px 44px minmax(0,1fr) 44px;gap:8px}
   .st-lab{font-size:13px}
   .cur-set{padding:10px}
   .pick.ex-line{padding:7px 12px}
@@ -363,7 +357,6 @@ input[type=search]{-webkit-appearance:none;appearance:none}
 .legend.big i{border-radius:50%}
 .legend .lg-p{background:var(--accent)}
 .legend .lg-s{background:var(--accent);opacity:.35}
-p.legend{justify-content:center}
 details.cue[open]{display:flex;flex-direction:column;gap:10px}
 /* Émile, le coach : avatar rond tiré du logo et bulle signée */
 .emile{display:flex;gap:10px;align-items:flex-start;text-align:left}

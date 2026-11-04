@@ -25,7 +25,7 @@ export const hasMovement = e => !!e && !!(e.photo || e.cue || musclesForMap(e));
 // Photos, consignes (dans la fenêtre seulement), puis silhouette en grand et noms des muscles
 export function movementBlock(e, opts){
   const m = musclesForMap(e); const cue = opts && opts.cue && e.cue;
-  return '<div class="mv">' + photos(e) + (cue ? '<div class="stack mv-cue"><h3>Consignes</h3><p>' + esc(e.cue) + '</p></div>' : '') + (m ? bodyMap(m, { big:true }) : '') + '</div>';
+  return '<div class="mv">' + photos(e) + (cue ? '<div class="stack mv-cue"><h3>Consignes</h3><p>' + esc(e.cue) + '</p></div>' : '') + (m ? bodyMap(m) : '') + '</div>';
 }
 // Fenêtre ouverte depuis la séance
 export function viewMovement(){

@@ -30,6 +30,9 @@ export function viewSession(){
   }
   h += emile('<p>Plus de 75 min : si tu manques de temps, coupe ' + (w.cut ? 'dans cet ordre : ' + esc(w.cut) : 'les dernières séries d’isolation') + '. Ne raccourcis pas les repos des mouvements lourds.</p>', { id:'cutwarn', hidden:true, tone:'warn', key:'long:' + w.id });
   const focus = sessionFocus(w, { open:S.sessOpen, ask:S.rirAsk });
+  // Un seul bloc #cur à l'écran : la série en correction, sinon la question des reps en réserve, sinon la série en cours
+  const ed = S.setEdit; const edSet = ed && w.ex[ed.ex] && w.ex[ed.ex].sets[ed.i];
+  focus.cur = edSet && edSet.done && focus.open.indexOf(ed.ex) >= 0 ? 'edit' : focus.ask ? 'ask' : 'turn';
   const one = (it, k) => focus.open.indexOf(it.ex) >= 0 ? openCard(it, w, k, focus) : exLine(it, w);
   let i = 0;
   while (i < items.length) {
@@ -45,7 +48,8 @@ export function viewSession(){
   if (w.lower && kneeOn()) h += '<section class="card"><h3>Genou pendant la séance</h3><p class="muted small">Douleur maximale ressentie, de 0 à 10.</p>' + kneeChips(w.knee == null ? null : w.knee, 'knee') + '</section>';
   h += '<section class="card"><h3>Notes</h3><textarea id="notes-' + w.id + '" data-f="notes" placeholder="Sensations, réglages de machine, ce qui a gêné…">' + esc(w.notes || '') + '</textarea></section>';
   // Une seule action orange : « Valider la série » pendant la séance, « Terminer la séance » une fois tout validé
-  h += '<button type="button" class="btn' + (focus.open.length || focus.ask ? '' : ' primary') + ' big" data-act="finish">Terminer la séance</button>';
+  const allDone = !focus.ask && items.every(it => { const st = w.ex[it.ex]; return !st || st.skip || finished(it, st); });
+  h += '<button type="button" class="btn' + (allDone ? ' primary' : '') + ' big" data-act="finish">Terminer la séance</button>';
   h += S.confirm === 'abandon' ? '<button type="button" class="btn danger big" data-act="abandon-yes">Confirmer : supprimer cette séance</button>' : '<button type="button" class="btn ghost big" data-act="abandon">Abandonner la séance</button>';
   return h;
 }
@@ -70,17 +74,18 @@ function exLine(it, w){
 }
 
 // Série en cours, ou série faite en correction : − et + pour la charge et les reps, puis Valider (ou Enregistrer la correction)
-function curSet(it, w, i, edit){
+function curSet(it, w, i, edit, withId){
   const key = esc(it.ex); const s = w.ex[it.ex].sets[i]; const t = w.targets[it.ex] || {}; const n = i + 1;
   const at = ' data-ex="' + key + '" data-i="' + i + '"';
-  if (it.kind === 'plyo') return '<div class="cur-set" id="cur"><span class="plyo-lab">' + it.lo + ' ' + esc(it.unit) + '</span><button type="button" class="btn primary big" data-act="done"' + at + '>Valider la série ' + n + '</button></div>';
+  const box = '<div class="cur-set"' + (withId ? ' id="cur"' : '') + '>';
+  if (it.kind === 'plyo') return box + '<span class="plyo-lab">' + it.lo + ' ' + esc(it.unit) + '</span><button type="button" class="btn primary big" data-act="done"' + at + '>Valider la série ' + n + '</button></div>';
   const step = it.step || (exDef(it.ex) || {}).step || 1;
   const kg = num(s.kg); const reps = repsOf(it, s, t, i);
   const row = (f, lab, val, unit, mode, ph, less, more) => '<div class="stepper"><span class="st-lab">' + lab + '</span>'
     + '<button type="button" class="step" data-act="step" data-f="' + f + '" data-v="-1"' + at + ' aria-label="' + less + '">−</button>'
     + '<label class="fld"><input id="' + f + '-' + key + '-' + i + '" data-f="' + f + '"' + at + ' inputmode="' + mode + '" autocomplete="off" value="' + esc(val) + '" placeholder="' + ph + '" aria-label="' + lab + ', série ' + n + '"><span>' + unit + '</span></label>'
     + '<button type="button" class="step" data-act="step" data-f="' + f + '" data-v="1"' + at + ' aria-label="' + more + '">+</button></div>';
-  let h = '<div class="cur-set" id="cur">' + row('kg', it.kind === 'bw' ? 'Lest' : 'Charge', kg == null ? '' : fmtKg(kg), 'kg', 'decimal', it.kind === 'bw' ? '0' : '', 'Moins ' + fmtKg(step) + ' kg', 'Plus ' + fmtKg(step) + ' kg')
+  let h = box + row('kg', it.kind === 'bw' ? 'Lest' : 'Charge', kg == null ? '' : fmtKg(kg), 'kg', 'decimal', it.kind === 'bw' ? '0' : '', 'Moins ' + fmtKg(step) + ' kg', 'Plus ' + fmtKg(step) + ' kg')
     + row('reps', 'Reps', String(reps), 'reps', 'numeric', String(reps), 'Une rep de moins', 'Une rep de plus');
   h += edit ? '<button type="button" class="btn big" data-act="set-save"' + at + '>Enregistrer la correction</button><button type="button" class="link" data-act="set-undo"' + at + '>Annuler la validation</button>'
     : '<button type="button" class="btn primary big" data-act="done"' + at + '>Valider la série ' + n + '</button>';
@@ -96,9 +101,9 @@ function setLine(it, w, i){
 }
 
 // Question des reps en réserve, juste après la dernière série : la valeur visée est signalée, jamais choisie à la place de la personne
-function rirAsk(key, t){
+function rirAsk(key, t, withId){
   const k = esc(key);
-  return '<div class="cur-set rir-ask" id="cur"><p class="rir-q">Reps en réserve sur la dernière série ?</p><div class="chips" role="group" aria-label="Reps en réserve">'
+  return '<div class="cur-set rir-ask"' + (withId ? ' id="cur"' : '') + '><p class="rir-q">Reps en réserve sur la dernière série ?</p><div class="chips" role="group" aria-label="Reps en réserve">'
     + [0,1,2,3,4].map(v => '<span class="rir-c"><button type="button" class="chip" data-act="rir" data-ex="' + k + '" data-v="' + v + '" aria-pressed="false"' + (v === t.rir ? ' aria-describedby="vise-' + k + '"' : '') + '>' + (v === 4 ? '4+' : v) + '</button>' + (v === t.rir ? '<span class="vise" id="vise-' + k + '">visé</span>' : '') + '</span>').join('')
     + '</div><button type="button" class="link" data-act="rir-skip" data-ex="' + k + '">Passer la question</button></div>';
 }
@@ -129,21 +134,21 @@ function openCard(it, w, idx, focus){
     if (last) h += '<p class="last">Dernière fois (' + esc(fmtDate(last.date)) + ') : <b>' + last.min + ' min' + (last.km ? ' · ' + fmtKg(last.km) + ' km' : '') + '</b>' + (lv.find(l => l[0] === last.level) ? ' · ' + esc(lowFirst(lv.find(l => l[0] === last.level)[1])) : '') + '</p>';
     if (lv.length > 1) h += '<div class="stack" style="gap:6px"><span class="label">Allure</span><div class="chips">' + lv.map(l => '<button type="button" class="chip txt' + (st.level === l[0] ? ' on' : '') + '" data-act="clevel" data-ex="' + esc(key) + '" data-v="' + l[0] + '" aria-pressed="' + (st.level === l[0]) + '"' + (s.done ? ' disabled' : '') + '>' + esc(l[1]) + '</button>').join('') + '</div>' + (lv.find(l => l[0] === st.level) && lv.find(l => l[0] === st.level)[2] ? '<p class="muted small">' + esc(capFirst(lv.find(l => l[0] === st.level)[2])) + '</p>' : '') + '</div>';
     if (s.done) h += '<button type="button" class="set-line done" data-act="done" data-ex="' + esc(key) + '" data-i="0"><span class="sn"><span class="sr">Annuler la validation du cardio </span><span aria-hidden="true">⏱</span></span><span class="sl-v">' + esc(s.min + ' min' + (num(s.km) ? ' · ' + fmtKg(num(s.km)) + ' km' : '')) + '</span><span class="sl-ok" aria-hidden="true">✓</span></button>';
-    else h += '<div class="cur-set"' + (turn === 0 ? ' id="cur"' : '') + '><div class="sets"><div class="setrow cardio"><span class="sn">⏱</span>'
+    else h += '<div class="cur-set"' + (turn === 0 && focus.cur === 'turn' ? ' id="cur"' : '') + '><div class="sets"><div class="setrow cardio"><span class="sn">⏱</span>'
       + '<label class="fld"><input id="min-' + esc(key) + '-0" data-f="min" data-ex="' + esc(key) + '" data-i="0" inputmode="numeric" autocomplete="off" value="' + esc(s.min == null ? '' : s.min) + '" placeholder="' + it.lo + '" aria-label="Durée en minutes"><span>min</span></label>'
       + (e.dist ? '<label class="fld"><input id="km-' + esc(key) + '-0" data-f="km" data-ex="' + esc(key) + '" data-i="0" inputmode="decimal" autocomplete="off" value="' + esc(s.km == null || s.km === '' ? '' : s.km) + '" placeholder="km" aria-label="Distance en km, facultative"><span>km</span></label>' : '')
       + '</div></div><button type="button" class="btn primary big" data-act="done" data-ex="' + esc(key) + '" data-i="0">Valider le cardio</button></div>';
   } else if (it.kind === 'check') {
     h += '<p class="small">' + esc(e.cue || '') + '</p>';
     h += st.done ? '<div class="row between"><span class="pill good">Fait ✓</span><button type="button" class="btn" data-act="check" data-ex="' + esc(key) + '">Annuler</button></div>'
-      : '<div class="cur-set"' + (turn === 0 ? ' id="cur"' : '') + '><button type="button" class="btn primary big" data-act="check" data-ex="' + esc(key) + '">Marquer comme fait</button></div>';
+      : '<div class="cur-set"' + (turn === 0 && focus.cur === 'turn' ? ' id="cur"' : '') + '><button type="button" class="btn primary big" data-act="check" data-ex="' + esc(key) + '">Marquer comme fait</button></div>';
   } else if (st.skip) {
     h += t.type === 'opt' ? '<button type="button" class="btn" data-act="unskip" data-ex="' + esc(key) + '">Je le fais cette semaine</button>' : '<p class="muted small">Passé cette semaine.</p>';
   } else {
     // Une série en correction prend la place de la série en cours (qui s'affiche alors comme une série à venir)
     const ed = S.setEdit && S.setEdit.ex === key && st.sets[S.setEdit.i] && st.sets[S.setEdit.i].done ? S.setEdit.i : -1;
-    h += '<div class="sets">' + st.sets.map((s, i) => i === ed ? curSet(it, w, i, true) : (i === turn && ed < 0 ? curSet(it, w, i, false) : setLine(it, w, i))).join('') + '</div>';
-    if (focus.ask === key) h += rirAsk(key, t);
+    h += '<div class="sets">' + st.sets.map((s, i) => i === ed ? curSet(it, w, i, true, focus.cur === 'edit') : (i === turn && ed < 0 ? curSet(it, w, i, false, focus.cur === 'turn') : setLine(it, w, i))).join('') + '</div>';
+    if (focus.ask === key) h += rirAsk(key, t, focus.cur === 'ask');
     h += '<div class="row between"><button type="button" class="link" data-act="addset" data-ex="' + esc(key) + '">+ Ajouter une série</button>' + (st.sets.length > 1 ? '<button type="button" class="link" data-act="rmset" data-ex="' + esc(key) + '">Retirer la dernière</button>' : '') + '</div>';
     if (fin && it.kind !== 'plyo' && focus.ask !== key) h += '<div class="stack" style="gap:6px"><span class="label">Reps en réserve sur la dernière série</span><div class="chips">' + [0,1,2,3,4].map(v => '<button type="button" class="chip' + (st.rir === v ? ' on' : '') + '" data-act="rir" data-ex="' + esc(key) + '" data-v="' + v + '" aria-pressed="' + (st.rir === v) + '">' + (v === 4 ? '4+' : v) + '</button>').join('') + '</div></div>';
   }
