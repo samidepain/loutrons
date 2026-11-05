@@ -161,6 +161,19 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .chip.txt{font-family:var(--f-body);font-weight:600;font-size:15px}
 .days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .days .chip{min-width:0;padding:0}
+/* Rotation (Planning) : rang, nom, ↑ et ↓ (boutons ronds de la séance), case « Dans la rotation » sur la ligne suivante */
+.rot-row{display:grid;grid-template-columns:22px minmax(0,1fr) 44px 44px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.rot-row .rot-name{font-weight:700;overflow-wrap:anywhere}
+.rot-row .rot-n{color:var(--muted)}
+.rot-row .step{background:var(--surface-2)}
+.rot-row .step:disabled{opacity:.35}
+.rot-in{grid-column:2 / -1;display:flex;align-items:center;gap:8px;min-height:44px;font-size:15px;color:var(--muted)}
+.rot-in input{width:22px;height:22px;accent-color:var(--accent)}
+.rot-row.off .rot-name{color:var(--muted);font-weight:400}
+/* Prévoir tes séances : jour et date dans la puce */
+.plan-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.15;min-height:48px}
+.plan-chip .num{font-weight:700}
+.plan-chip:disabled{opacity:.4}
 .chip.on{background:var(--ink);color:var(--bg)}
 .chip.on.hi{background:var(--bad);color:#fff}
 .chip.sec.on{background:var(--court);color:var(--bg)}

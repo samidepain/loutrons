@@ -1,7 +1,7 @@
 // Affichage : barre d’onglets, rond du profil, thème, et choix de l’écran à afficher.
-import { $, esc, parseIso, today } from './util.js';
+import { $, esc, today } from './util.js';
 import { S } from './store.js';
-import { activeWorkout, needsSetup, planDay, settings, workouts } from './data.js';
+import { activeWorkout, needsSetup, needToday, settings } from './data.js';
 import { ensureTick } from './timers.js';
 import { viewToday } from './views/today.js';
 import { viewSession } from './views/session.js';
@@ -30,7 +30,8 @@ const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['food','Al
 const tabsShown = () => TABS.filter(t => t[0] !== 'food' || (S.loaded && nutritionOf().on));
 // Roue dentée dessinée par l'appli : un anneau en tirets (les dents) et un petit cercle au centre
 const GEAR = '<svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke-width="4" stroke-dasharray="3.3 2.2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/></svg>';
-function sessionDueToday(){ if (!S.loaded) return false; const d = today(); const p = planDay(parseIso(d).getDay()); return !!p.s && !workouts().some(w => w.date === d && w.status === 'terminée'); }
+// Point orange de l'onglet Aujourd'hui : il faut venir aujourd'hui (jour prévu, ou autant de séances restantes que de jours)
+function sessionDueToday(){ return !!S.loaded && needToday(today()); }
 export function renderTabs(){
   const aw = S.loaded && activeWorkout(); const due = sessionDueToday();
   $('#tabs').innerHTML = tabsShown().map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');

@@ -1,7 +1,7 @@
 // Moteur de progression : objectifs de chaque exercice, records, séries par muscle, alerte de fatigue, bilan de bloc.
 import { addDays, clamp, daysBetween, e1rm, fmtKg, lowFirst, num, roundTo, today } from './util.js';
-import { DAY_ORDER, MUSCLES } from './library.js';
-import { bestE1, blockRange, bodyDocs, bodyweight, canon, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, maxKg, musclesOf, planDay, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
+import { MUSCLES } from './library.js';
+import { bestE1, blockRange, blockStarts, bodyDocs, bodyweight, canon, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, lastSessionGap, maxKg, musclesOf, perWeekOf, rotationOf, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
 
 /* ================= Moteur de progression =================
    Sources : règle « 2 pour 2 » de la NSCA et paliers de terrain (la position de l'ACSM de 2026 ne fixe pas de chiffre),
@@ -32,6 +32,18 @@ export function computeTarget(e, wk, excludeId){
     text: e.kind === 'bw' ? 'Première fois : commence au poids du corps (lest 0), vise ' + lo + '-' + hi + ' reps et note tes reps en réserve.'
       : 'Première fois : choisis une charge qui te permet ' + lo + '-' + hi + ' reps avec 2-3 reps en réserve, et note-les.' };
   const kg = maxKg(base); const top = topSets(base); const last = top[top.length - 1]; const rir = base.rir;
+  // Reprise. Après une pause de séances (plus de 14 jours sans séance terminée) : exercice pas fait depuis 15 à 28 jours, même charge ;
+  // plus de 28 jours, −10 %. Bosquet et al. 2013 : force maximale presque intacte jusqu'à 4 semaines d'arrêt complet, perte plus rapide ensuite.
+  // Sans pause de séances (une rotation à 2 séances par semaine espace un exercice de 15 jours ou plus), seul un exercice absent plus de
+  // 28 jours est repris à la même charge, sans hausse. −10 % et reprise sans hausse : règles de terrain. Un genou sensible garde la priorité.
+  const gap = daysBetween(all[0].date, today()); const away = lastSessionGap(today()); const pause = away != null && away > 14;
+  if (!knee && (pause ? gap >= 15 : gap > 28)) {
+    const reps = []; for (let i = 0; i < nSets; i++) reps.push(clamp((top[i] || last).reps, lo, hi));
+    let nk = kg;
+    if (pause && gap > 28 && kg > 0) { nk = Math.floor((kg * 0.9) / step) * step; if (nk >= kg) nk = kg - step; nk = Math.max(0, roundTo(nk, 0.25)); }
+    if (nk < kg) return { type:'back', label:'Reprise −10 %', sets:nSets, kg:nk, reps, rir:tr, text:'Pas fait depuis ' + gap + ' jours : repars à ' + fmtKg(nk) + ' kg (−10 %), puis remonte. C’est une règle de terrain.' };
+    return { type:'back', label:'Reprise', sets:nSets, kg, reps, rir:tr, text:'Pas fait depuis ' + gap + ' jours : reprends à ' + (e.kind === 'bw' && !kg ? 'ton poids du corps' : fmtKg(kg) + ' kg') + ', sans chercher à monter cette fois.' };
+  }
   if (wk.deload) return { type:'deload', label:'Décharge', sets:nSets, kg, reps:fill(lo), rir:3,
     text:'Même charge, environ 1/3 de séries en moins, 3-4 reps en réserve : on baisse le volume et on garde l’intensité.' };
   const allTop = top.length >= e.sets && top.every(s => s.reps >= hi);
@@ -166,10 +178,12 @@ export function muscleDone(from, to){
   });
   return m;
 }
+// Séries prévues par muscle pour une semaine type : séries de la rotation, ramenées à l'objectif de séances de la semaine
 export function musclePlanned(){
   const m = {}; MUSCLES.forEach(x => { m[x] = 0; });
-  DAY_ORDER.forEach(wd => { const p = planDay(wd); if (!p.s) return; const t = tplDef(p.s); if (!t) return;
-    tplItems(t).forEach(it => { const e = exDef(it.ex); if (!e || e.kind === 'plyo' || e.kind === 'check' || e.kind === 'cardio') return; const n = it.sets || e.sets || 0;
+  const rot = rotationOf(); const k = rot.length ? perWeekOf() / rot.length : 0;
+  rot.forEach(id => { const t = tplDef(id); if (!t) return;
+    tplItems(t).forEach(it => { const e = exDef(it.ex); if (!e || e.kind === 'plyo' || e.kind === 'check' || e.kind === 'cardio') return; const n = (it.sets || e.sets || 0) * k;
       (e.muscles.p || []).forEach(x => { if (m[x] != null) m[x] += n; }); (e.muscles.s || []).forEach(x => { if (m[x] != null) m[x] += n * 0.5; }); }); });
   return m;
 }
@@ -184,6 +198,8 @@ export function fatigueCheck(){
       const h = history(k, null).filter(x => !x.deload);
       const i = h.findIndex(x => x.date === w.date && x.at === (w.startedAt || 0));
       if (i < 0 || !h[i + 1]) return;
+      // Une baisse prescrite (reprise après une pause) ou une comparaison avec une séance vieille de 15 jours ou plus n'est pas une fatigue
+      if ((w.targets && w.targets[k] && w.targets[k].type === 'back') || daysBetween(h[i + 1].date, h[i].date) >= 15) return;
       compared++;
       const cur = bestE1(canon(k), h[i]), prev = bestE1(canon(k), h[i + 1]);
       if (cur < prev * 0.975) { const e = exDef(k); drops.push((e ? e.name : k) + ' (−' + Math.max(3, Math.round((1 - cur / prev) * 100)) + ' %)'); }
@@ -198,10 +214,13 @@ export function fatigueCheck(){
 export function blockReport(block){
   const r = blockRange(block); const d = today(); const to = r.to < d ? r.to : d;
   const finished = r.to < d;
-  const weeks = Math.max(1, Math.min(6, Math.floor(daysBetween(r.from, to) / 7) + 1));
+  // Bloc coupé par une pause (un nouveau départ juste après) : les semaines comptent jusqu'à sa dernière séance, pas pendant la pause
+  const next = blockStarts().find(x => x > r.from);
+  const cut = !!next && !workouts().some(w => w.status === 'terminée' && w.date > r.to && w.date < next);
+  const inBlock = workouts().filter(w => w.status === 'terminée' && w.date >= r.from && w.date <= to); const lastIn = inBlock.length ? inBlock[inBlock.length - 1].date : r.from;
+  const weeks = Math.max(1, Math.min(6, Math.floor(daysBetween(r.from, cut ? lastIn : to) / 7) + 1));
   const done = workouts().filter(w => w.status === 'terminée' && w.date >= r.from && w.date <= to);
-  const perWeek = DAY_ORDER.filter(x => planDay(x).s).length;
-  const planned = perWeek * weeks;
+  const planned = perWeekOf() * weeks;
   const ids = new Set(); done.forEach(w => Object.keys(w.ex || {}).forEach(k => ids.add(canon(k))));
   const forces = [];
   ids.forEach(id => {

@@ -5,6 +5,8 @@ import { settings } from './data.js';
 
 export function callName(){ const s = settings(); return s.sex === 'm' ? 'loutron' : s.sex === 'f' ? 'loutronne' : String(s.name || '').trim(); }
 // « Loutron, ta dernière sauvegarde… » : la phrase adressée à la personne
+// Conseil du retour après une pause de plus de 14 jours (règles de la reprise : engine.js, computeTarget)
+export const returnTip = gap => 'Bon retour ! ' + gap + ' jours sans séance : je reprends en douceur, mêmes charges cette fois (−10 % sur un exercice pas fait depuis plus de 4 semaines). Ton bloc repart en semaine 1.';
 export function hey(text){ const c = callName(); return c ? capFirst(c) + ', ' + lowFirst(text) : text; }
 // Conseils fermés avec la croix (settings.dismissed : clé → date). La clé décrit la situation (semaine, séance, jour…) :
 // un conseil fermé ne revient que quand la situation change.

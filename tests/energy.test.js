@@ -31,13 +31,13 @@ test('activités : course au kilomètre, niveaux du Compendium, sports, calories
   assert.equal(sportOf('Escalade'), null);
 });
 
-test('dépense du jour : séance prévue annoncée le matin, puis remplacée par la vraie ; activités ajoutées', () => {
+test('dépense du jour : rien pour une séance pas encore commencée, puis la vraie ; activités ajoutées', () => {
   jour('2026-11-02'); // lundi : Upper A prévu dans le programme exemple
   donnees(docs(reglages(), pesee(80), ['a_2026-11-02_x', { date: '2026-11-02', type: 'run', km: 5, min: 28, at: 1 }]));
   const matin = dayEnergy('2026-11-02');
-  assert.deepEqual(matin.items.map(i => i.kind), ['planned', 'activity']);
-  assert.equal(matin.items[1].kcal, 400);
-  assert.equal(matin.kcal, matin.items[0].kcal + 400);
+  assert.deepEqual(matin.items.map(i => i.kind), ['activity']);
+  assert.equal(matin.items[0].kcal, 400);
+  assert.equal(matin.kcal, 400);
   donnees(docs(reglages(), pesee(80), seance('2026-11-02', {}, { tpl: 'UA', est: 70, duration: 64, effort: 'heavy', kcal: 341 })));
   const soir = dayEnergy('2026-11-02');
   assert.deepEqual(soir.items.map(i => [i.kind, i.kcal]), [['session', 341]]);

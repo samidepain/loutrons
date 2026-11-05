@@ -27,7 +27,7 @@ test('mois voisins et nom du mois, y compris au changement d’année', () => {
   assert.equal(fmtMonth('2026-11'), 'novembre 2026');
 });
 
-test('résumé d’une journée : séance faite, en cours, prévue seulement aujourd’hui et après', () => {
+test('résumé d’une journée : séance faite, en cours ; plus de séance prévue d’après le jour de la semaine (rotation)', () => {
   jour('2026-11-04'); // mercredi ; programme exemple : lundi, mardi, vendredi, dimanche
   donnees(docs(reglages(),
     seance('2026-11-02', { la_hack: { kg: 100, reps: [8, 8, 8], rir: 2 } }),
@@ -39,8 +39,8 @@ test('résumé d’une journée : séance faite, en cours, prévue seulement auj
   const auj = daySummary('2026-11-04');
   assert.ok(auj.active);
   assert.equal(auj.planned, null);
-  assert.equal(daySummary('2026-11-06').planned, 'UB'); // vendredi à venir
-  assert.equal(daySummary('2026-11-09').planned, 'UA'); // lundi suivant
+  assert.equal(daySummary('2026-11-06').planned, null); // vendredi à venir, pas prévu à l'avance
+  assert.equal(daySummary('2026-11-09').planned, null); // lundi suivant
   const jeudi = daySummary('2026-11-05');
   assert.equal(jeudi.planned, null);
   assert.equal(jeudi.label, 'Repos');

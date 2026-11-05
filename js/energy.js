@@ -3,7 +3,7 @@
 // Une séance de muscu terminée garde son effort (w.effort) et sa dépense (w.kcal, calculée à la fin de la séance).
 import { norm, num, parseIso, today } from './util.js';
 import { S } from './store.js';
-import { bodyweight, daySummary, exDef, itemsOf, settings, sportInfo, sportOn, tplDef, tplEst, wName } from './data.js';
+import { bodyweight, daySummary, exDef, itemsOf, settings, sportInfo, sportOn, wName } from './data.js';
 
 // Valeurs MET du Compendium of Physical Activities 2024 (Herrmann et al.) ; 1 MET ≈ 1 kcal par kg et par heure, au repos.
 // La dépense comptée est nette (MET − 1) : le repos est déjà dans les besoins du jour.
@@ -82,14 +82,14 @@ export function activityName(a){
   return typeName(a.type);
 }
 
-// Ce qui compte dans la dépense d'un jour : séances faites, séance prévue ou en cours (le jour même, annoncée dès le matin
-// puis remplacée par la vraie), activités. kind : 'session' | 'planned' | 'activity' ; kcal null si incalculable.
+// Ce qui compte dans la dépense d'un jour : séances faites, séance en cours (durée estimée, puis la vraie une fois terminée), activités.
+// Une séance seulement prévue ne compte pas (version 2.13). kind : 'session' | 'planned' (séance en cours) | 'activity' ; kcal null si incalculable.
 export function dayEnergy(day){
   const kg = bodyweight(); const items = []; const s = daySummary(day);
   s.done.forEach(w => items.push({ kind:'session', id:w.id, name:wName(w), min:sessionMin(w), kcal:sessionKcal(w, kg), effort:effortOf(w) }));
   if (day === today()) {
-    const est = s.active ? num(s.active.est) || 60 : s.planned ? tplEst(tplDef(s.planned)) : 0;
-    if (est) items.push({ kind:'planned', name: s.active ? wName(s.active) : tplDef(s.planned).name, min:est, kcal: kg ? Math.round(net(EFFORT.classic.met, kg, est)) : null, active: !!s.active });
+    const est = s.active ? num(s.active.est) || 60 : 0;
+    if (est) items.push({ kind:'planned', name: wName(s.active), min:est, kcal: kg ? Math.round(net(EFFORT.classic.met, kg, est)) : null, active: true });
   }
   s.acts.forEach(a => items.push({ kind:'activity', id:a.id, a, name:activityName(a), min:num(a.min) || 0, kcal: a.kcal != null ? a.kcal : activityKcal(a, kg) }));
   return { items, kcal: items.reduce((t, i) => t + (i.kcal || 0), 0), min: items.reduce((t, i) => t + (i.min || 0), 0), unknown: items.some(i => i.kcal == null) };
@@ -99,7 +99,7 @@ export function dayEnergy(day){
 export const glassOf = () => num(settings().glass) || GLASS;
 export const waterOf = day => num((S.docs.get('e_' + day) || {}).ml) || 0;
 export function waterBase(sex){ return WATER[sex === 'm' || sex === 'f' ? sex : 'other']; }
-// Objectif du jour en mL, arrondi à 100 mL : boissons + 0,5 L par heure de sport (séances, séance prévue, activités)
+// Objectif du jour en mL, arrondi à 100 mL : boissons + 0,5 L par heure de sport (séances commencées ou faites, activités)
 export function waterGoal(day){ return Math.round((waterBase(settings().sex) + WATER.perHour * dayEnergy(day).min / 60) / 100) * 100; }
 // Sport du module « sport collectif » prévu ce jour-là : 'train', 'match' ou null
 export function sportPlanned(day){

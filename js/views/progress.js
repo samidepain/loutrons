@@ -1,8 +1,8 @@
 // Écrans Progrès et Bilan de bloc.
 import { addDays, esc, fmtDate, fmtKg, mondayOf, num, parseIso, today, withDot } from '../util.js';
-import { DAY_ORDER, JUMP_PROTOCOL, MUSCLES } from '../library.js';
+import { JUMP_PROTOCOL, MUSCLES } from '../library.js';
 import { S } from '../store.js';
-import { allEx, blockRange, bodyDocs, bodyweight, canon, history, jumpsOn, kneeEntries, kneeOn, planDay, settings, testForBlock, weekInfo, workouts } from '../data.js';
+import { allEx, blockRange, bodyDocs, bodyweight, canon, history, jumpsOn, kneeEntries, kneeOn, perWeekOf, settings, testForBlock, weekInfo, workouts } from '../data.js';
 import { blockReport, exerciseProgress, fatigueCheck, muscleDone, musclePlanned, setScore } from '../engine.js';
 import { chart } from '../chart.js';
 import { viewHistory } from './history.js';
@@ -18,7 +18,7 @@ function viewProgress(){
   if (!S.loaded) return '<p class="empty">Chargement…</p>';
   const ws = workouts().filter(w => w.status === 'terminée'); const d = today();
   const last28 = ws.filter(w => w.date > addDays(d, -28)); const wk = weekInfo(d);
-  const perWeek = DAY_ORDER.filter(x => planDay(x).s).length;
+  const perWeek = perWeekOf();
   let h = '';
   h += '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">séances au total</span></div><div class="stat"><span class="v num">' + last28.length + '<span class="small muted">/' + perWeek * 4 + '</span></span><span class="l">sur 4 semaines</span></div><div class="stat"><span class="v num">' + wk.n + '</span><span class="l">semaine du programme</span></div></div>';
 

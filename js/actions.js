@@ -2,7 +2,7 @@
 import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, nbsp, num, rid, stepValue, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
-import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, upNext, weekInfo } from './data.js';
+import { activeWorkout, allTpl, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, programRotation, putSettings, rotationOf, rotationWith, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, upNext, weekInfo } from './data.js';
 import { findPRs, initItem } from './engine.js';
 import { downloadFile, exportFile, importable, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
@@ -93,6 +93,9 @@ function setField(t){
   put(w.id, w);
 }
 // État de l'écran de séance, remis à zéro au début, à la fin et à l'abandon d'une séance
+// Rotation figée : l'ordre actuel et les séances hors rotation (une séance non citée entrerait sinon d'elle-même dans la rotation)
+function frozenRot(){ const rot = rotationOf(); return { rotation: rot.slice(), rotOff: allTpl().map(t => t.id).filter(id => rot.indexOf(id) < 0) }; }
+function moveRot(id, dir){ const f = frozenRot(); const i = f.rotation.indexOf(id); const j = i + dir; if (i < 0 || j < 0 || j >= f.rotation.length) return; f.rotation[i] = f.rotation[j]; f.rotation[j] = id; putSettings(f); render(); }
 function resetSession(){ S.sessOpen = null; S.rirAsk = null; S.setEdit = null; S.move = null; }
 const lessMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Après une validation ou l'ouverture d'un exercice : la série en cours (#cur) reste visible entre l'en-tête de la séance et le minuteur
@@ -134,7 +137,6 @@ function saveWeight(kg){ const d = today(); put('b_' + d, Object.assign({ date:d
 function progError(U){
   if (!U.prog) return ['Choisis un programme.'];
   if (U.prog === 'custom' && !String(U.progName || '').trim()) return ['Donne un nom à ton programme.', '#setup-pname'];
-  if (U.prog !== 'custom' && !U.days.length) return ['Choisis au moins un jour.'];
   return null;
 }
 // Objectif et alimentation : à l'accueil (S.setup.n) ou dans le profil (settings.nutrition).
@@ -214,8 +216,9 @@ const A = {
   // Profil : vers les réglages de l'entraînement (Entraînement › Planning)
   'go-planning'(){ S.progTab = 'planning'; A.tab({ dataset:{ v:'training' } }); },
   // Premier lancement et programme
-  'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
+  'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; U.perWeek = U.prog === 'exemple' ? 4 : 3; render(); },
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
+  'setup-per-week'(b){ S.setup.perWeek = +b.dataset.v; render(); },
   'setup-restart'(b){ S.setup.restart = b.checked; },
   'setup-cancel'(){ S.setup = null; render(); },
   'setup-next'(){
@@ -241,8 +244,9 @@ const A = {
     if (pe) { if (first) U.step = 2; render(); toast(pe[0]); const i = pe[1] && $(pe[1]); if (i) i.focus(); return; }
     const name = custom ? String(U.progName || '').trim() : PROGRAMS[U.prog].name;
     if (first && U.n.on && planFor(setupData(U), U.n, today()).status === 'missing') { toast('Complète ce qu’il manque pour le calcul, ou choisis « Pas maintenant ».'); return; }
-    const program = { base: custom ? null : U.prog, name, days: DAY_ORDER.filter(d => !custom && U.days.indexOf(d) >= 0) };
-    const patch = { program, plan: buildPlan(program.base, program.days) };
+    // Rotation (version 2.13) : un objectif de séances par semaine, plus de jours fixes ; la rotation repart de l'ordre du nouveau programme
+    const program = { base: custom ? null : U.prog, name, days: [] };
+    const patch = Object.assign({ program, perWeek: U.perWeek || 3 }, programRotation(program.base));
     if (first) {
       patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; patch.created = today();
       if (U.sex) patch.sex = U.sex;
@@ -561,11 +565,12 @@ const A = {
     const D = S.draft; const t = D.data;
     if (!t.name.trim()) { toast('Donne un nom à la séance.'); $('#d-name').focus(); return; }
     if (!t.items.length) { toast('Ajoute au moins un exercice.'); return; }
-    saveTpl(Object.assign({ id:D.id }, t)); S.draft = null; S.confirm = null; S.view = 'training'; S.progTab = 'seances'; render(); toast('Séance enregistrée.');
+    // Séance créée : elle entre à la fin de la rotation (figée d'abord si elle venait encore du planning d'avant)
+    const isNew = !tplDef(D.id); saveTpl(Object.assign({ id:D.id }, t)); if (isNew) { const rw = rotationWith(D.id); if (rw) putSettings(rw); } S.draft = null; S.confirm = null; S.view = 'training'; S.progTab = 'seances'; render(); toast('Séance enregistrée.');
   },
   'reset-tpl'(){ del('p_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-tpl'(){ S.confirm = 'del-tpl'; render(); },
-  'del-tpl-yes'(){ const id = S.draft.id; del('p_' + id); const p = Object.assign({}, planOf()); let ch = false; Object.keys(p).forEach(k => { if (p[k] && p[k].s === id) { p[k] = { label:'Repos' }; ch = true; } }); if (ch) putSettings({ plan:p }); S.draft = null; S.confirm = null; render(); toast('Séance supprimée.'); },
+  'del-tpl-yes'(){ const id = S.draft.id; del('p_' + id); const st = settings(); if (Array.isArray(st.rotation) || Array.isArray(st.rotOff)) putSettings({ rotation: (st.rotation || []).filter(x => x !== id), rotOff: (st.rotOff || []).filter(x => x !== id) }); const p = Object.assign({}, planOf()); let ch = false; Object.keys(p).forEach(k => { if (p[k] && p[k].s === id) { p[k] = { label:'Repos' }; ch = true; } }); if (ch) putSettings({ plan:p }); S.draft = null; S.confirm = null; render(); toast('Séance supprimée.'); },
   'draft-cancel'(){ const after = S.draft && S.draft.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null; if (after) S.picker = after.picker; render(); },
   // Exercices
   'new-ex'(){ S.draft = { kind:'ex', isNew:true, id:null, data:blankEx() }; render(); window.scrollTo(0, 0); },
@@ -599,6 +604,20 @@ const A = {
   'reset-ex'(){ del('x_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-ex'(){ S.confirm = 'del-ex'; render(); },
   'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; S.fiche = null; render(); toast('Exercice supprimé.'); },
+  // Rotation : ordre, séances mises de côté, objectif, jours prévus. La rotation déduite est d'abord figée (ordre et mises de côté)
+  'rot-up'(b){ moveRot(b.dataset.v, -1); },
+  'rot-down'(b){ moveRot(b.dataset.v, 1); },
+  'rot-toggle'(b){
+    const f = frozenRot(); const id = b.dataset.v;
+    if (f.rotation.indexOf(id) >= 0) { f.rotation = f.rotation.filter(x => x !== id); f.rotOff.push(id); } else { f.rotOff = f.rotOff.filter(x => x !== id); f.rotation.push(id); }
+    putSettings(f); render();
+  },
+  'reset-rotation'(){ putSettings(programRotation((programOf() || {}).base)); render(); toast('Ordre du programme rétabli.'); },
+  'per-week'(b){ putSettings({ perWeek: +b.dataset.v }); render(); },
+  'plan-day'(b){
+    const d = b.dataset.v; const lim = addDays(today(), -14); const cur = (settings().planned || []).filter(x => typeof x === 'string' && x >= lim);
+    const on = cur.indexOf(d) >= 0; putSettings({ planned: on ? cur.filter(x => x !== d) : cur.concat([d]).sort() }); render(); toast(on ? 'Séance retirée.' : 'Séance prévue.');
+  },
   'reset-plan'(){ const g = programOf(); if (!g || !PROGRAMS[g.base]) return; putSettings({ plan: buildPlan(g.base, g.days || []) }); render(); toast('Planning d’origine rétabli.'); },
   // Données
   async export(b){

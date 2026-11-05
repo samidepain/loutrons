@@ -39,10 +39,10 @@ test('un jour passé sans séance ni activité ne donne rien, même si une séan
   assert.deepEqual(dayFamilies('2026-11-03'), []);
 });
 
-test('un sport noté un jour de match prévu donne sports collectifs fait, une seule fois', () => {
+test('un sport noté un jour de match prévu donne sports collectifs fait, une seule fois (et la salle prévue tant que l’objectif de la semaine n’est pas atteint)', () => {
   jour('2026-11-07');
   donnees(docs(sport(), act('2026-11-07', 'sport', { sport: 'basket', level: 'match' })));
-  assert.deepEqual(dayFamilies('2026-11-07'), [{ fam: 'collectif', state: 'done' }]);
+  assert.deepEqual(dayFamilies('2026-11-07'), [{ fam: 'salle', state: 'planned' }, { fam: 'collectif', state: 'done' }]);
 });
 
 test('ordre des conseils d’Émile : le plus petit rang d’abord, ordre gardé à rang égal, conseils fermés retirés', () => {

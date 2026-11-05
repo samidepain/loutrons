@@ -1,8 +1,8 @@
 // Écran Entraînement (hors séance en cours) : ton programme, ses séances, les exercices, le planning.
-import { capFirst, esc, fmtDateLong, fmtKg, lowFirst, num, today, WEEKDAYS, withDot } from '../util.js';
+import { addDays, capFirst, esc, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, num, parseIso, today, WEEKDAYS, withDot } from '../util.js';
 import { DAY_ORDER, DAY_SHORT, KINDS, MUSCLES, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
-import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, planDay, programOf, searchEx, settings, sportInfo, sportOn, startDate, tplEst, tplItems, weekInfo } from '../data.js';
+import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, perWeekOf, planDay, plannedDates, plannedSessions, programOf, rotationOf, searchEx, settings, sportInfo, sportOn, startDate, tplDef, tplEst, tplItems, weekInfo } from '../data.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
 
@@ -21,7 +21,7 @@ function programCard(){
     ? '<div class="row"><input class="plain" id="prog-name" value="' + esc(g.name || '') + '" aria-label="Nom du programme" style="flex:1;width:auto;min-width:0"><button type="button" class="btn primary" data-act="prog-rename-save">Enregistrer</button></div>'
     : '<div class="row between"><h2>' + esc(g.name || 'Mon programme') + '</h2><button type="button" class="link" data-act="prog-rename">Renommer</button></div>';
   h += '<p class="muted small">' + esc(base ? base.desc : 'Ton propre programme : crée tes séances et mets-y les exercices que tu veux.') + '</p>';
-  return h + '<div class="row"><button type="button" class="btn" data-act="prog-change">Changer de programme</button><button type="button" class="btn" data-act="ptab" data-v="planning">Changer les jours</button></div></section>';
+  return h + '<div class="row"><button type="button" class="btn" data-act="prog-change">Changer de programme</button><button type="button" class="btn" data-act="ptab" data-v="planning">Changer la rotation</button></div></section>';
 }
 export function noTplCard(){
   return '<section class="card"><h2>Crée ta première séance</h2><p class="muted">Donne-lui un nom, puis ajoute tes exercices : s’il en manque un, crée-le depuis la liste.</p><button type="button" class="btn primary big" data-act="go-new-tpl">Créer une séance</button></section>';
@@ -61,17 +61,36 @@ export function exerciseList(){
 }
 // Planning : tes jours, cette semaine (semaine chargée, décharge anticipée), réglages de l'entraînement (début, options, jours de sport)
 function viewPlanning(){
-  const tpls = allTpl(); const g = programOf() || {};
-  let h = '<section class="card"><h3>Tes jours</h3><p class="muted small">Sert au rappel du jour et aux séries prévues ; tu peux toujours faire une autre séance.</p>';
-  if (!tpls.length) h += '<p class="small">Crée d’abord tes séances dans l’onglet Séances, puis choisis-les ici.</p>';
-  DAY_ORDER.forEach(wd => {
-    const p = planDay(wd);
-    h += '<label class="f"><span>' + esc(capFirst(WEEKDAYS[wd])) + (p.label !== 'Repos' ? ' · ' + esc(p.label) : '') + '</span><select data-plan="' + wd + '">' +
-      tpls.map(t => '<option value="s:' + esc(t.id) + '"' + (p.s === t.id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') +
-      '<option value="l:Repos"' + (p.s ? '' : ' selected') + '>Pas de séance</option></select></label>';
+  const tpls = allTpl(); const rot = rotationOf(); const per = perWeekOf();
+  let h = '<section class="card"><h3>Ta rotation</h3><p class="muted small">Tes séances reviennent dans cet ordre. Aujourd’hui te propose la suivante, quel que soit le jour ; tu peux toujours en faire une autre.</p>';
+  if (!tpls.length) h += '<p class="small">Crée d’abord tes séances dans l’onglet Séances.</p>';
+  rot.forEach((id, i) => { h += rotRow(tplDef(id), i, rot.length, true); });
+  tpls.filter(t => rot.indexOf(t.id) < 0).forEach(t => { h += rotRow(t, -1, 0, false); });
+  h += '<span class="label">Séances par semaine</span><div class="chips" role="group" aria-label="Séances par semaine">' + [2, 3, 4, 5, 6].map(n => '<button type="button" class="chip' + (per === n ? ' on' : '') + '" data-act="per-week" data-v="' + n + '" aria-pressed="' + (per === n) + '">' + n + '</button>').join('') + '</div>';
+  if (Array.isArray(settings().rotation) || Array.isArray(settings().rotOff)) h += '<button type="button" class="link" data-act="reset-rotation">Revenir à l’ordre du programme</button>';
+  return h + '</section>' + planAheadCard() + weekCard() + settingsCard();
+}
+// Une séance de la rotation : rang, nom, ↑ et ↓ pour la déplacer, et la case « Dans la rotation »
+function rotRow(t, i, n, on){
+  const id = esc(t.id); const nm = esc(t.name);
+  return '<div class="rot-row' + (on ? '' : ' off') + '"><span class="rot-n num">' + (on ? i + 1 : '') + '</span><span class="rot-name">' + nm + '</span>'
+    + '<button type="button" class="step" data-act="rot-up" data-v="' + id + '" aria-label="Monter ' + nm + '"' + (on && i > 0 ? '' : ' disabled') + '>↑</button>'
+    + '<button type="button" class="step" data-act="rot-down" data-v="' + id + '" aria-label="Descendre ' + nm + '"' + (on && i < n - 1 ? '' : ' disabled') + '>↓</button>'
+    + '<label class="rot-in"><input type="checkbox" data-act="rot-toggle" data-v="' + id + '"' + (on ? ' checked' : '') + '><span>Dans la rotation</span></label></div>';
+}
+// Prévoir tes séances (facultatif) : cette semaine et la suivante ; les jours prévus reçoivent la rotation dans l'ordre
+function planAheadCard(){
+  const t = today(); const mon = mondayOf(t); const planned = plannedDates(); const ses = plannedSessions();
+  let h = '<section class="card"><h3>Prévoir tes séances</h3><p class="muted small">Facultatif : touche les jours où tu comptes venir. Ils reçoivent les séances de ta rotation, dans l’ordre.</p>';
+  [0, 7].forEach(off => {
+    h += '<span class="label">' + (off ? 'Semaine prochaine' : 'Cette semaine') + '</span><div class="days" role="group" aria-label="' + (off ? 'Semaine prochaine' : 'Cette semaine') + '">';
+    for (let i = 0; i < 7; i++) { const d = addDays(mon, off + i); const on = planned.indexOf(d) >= 0;
+      h += '<button type="button" class="chip txt plan-chip' + (on ? ' on' : '') + '" data-act="plan-day" data-v="' + d + '" aria-pressed="' + on + '"' + (d < t ? ' disabled' : '') + '>' + DAY_SHORT[DAY_ORDER[i]] + '<span class="num">' + parseIso(d).getDate() + '</span></button>'; }
+    h += '</div>';
   });
-  if (PROGRAMS[g.base]) h += '<button type="button" class="link" data-act="reset-plan">Revenir au planning d’origine</button>';
-  return h + '</section>' + weekCard() + settingsCard();
+  const list = Object.keys(ses);
+  if (list.length) h += '<p class="small">' + list.map(d => esc(nbsp(capFirst(fmtDateLong(d)) + ' : ' + tplDef(ses[d]).name))).join('<br>') + '</p>';
+  return h + '</section>';
 }
 // Cette semaine : semaine chargée en sport (si sport et détente), décharge anticipée (déplacé d'Aujourd'hui)
 function weekCard(){

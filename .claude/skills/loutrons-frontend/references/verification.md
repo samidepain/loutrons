@@ -8,7 +8,7 @@
 npm test
 ```
 
-Tous les tests doivent passer (153 avec la version 2.12). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
+Tous les tests doivent passer (179 avec la version 2.13). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
 
 ## 2. Servir l'appli
 

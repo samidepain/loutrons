@@ -1,12 +1,12 @@
 // Écran Séance : un exercice ouvert à la fois, la série en cours avec − et +, les autres séries sur une ligne.
-import { capFirst, esc, fmtDate, fmtKg, fmtRest, lowFirst, num } from '../util.js';
+import { capFirst, daysBetween, esc, fmtDate, fmtKg, fmtRest, lowFirst, nbsp, num } from '../util.js';
 import { JUMP_PROTOCOL } from '../library.js';
 import { S } from '../store.js';
-import { activeWorkout, allTpl, exDef, history, itemsOf, jumpsOn, kneeOn, sessionFocus, testDue, testForBlock, weekInfo, wName } from '../data.js';
+import { activeWorkout, allTpl, exDef, history, itemsOf, jumpsOn, kneeOn, sessionFocus, testDue, testForBlock, weekInfo, wName, workouts } from '../data.js';
 import { lastCardio, warmup } from '../engine.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
-import { emile } from '../emile.js';
+import { emile, returnTip } from '../emile.js';
 import { hasMovement } from './movement.js';
 
 export function viewSession(){
@@ -22,6 +22,9 @@ export function viewSession(){
   h += '<div class="bar" aria-label="Avancement"><i style="width:' + pct + '%"></i></div><span class="muted small">' + done + '/' + total + ' séries validées</span></div>';
   const b = S.docs.get('b_' + w.date) || {};
   if (num(b.sleep) != null && num(b.sleep) < 6) h += emile('<p>Nuit courte (' + fmtKg(num(b.sleep)) + ' h) : vise les objectifs, mais garde 1 rep de plus en réserve et ne force pas de record aujourd’hui.</p>', { tone:'warn', key:'sleep:' + w.id });
+  // Première séance après plus de 14 jours sans séance : le conseil du retour, en haut de la séance
+  const prev = workouts().filter(x => x.status === 'terminée' && x.date < w.date).pop();
+  if (prev && daysBetween(prev.date, w.date) > 14) h += emile('<p>' + esc(nbsp(returnTip(daysBetween(prev.date, w.date)))) + '</p>', { key:'retour-s:' + prev.date });
   if (w.lower && jumpsOn() && testDue(w.date)) {
     h += '<section class="card plan"><div class="stack" style="gap:4px"><h3>Test de détente du bloc ' + weekInfo(w.date).block + '</h3><p class="small">' + esc(JUMP_PROTOCOL) + '</p></div>';
     h += '<div class="fields">' + [0,1,2].map(i => '<label class="f"><span>Essai ' + (i + 1) + ' (cm)</span><input class="n" id="jump-' + i + '" inputmode="decimal" placeholder="cm"></label>').join('') + '</div>';
@@ -115,7 +118,7 @@ function openCard(it, w, idx, focus){
   if (it.kind === 'load' || it.kind === 'bw') presc = (t.sets || it.sets) + ' × ' + it.lo + '-' + it.hi + (it.uni ? ' par jambe' : '') + ' · repos ' + fmtRest(it.rest) + (t.rir != null ? ' · ' + t.rir + ' en réserve' : '');
   else if (it.kind === 'plyo') presc = (t.sets || it.sets) + ' × ' + it.lo + ' ' + it.unit;
   else if (it.kind === 'cardio') presc = it.lo + ' min';
-  const pillCls = { up:'good', reps:'acc', calib:'court', deload:'court', down:'warn', reset:'warn', hold:'warn', confirm:'court', skip:'bad', opt:'', plyo:'acc', check:'' }[t.type] || '';
+  const pillCls = { up:'good', reps:'acc', calib:'court', back:'court', deload:'court', down:'warn', reset:'warn', hold:'warn', confirm:'court', skip:'bad', opt:'', plyo:'acc', check:'' }[t.type] || '';
   let h = '<section class="card ex open' + (st.skip ? ' skipped' : '') + (fin ? ' complete' : '') + '" data-ex="' + esc(key) + '">';
   h += '<div class="stack ex-h"><h3 class="exname">' + esc(it.name) + '</h3>' + (presc ? '<span class="presc">' + esc(presc) + '</span>' : '')
     + '<div class="row ex-acts">' + (hasMovement(e) ? '<button type="button" class="btn sm" data-act="move-open" data-v="' + esc(key) + '">Voir le mouvement</button>' : '') + '<button type="button" class="btn sm" data-act="pick-replace" data-i="' + idx + '">Remplacer</button></div></div>';

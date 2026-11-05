@@ -1,15 +1,15 @@
 // Écran Aujourd’hui : en haut la séance du jour, la semaine et l'alimentation ; dessous un conseil d'Émile à la fois,
 // puis le suivi du jour en lignes compactes (eau, poids et sommeil, activités, genou).
-import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nSeries, num, parseIso, today, withDot } from '../util.js';
+import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
-import { activeWorkout, activities, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, planDay, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, wName, workouts } from '../data.js';
+import { activeWorkout, activities, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
 import { fatigueCheck } from '../engine.js';
 import { useShare } from '../backup.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
 import { calendarCard } from './calendar.js';
 import { checkCard, foodTodayCard } from './goal.js';
-import { emile, emileQueue, hey } from '../emile.js';
+import { emile, emileQueue, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
 
@@ -28,21 +28,28 @@ function planCard(d, plan, aw, doneToday, tpls){
     const sw = (S.summary && doneToday.find(w => w.id === S.summary.id)) || doneToday[doneToday.length - 1];
     return '<section class="card plan"><span class="label">Séance faite</span><div class="name">' + esc(wName(sw)) + '</div><p class="muted">' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' + effortChoice(sw) + autre + '</section>';
   }
-  if (plan.s) {
-    const t = tplDef(plan.s);
-    return '<section class="card plan"><span class="label">Aujourd’hui</span><div class="name">' + esc(t.name) + '</div><p>' + esc(t.focus || '') + ' · environ ' + tplEst(t) + ' min</p>' + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '')
-      + '<button type="button" class="btn primary big" data-act="start" data-v="' + plan.s + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button></section>';
-  }
-  let next = null; for (let i = 1; i <= 7 && !next; i++) { const dd = addDays(d, i); const p = planDay(parseIso(dd).getDay()); if (p.s) next = { d:dd, t:tplDef(p.s) }; }
   // Jour de sport prévu (module sport) et pas encore noté : un geste pour le noter
   const sp = S.loaded && sportPlanned(d); const noter = sp && !activities(d).some(a => a.type === 'sport');
-  return '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (plan.note ? '<p class="muted">' + esc(plan.note) + '</p>' : '') + (next ? '<p class="small">Prochaine séance : <b>' + esc(next.t.name) + '</b>, ' + esc(withDot(fmtDateLong(next.d))) + '</p>' : '')
-    + (noter ? '<button type="button" class="btn" data-act="act-add" data-v="' + sp + '">+ ' + esc(sp === 'match' ? 'Noter le match' : 'Noter le ' + lowFirst(sportInfo().name)) + '</button>' : '') + autre + '</section>';
+  const noterBtn = noter ? '<button type="button" class="btn" data-act="act-add" data-v="' + sp + '">+ ' + esc(sp === 'match' ? 'Noter le match' : 'Noter le ' + lowFirst(sportInfo().name)) + '</button>' : '';
+  // Rotation (version 2.13) : la séance du jour prévu, sinon la séance suivante ; avancement de la semaine
+  const id = S.loaded ? (plannedSessions()[d] || nextSession()) : null; const t = id && tplDef(id);
+  if (!t) return tpls.length || noter ? '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (tpls.length ? '<p class="small">Aucune séance dans ta rotation : choisis-les dans Entraînement › Planning.</p>' : '') + noterBtn + autre + '</section>' : '';
+  const prevu = plannedDates().indexOf(d) >= 0; const p = weekProgress(d); const reached = !prevu && p.done >= p.target;
+  // Match ce soir ou demain (module sport) et séance du bas du corps : garder des jambes fraîches ; note du jour du programme exemple
+  const mt = sportPlanned(d) === 'match' ? 'ce soir' : sportPlanned(addDays(d, 1)) === 'match' ? 'demain' : null;
+  const caution = (mt && tplLower(t) ? '<p class="small">' + esc(nbsp('Match ' + mt + ' : garde des jambes fraîches, préfère une séance du haut du corps (« Faire une autre séance »).')) + '</p>' : '') + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
+  const count = p.done + ' séance' + (p.done > 1 ? 's' : '') + ' sur ' + p.target + ' cette semaine';
+  return '<section class="card plan"><span class="label">' + (prevu ? 'Prévue aujourd’hui' : 'Ta prochaine séance') + '</span><div class="name">' + esc(t.name) + '</div>'
+    + '<p>' + esc(nbsp((t.focus ? t.focus + ' · ' : '') + 'environ ' + tplEst(t) + ' min' + (reached ? '' : ' · ' + count))) + '</p>' + (reached ? '<p class="small">' + esc(nbsp(count + ' : tu peux te reposer.')) + '</p>' : '') + caution
+    + '<button type="button" class="btn' + (reached ? '' : ' primary') + ' big" data-act="start" data-v="' + esc(id) + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>' + noterBtn + autre + '</section>';
 }
 
 // Conseils d'Émile du jour, du plus important au moins important (rang 1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : semaine)
 function emileCards(d, wk, goal){
   const q = [];
+  // Retour après plus de 14 jours sans séance : la reprise est expliquée (rang 2, comme une alerte)
+  const gap = S.loaded && !activeWorkout() && !workouts().some(w => w.date === d && w.status === 'terminée') ? lastSessionGap(d) : null;
+  if (gap != null && gap > 14) q.push({ rank:2, html: emile('<p>' + esc(nbsp(returnTip(gap))) + '</p>', { key:'retour:' + addDays(d, -gap) }) });
   if (S.summary) {
     const sw = S.docs.get(S.summary.id);
     let b = sw ? '<p class="muted">' + esc(wName(sw)) + ' · ' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' : '';

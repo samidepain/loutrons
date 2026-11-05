@@ -2,7 +2,7 @@
 import { addDays, capFirst, esc, fmtDateLong, fmtMonth, lowFirst, mondayOf, monthDays, nSeries, parseIso, today } from '../util.js';
 import { DAY_SHORT } from '../library.js';
 import { S } from '../store.js';
-import { activityFamily, bodyweight, countSets, dayFamilies, daySummary, sportInfo, tplDef, tplEst, wName, workouts } from '../data.js';
+import { activityFamily, bodyweight, countSets, dayFamilies, daySummary, perWeekOf, plannedDates, sportInfo, tplDef, tplEst, wName, workouts } from '../data.js';
 import { workoutLines } from './history.js';
 import { activityKcal, activityName, sessionKcal } from '../energy.js';
 import { actDetail } from './activity.js';
@@ -39,6 +39,8 @@ function dayDetail(day){
   s.acts.forEach(a => { h += '<p>' + dot({ fam:activityFamily(a.type), state:'done' }) + '<b>' + esc(activityName(a)) + '</b>' + (actDetail(a) ? ' · ' + esc(actDetail(a)) : '') + kc(a.kcal != null ? a.kcal : activityKcal(a, kg)) + '</p>'; });
   const sp = dayFamilies(day).some(f => f.fam === 'collectif' && f.state === 'planned');
   if (sp) h += '<p>' + dot({ fam:'collectif', state:'planned' }) + 'Prévu : <b>' + esc(sportPrevu(day)) + '</b></p>';
+  // Prévoir à l'avance (facultatif) : aujourd'hui et les jours à venir, sans séance faite ni en cours
+  if (day >= t && !s.active && !s.done.length) { const on = plannedDates().indexOf(day) >= 0; h += '<button type="button" class="btn" data-act="plan-day" data-v="' + day + '">' + (on ? 'Retirer la séance prévue' : 'Prévoir une séance') + '</button>'; }
   if (!s.active && !s.done.length && !s.planned && !s.acts.length && !sp) h += '<p class="muted">' + (day < t ? 'Aucune séance notée ce jour-là.' : s.label !== 'Repos' ? esc(s.label) + ' : pas de séance de salle prévue.' : 'Repos : pas de séance prévue.') + '</p>';
   return h + '</div>';
 }
@@ -46,7 +48,7 @@ export function calendarCard(){
   if (!S.loaded) return '';
   if (!S.calMonth) {
     const mon = mondayOf(today()); const n = workouts().filter(w => w.date >= mon && w.date <= addDays(mon, 6) && w.status === 'terminée').length;
-    let h = '<section class="card cal"><div class="row between"><div class="stack" style="gap:2px"><h3>Ta semaine</h3><span class="muted small">' + n + ' séance' + (n > 1 ? 's faites' : ' faite') + '</span></div><button type="button" class="link" data-act="cal-month">Voir le mois</button></div><div class="cal-week">';
+    let h = '<section class="card cal"><div class="row between"><div class="stack" style="gap:2px"><h3>Ta semaine</h3><span class="muted small">' + n + ' séance' + (n > 1 ? 's' : '') + ' sur ' + perWeekOf() + '</span></div><button type="button" class="link" data-act="cal-month">Voir le mois</button></div><div class="cal-week">';
     for (let i = 0; i < 7; i++) h += cell(addDays(mon, i), false);
     return h + '</div></section>';
   }

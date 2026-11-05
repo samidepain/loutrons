@@ -8,7 +8,7 @@ import { goalForm, setupData } from './goal.js';
 import { planFor } from '../nutrition.js';
 import { emile } from '../emile.js';
 
-export function newSetup(mode){ return { mode, step:1, name: settings().name || '', sex:null, birth:'', height:'', weight:'', prog:null, progName:'', days:[], restart:true,
+export function newSetup(mode){ return { mode, step:1, name: settings().name || '', sex:null, birth:'', height:'', weight:'', prog:null, progName:'', days:[], perWeek:null, restart:true,
   n:{ on:false, activity:null, goal:'keep', target:'', by:'' }, ask:[] }; }
 export function viewSetup(){
   const U = S.setup; const first = U.mode === 'welcome';
@@ -35,12 +35,12 @@ export function viewSetup(){
   h += '<section class="card"><h3>' + (first ? 'Ton programme de départ' : 'Nouveau programme') + '</h3>';
   Object.keys(PROGRAMS).forEach(k => { h += opt(k, PROGRAMS[k].name, PROGRAMS[k].desc); });
   h += opt('custom', 'Créer mon programme', 'Tu le nommes, tu crées tes séances et tu choisis tes exercices.');
-  if (U.prog === 'custom') h += '<label class="f"><span>Nom de ton programme</span><input id="setup-pname" data-u="progName" value="' + esc(U.progName) + '" placeholder="ex. Prise de masse"></label><p class="muted small">Tu choisiras tes jours dans Entraînement › Planning, une fois tes séances créées.</p>';
+  if (U.prog === 'custom') h += '<label class="f"><span>Nom de ton programme</span><input id="setup-pname" data-u="progName" value="' + esc(U.progName) + '" placeholder="ex. Prise de masse"></label><p class="muted small">Tu régleras ta rotation dans Entraînement › Planning, une fois tes séances créées.</p>';
   h += '</section>';
-  if (PROGRAMS[U.prog]) {
-    const n = PROGRAMS[U.prog].tpls.length;
-    h += '<section class="card"><h3>Tes jours de salle</h3><p class="muted small">Ce programme compte ' + n + ' séances : choisis ' + n + ' jours. Elles sont réparties dans l’ordre de la semaine.</p><div class="days" role="group">' +
-      DAY_ORDER.map(wd => { const on = U.days.indexOf(wd) >= 0; return '<button type="button" class="chip txt' + (on ? ' on' : '') + '" data-act="setup-day" data-v="' + wd + '" aria-pressed="' + on + '">' + DAY_SHORT[wd] + '</button>'; }).join('') + '</div></section>';
+  if (U.prog) {
+    const per = U.perWeek || 3;
+    h += '<section class="card"><h3>Combien de séances par semaine ?</h3><p class="muted small">Tes séances reviennent dans l’ordre, quel que soit le jour : l’appli te propose la suivante. Tu pourras aussi prévoir tes jours à l’avance.</p><div class="chips" role="group" aria-label="Séances par semaine">'
+      + [2, 3, 4, 5, 6].map(n => '<button type="button" class="chip' + (per === n ? ' on' : '') + '" data-act="setup-per-week" data-v="' + n + '" aria-pressed="' + (per === n) + '">' + n + '</button>').join('') + '</div></section>';
   }
   if (!first) h += '<section class="card"><label class="toggle"><input type="checkbox" id="setup-restart" data-act="setup-restart"' + (U.restart ? ' checked' : '') + '><span><b>Recommencer en semaine 1</b><br><span class="muted small">Nouveau bloc de 6 semaines, en commençant par une semaine de calibration.</span></span></label></section>';
   else h += '<p class="muted small">Suivi du genou, tests de détente, sport collectif à côté : ces options s’activent plus tard dans Entraînement › Planning.</p>';
