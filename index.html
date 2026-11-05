@@ -402,7 +402,9 @@ details.cue[open]{display:flex;flex-direction:column;gap:10px}
 .quick{display:flex;align-items:center;gap:8px}
 .quick > .pick{flex:1;min-width:0}
 .quick .ql{display:flex;flex-direction:column;gap:2px;min-width:0}
-.quick .n{overflow-wrap:anywhere}
+.quick .n,.quick .m{overflow-wrap:anywhere}
+/* Titres saisis (nom d'un repas enregistré) : un mot très long passe à la ligne au lieu de déborder */
+#app h1{overflow-wrap:break-word}
 button.plus{flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--surface-2);color:var(--accent-ink);font-size:26px;font-weight:700;line-height:1;transition:transform .14s}
 button.plus:active{transform:scale(.93)}
 .meal > .link{align-self:flex-start}

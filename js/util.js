@@ -19,6 +19,8 @@ const MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sep
 export const WEEKDAYS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
 export const fmtDate = s => { const d = parseIso(s); return d.getDate() + ' ' + MONTHS[d.getMonth()]; };
 export const fmtDateLong = s => { const d = parseIso(s); return WEEKDAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; };
+// Typographie française : espace insécable avant « : ; ? ! », dans les guillemets, et entre un nombre et son unité
+export const nbsp = s => String(s).replace(/ ([:;?!»])/g, '\u00a0$1').replace(/« /g, '«\u00a0').replace(/(\d) (g|kg|kcal|min|mL|L)(?![\w])/g, '$1\u00a0$2');
 export const withDot = s => s.slice(-1) === '.' ? s : s + '.'; // fin de phrase sans doubler le point de « oct. »
 export const e1rm = (kg, reps) => kg * (1 + reps / 30);
 export const clone = o => JSON.parse(JSON.stringify(o));

@@ -1,9 +1,10 @@
 // Journal des repas : habituels d'un repas, repas passés (« Comme hier »), repas enregistrés, copie d'entrées, sauvegarde des repas enregistrés.
 import { test, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { copyEntries, habitualFoods, mealLabel, pastMeals, savedMeals } from '../js/food.js';
+import { copyEntries, freshFood, habitualFoods, mealLabel, pastMeals, savedMeals } from '../js/food.js';
+import { nbsp } from '../js/util.js';
 import { exportFile, importable } from '../js/backup.js';
-import { quickPast } from '../js/views/food.js';
+import { quickFood, quickPast } from '../js/views/food.js';
 import { donnees, jour, reglages, docs } from './aide.js';
 
 afterEach(() => mock.timers.reset());
@@ -121,4 +122,47 @@ test('la ligne d’un repas passé échappe ce qu’elle met dans ses attributs'
 test('repas enregistrés : un document sans liste d’aliments est ignoré (sauvegarde importée)', () => {
   donnees(docs(reglages(), { q_1: { name: 'Sans aliments', meal: 'lunch' }, q_2: { name: 'Mon déjeuner', meal: 'lunch', items: [] } }));
   assert.deepEqual(savedMeals('lunch').map(q => q.id), ['q_2']);
+});
+
+test('copie : les valeurs pour 100 g sont copiées, pas partagées avec la source', () => {
+  donnees(docs(reglages()));
+  const src = entree('breakfast', 'ciq:x', 120);
+  assert.notEqual(copyEntries([src], 'lunch')[0].per100, src.per100);
+});
+
+test('copie d’un aliment ou d’une recette créés : valeurs, portion et source actuelles', () => {
+  donnees(docs(reglages(), { f_ownr1: { src: 'recipe', name: 'Gratin', brand: '', per100: Object.assign({}, P, { kcal: 180 }), serving: 350 } }));
+  const [c] = copyEntries([entree('dinner', 'own:r1', 350, { src: 'recipe', name: 'Ancien gratin' })], 'dinner');
+  assert.deepEqual([c.name, c.per100.kcal, c.serving, c.portion, c.src], ['Gratin', 180, 350, '1 portion', 'recipe']);
+});
+
+test('habituels et repas passés : le changement de mois ne coupe rien', () => {
+  jour('2026-11-01');
+  donnees(docs(reglages(), repas('2026-10-31', entree('breakfast', 'ciq:cafe', 250)), repas('2026-10-30', entree('breakfast', 'ciq:cafe', 250))));
+  assert.equal(habitualFoods('breakfast', '2026-11-01')[0].count, 2);
+  assert.deepEqual(pastMeals('breakfast', '2026-11-01').map(x => x.date), ['2026-10-31', '2026-10-30']);
+  assert.equal(mealLabel('2026-10-31', '2026-11-01'), 'hier');
+});
+
+test('aliment à jour : un aliment créé puis modifié montre ses valeurs actuelles', () => {
+  donnees(docs(reglages(), { f_ownr1: { src: 'recipe', name: 'Gratin', brand: '', per100: Object.assign({}, P, { kcal: 180 }) } }));
+  const f = freshFood({ key: 'own:r1', src: 'recipe', name: 'Ancien', brand: '', g: 100, per100: P });
+  assert.deepEqual([f.name, f.per100.kcal, f.g], ['Gratin', 180, 100]);
+  assert.ok(/180\u00a0kcal/.test(quickFood(f, 'dinner')));
+});
+
+test('ligne d’un habituel : marque, quantité et calories, avec des espaces insécables', () => {
+  donnees(docs(reglages()));
+  const h = quickFood({ key: 'off:1', src: 'off', name: 'Céréales', brand: 'Marque', g: 60, per100: P }, 'breakfast');
+  assert.ok(h.indexOf('Marque · 60\u00a0g · 60\u00a0kcal') >= 0);
+});
+
+test('repas passé dans la fenêtre : le nom du bouton donne la date (deux lundis restent distincts)', () => {
+  const h = quickPast({ date: '2026-10-26', items: [entree('breakfast', 'ciq:cafe', 250)] }, 'breakfast', 'Lundi 26 oct.', '2026-11-04', true);
+  assert.ok(/aria-label="Ajouter le repas de lundi 26 oct\."/.test(h));
+});
+
+test('espaces insécables : avant « : ; ? ! », dans les guillemets, entre un nombre et son unité', () => {
+  assert.equal(nbsp('Total : 415 kcal · 19 g de protéines'), 'Total\u00a0: 415\u00a0kcal · 19\u00a0g de protéines');
+  assert.equal(nbsp('« Matin » ajouté !'), '«\u00a0Matin\u00a0» ajouté\u00a0!');
 });

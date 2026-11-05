@@ -273,7 +273,7 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 - Typographie française :
   - guillemets « » ;
   - apostrophe typographique ’ dans les textes affichés ;
-  - espace insécable avant `: ; ? !` (fonction `fr()`, pour l'instant interne à `views/goal.js` : la déplacer dans `util.js` si un autre écran en a besoin) ;
+  - espace insécable avant `: ; ? !`, dans les guillemets et entre un nombre et son unité : `nbsp()` dans `util.js` (texte déjà échappé ou message) ; `fr()` de `views/goal.js` échappe puis met les espaces avant la ponctuation ;
   - unités séparées par une espace insécable.
 - Vocabulaire professionnel : « perdre de la masse grasse », « prendre de la masse musculaire », « maintenir son poids ».
 - Une règle de terrain n'est jamais présentée comme un résultat d'étude. Les sources restent dans « La science ».

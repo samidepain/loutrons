@@ -89,12 +89,14 @@ function storedFood(key){
   const o = id && S.docs.get(id); if (!o || !o.per100) return null;
   return { name: o.name, brand: o.brand || '', per100: o.per100, serving: o.serving || null, portion: o.src === 'recipe' ? '1 portion' : null };
 }
+// Aliment d'un raccourci avec les valeurs actuelles d'un aliment gardé sur le téléphone (même quantité), sinon tel qu'il a été noté
+export const freshFood = f => Object.assign({}, f, storedFood(f.key) || {});
 // Nouvelles entrées du journal copiées d'autres (repas passé, repas enregistré, habituel) : nouvel identifiant, repas demandé,
 // mêmes quantités ; valeurs actuelles d'un aliment gardé sur le téléphone, sinon celles copiées (table Ciqual, recettes types)
 export function copyEntries(items, meal){
   return items.map(it => {
     const f = storedFood(it.key) || it;
-    const e = { id: rid(), meal, key: it.key, name: f.name, brand: f.brand || '', g: it.g, per100: f.per100 };
+    const e = { id: rid(), meal, key: it.key, name: f.name, brand: f.brand || '', g: it.g, per100: Object.assign({}, f.per100) };
     if (f.serving || it.serving) e.serving = f.serving || it.serving;
     if (f.portion || it.portion) e.portion = f.portion || it.portion;
     if (it.src === 'rec' || it.src === 'recipe') e.src = it.src;

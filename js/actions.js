@@ -1,5 +1,5 @@
 // Actions de l’interface : clics, saisies et changements.
-import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, num, rid, stepValue, toast, today, toggleIn, withDot } from './util.js';
+import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, nbsp, num, rid, stepValue, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
 import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, upNext, weekInfo } from './data.js';
@@ -14,7 +14,7 @@ import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
 import { checkDue, nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
-import { copyEntries, dayDoc, fromOff, habitualFoods, mealLabel, MEALS, recentFoods, validBarcode } from './food.js';
+import { copyEntries, dayDoc, freshFood, fromOff, habitualFoods, mealLabel, MEALS, recentFoods, validBarcode } from './food.js';
 import { foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
 import { ownRecipe } from './recipes.js';
 import { activityKcal, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, waterOf } from './energy.js';
@@ -166,7 +166,7 @@ function addEntries(day, entries){ const d = dayDoc(day); put('m_' + day, Object
 // Raccourcis du journal : jour et repas visés (la fenêtre d'ajout ouverte, sinon le jour affiché et le repas du raccourci)
 const quickTarget = m => S.food ? { day: S.food.day, meal: S.food.meal } : { day: S.foodDay || today(), meal: m };
 // Aliment d'un raccourci : un habituel de ce repas (dernière quantité), sinon un récent
-const quickFoodOf = (key, m, day, l) => (l !== 'rec' && habitualFoods(m, day, 60).find(f => f.key === key)) || recentFoods(200).find(f => f.key === key) || null;
+const quickFoodOf = (key, m, day, l) => { const f = (l !== 'rec' && habitualFoods(m, day, 60).find(x => x.key === key)) || recentFoods(200).find(x => x.key === key); return f ? freshFood(f) : null; };
 const mealLow = m => ((MEALS.find(x => x[0] === m) || ['', ''])[1]);
 // « Ajouté : 1 aliment », « Ajoutés : 3 aliments » (accord indépendant du nom des aliments et du repas)
 const added = n => (n > 1 ? 'Ajoutés : ' : 'Ajouté : ') + n + ' aliment' + (n > 1 ? 's' : '');
@@ -272,19 +272,19 @@ const A = {
   // « + » d'un habituel ou d'un récent : ajouté d'un geste avec la dernière quantité
   'fd-plus'(b){
     const t = quickTarget(b.dataset.m); const f = quickFoodOf(b.dataset.v, b.dataset.m, t.day, b.dataset.l); if (!f) return;
-    addEntries(t.day, copyEntries([f], t.meal)); S.food = null; render(); toast(withDot('Ajouté : ' + f.name));
+    addEntries(t.day, copyEntries([f], t.meal)); S.food = null; render(); toast(nbsp(withDot('Ajouté : ' + f.name)));
   },
   // « + » d'un repas passé : tout le repas copié, mêmes quantités
   'fd-again'(b){
     const t = quickTarget(b.dataset.m); const items = dayDoc(b.dataset.d).items.filter(i => i.meal === b.dataset.m); if (!items.length) return;
     addEntries(t.day, copyEntries(items, t.meal)); S.food = null; render();
     const lab = mealLabel(b.dataset.d, t.day);
-    toast(added(items.length) + ' (' + mealLow(b.dataset.m).toLowerCase() + ' ' + (lab === 'hier' ? 'd’hier' : 'de ' + lab) + ')');
+    toast(nbsp(added(items.length) + ' (' + mealLow(b.dataset.m).toLowerCase() + ' ' + (lab === 'hier' ? 'd’hier' : 'de ' + lab) + ')'));
   },
   // « + » d'un repas enregistré : tous ses aliments, dans le repas choisi en haut de la fenêtre
   'fd-meal-add'(b){
     const q = S.docs.get(b.dataset.v); if (!q || !q.items || !q.items.length) return; const t = quickTarget(q.meal);
-    addEntries(t.day, copyEntries(q.items, t.meal)); S.food = null; render(); toast(added(q.items.length) + ' (« ' + q.name + ' »)');
+    addEntries(t.day, copyEntries(q.items, t.meal)); S.food = null; render(); toast(nbsp(added(q.items.length) + ' (« ' + q.name + ' »)'));
   },
   // Repas enregistrés : enregistrer un repas du journal (2 aliments au moins), détail, renommer, supprimer
   'fd-save-meal'(b){
@@ -296,9 +296,9 @@ const A = {
     const items = dayDoc(F.day).items.filter(i => i.meal === F.meal).map(({ id, meal, ...rest }) => rest);
     put('q_' + rid(), { name, meal:F.meal, items, at:today() }); S.food = null; render(); toast('Repas enregistré.');
   },
-  'fd-saved'(b){ Object.assign(S.food, { mode:'meal', qid:b.dataset.v, renaming:false }); S.confirm = null; render(); window.scrollTo(0, 0); },
-  'fd-saved-rename'(){ S.food.renaming = true; render(); const i = $('#sm-name'); if (i) i.focus(); },
-  'fd-saved-rename-ok'(){ const name = savedName(); const q = S.docs.get(S.food.qid); if (!name || !q) return; put(S.food.qid, Object.assign({}, q, { name })); S.food.renaming = false; render(); },
+  'fd-saved'(b){ Object.assign(S.food, { mode:'meal', qid:b.dataset.v, renaming:false, nameDraft:null }); S.confirm = null; render(); window.scrollTo(0, 0); },
+  'fd-saved-rename'(){ S.food.renaming = true; S.food.nameDraft = null; render(); const i = $('#sm-name'); if (i) i.focus(); },
+  'fd-saved-rename-ok'(){ const name = savedName(); const q = S.docs.get(S.food.qid); if (!name || !q) return; put(S.food.qid, Object.assign({}, q, { name })); S.food.renaming = false; S.food.nameDraft = null; render(); },
   'fd-saved-del'(){ S.confirm = 'q-del'; render(); },
   'fd-saved-del-yes'(){ del(S.food.qid); S.confirm = null; Object.assign(S.food, { mode:'search', qid:null }); render(); toast('Repas supprimé.'); },
   // Nom d'un habituel ou d'un récent touché : écran « Quantité » déjà rempli
@@ -633,6 +633,7 @@ document.addEventListener('input', e => {
   if (t.matches('[data-fq]') && S.food) { S.food.q = t.value; const l = $('#fd-list'); if (l) l.innerHTML = foodList(); return; }
   if (t.matches('[data-fg]') && S.food) { S.food.g = t.value; const pv = $('#fd-prev'); if (pv) pv.innerHTML = preview(S.food.sel, num(t.value)); return; }
   if (t.matches('[data-fc]') && S.food && S.food.draft) { S.food.draft[t.dataset.fc] = t.value; return; }
+  if (t.id === 'sm-name' && S.food) { S.food.nameDraft = t.value; return; }
   if (t.matches('[data-rc]') && S.food && S.food.rec) { S.food.rec[t.dataset.rc] = t.value; const pv = $('#rec-prev'); if (pv) pv.innerHTML = recPreview(); return; }
   if (t.matches('[data-ri]') && S.food && S.food.rec) { const it = S.food.rec.items[+t.dataset.ri]; if (it) it.g = num(t.value); const pv = $('#rec-prev'); if (pv) pv.innerHTML = recPreview(); return; }
   if (t.matches('[data-rq]') && S.food && S.food.rec) { S.food.rec.q = t.value; const l = $('#rec-list'); if (l) l.innerHTML = recList(); return; }
