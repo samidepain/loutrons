@@ -4,7 +4,7 @@ import { S } from './store.js';
 import { activeWorkout, needsSetup, needToday, settings } from './data.js';
 import { ensureTick } from './timers.js';
 import { viewToday } from './views/today.js';
-import { viewSession } from './views/session.js';
+import { viewEnd, viewSession } from './views/session.js';
 import { viewPicker } from './views/picker.js';
 import { viewBilan, viewProgressPage } from './views/progress.js';
 import { viewProgram } from './views/program.js';
@@ -49,7 +49,7 @@ function paint(){
   renderTabs();
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
-  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.act ? viewActivity()
+  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity()
     : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : viewProgressPage())
     : v === 'food' && nutritionOf().on ? viewFood()
     : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : viewToday();

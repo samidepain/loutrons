@@ -39,8 +39,9 @@ function finishWorkout(){
   w.status = 'terminée'; w.endedAt = Date.now(); w.duration = Math.round((w.endedAt - w.startedAt) / 60000);
   w.effort = 'classic'; w.kcal = computeSessionKcal(w, bodyweight());
   put(w.id, w);
-  S.summary = { id:w.id, prs: findPRs(w) }; resetSession();
-  stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0);
+  // Écran de fin de séance (fenêtre qui monte) ; son entrée animée ne se joue qu'une fois
+  S.summary = { id:w.id, prs: findPRs(w), screen:true, enter:true }; resetSession();
+  stopRest(); S.view = 'today'; render(); window.scrollTo(0, 0); S.summary.enter = false;
 }
 // Point toutes les 2 semaines : la réponse est gardée dans l'historique ; « Passer à … » corrige les besoins
 function recordCheck(status, applied){
@@ -483,7 +484,7 @@ const A = {
         if (num(s.kg) == null) { toast('Indique la charge utilisée.'); if (kgIn) kgIn.focus(); return; }
         const nx = st.sets[i + 1]; if (nx && !nx.done && num(nx.kg) == null) nx.kg = s.kg;
       } else s.reps = it.lo;
-      s.done = true;
+      s.done = true; S.justDone = key + ':' + i;
       // Après la dernière série d'un exercice, le minuteur annonce l'exercice suivant
       const left = st.sets.findIndex(x => !x.done);
       // Dernière série d'un exercice à la charge ou au poids du corps : la question des reps en réserve, si elles ne sont pas notées
@@ -495,7 +496,7 @@ const A = {
       else if (it.kind !== 'plyo') startRest(it.rest || 90, after ? 'Prochain : ' + after.name : it.name + (left >= 0 ? ' · série ' + (left + 1) + ' ensuite' : ' · terminé'));
       else startRest(60, after ? 'Prochain : ' + after.name : 'Récupère avant la série suivante');
     } else { s.done = false; if (S.rirAsk === key) S.rirAsk = null; }
-    S.setEdit = null; put(w.id, w); render(); showCurrent();
+    S.setEdit = null; put(w.id, w); render(); showCurrent(); S.justDone = null;
   },
   // − et + de la série en cours : la charge avance du palier de l'exercice, les reps de 1
   step(b){

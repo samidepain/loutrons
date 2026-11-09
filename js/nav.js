@@ -17,6 +17,7 @@ export function screenOf(){
   if (S.move) return { key:'move-' + S.move, level:0, sheet:'move' };
   if (S.act) return { key:'act', level:0, sheet:'act' };
   if (S.bilan) return { key:'bilan-' + S.bilan, level:1, from:S.view };
+  if (S.summary && S.summary.screen) return { key:'end', level:0, sheet:'end' };
   const v = S.view;
   if (v === 'training') {
     if (S.loaded && activeWorkout()) return { key:'session', level:0, tab:v };

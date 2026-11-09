@@ -2,12 +2,15 @@
 import { capFirst, daysBetween, esc, fmtDate, fmtKg, fmtRest, lowFirst, nbsp, num } from '../util.js';
 import { JUMP_PROTOCOL } from '../library.js';
 import { S } from '../store.js';
-import { activeWorkout, allTpl, exDef, history, itemsOf, jumpsOn, kneeOn, sessionFocus, testDue, testForBlock, weekInfo, wName, workouts } from '../data.js';
+import { activeWorkout, allTpl, bodyweight, exDef, history, itemsOf, jumpsOn, kneeOn, sessionFocus, testDue, testForBlock, weekInfo, wName, workouts } from '../data.js';
 import { lastCardio, warmup } from '../engine.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
-import { emile, returnTip } from '../emile.js';
+import { emile, hey, returnTip } from '../emile.js';
 import { hasMovement } from './movement.js';
+import { effortChoice } from './today.js';
+import { ring } from '../ring.js';
+import { sessionKcal } from '../energy.js';
 
 export function viewSession(){
   const w = S.loaded && activeWorkout();
@@ -15,8 +18,7 @@ export function viewSession(){
   if (!w) return '<section class="card"><h2>Pas de séance en cours</h2><p class="muted">Choisis la séance à faire : les objectifs viennent de tes dernières séances.</p><div class="row">' +
     allTpl().map(t => '<button type="button" class="btn primary" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
   const items = itemsOf(w);
-  let total = 0, done = 0;
-  items.forEach(it => { const st = w.ex[it.ex]; if (!st || st.skip) return; if (it.kind === 'check') { total++; if (st.done) done++; } else { total += st.sets.length; done += st.sets.filter(s => s.done).length; } });
+  const { total, done } = setProgress(w);
   const pct = total ? Math.round(done / total * 100) : 0;
   let h = '<div class="sess-head"><div class="row between"><div class="stack" style="gap:2px"><h1>' + esc(wName(w)) + '</h1><span class="muted small">Semaine ' + w.week + ' · ' + (w.deload ? 'décharge' : 'bloc semaine ' + w.blockWeek + '/6') + (w.est ? ' · environ ' + w.est + ' min' : '') + '</span></div><span id="elapsed" class="clock">0:00</span></div>';
   h += '<div class="bar" aria-label="Avancement"><i style="width:' + pct + '%"></i></div><span class="muted small">' + done + '/' + total + ' séries validées</span></div>';
@@ -56,6 +58,27 @@ export function viewSession(){
   h += S.confirm === 'abandon' ? '<button type="button" class="btn danger big" data-act="abandon-yes">Confirmer : supprimer cette séance</button>' : '<button type="button" class="btn ghost big" data-act="abandon">Abandonner la séance</button>';
   return h;
 }
+
+// Séries validées sur les séries prévues (exercices passés exclus ; une case à cocher compte pour une série)
+function setProgress(w){
+  let total = 0, done = 0;
+  itemsOf(w).forEach(it => { const st = w.ex[it.ex]; if (!st || st.skip) return; if (it.kind === 'check') { total++; if (st.done) done++; } else { total += st.sets.length; done += st.sets.filter(s => s.done).length; } });
+  return { total, done };
+}
+// Écran de fin de séance (fenêtre) : anneau des séries, durée, dépense, effort, records, Émile
+export function viewEnd(){
+  const w = S.docs.get(S.summary.id); if (!w) return '';
+  const { total, done } = setProgress(w); const kc = sessionKcal(w, bodyweight()); const prs = S.summary.prs || [];
+  let h = '<div class="end' + (S.summary.enter ? ' enter' : '') + '"><div class="end-top">' + ring(total ? done / total : 1, { label:done + ' séries validées sur ' + total, html:'<b class="num end-n">' + done + '</b><span class="muted small">sur ' + total + ' séries</span>' })
+    + '<div class="stack end-t"><span class="label">Séance terminée</span><h1>' + esc(wName(w)) + '</h1></div></div>';
+  h += '<div class="stats"><div class="stat"><span class="v">' + (w.duration || 0) + '<small>min</small></span><span class="l">durée</span></div><div class="stat"><span class="v">' + (kc == null ? '–' : Math.round(kc / 10) * 10) + '<small>kcal</small></span><span class="l">dépensées</span></div><div class="stat"><span class="v">' + prs.length + '</span><span class="l">' + (prs.length > 1 ? 'records' : 'record') + '</span></div></div>';
+  h += '<section class="card">' + effortChoice(w) + '</section>';
+  if (prs.length) h += '<section class="card gold"><div class="ring-row"><span class="trophy" aria-hidden="true">' + TROPHY + '</span><h2>' + (prs.length > 1 ? prs.length + ' nouveaux records' : 'Nouveau record') + '</h2></div>' + prs.map(p => '<p class="small">' + esc(p) + '</p>').join('') + '</section>';
+  // Émile en pied (logo), qui signe le message ; lumière douce derrière lui (réussite)
+  h += '<div class="end-emile"><img class="end-logo" src="icons/logo.png" alt="" width="96" height="96"><p><span class="who">Émile</span><br>' + esc(nbsp(hey(prs.length ? 'Bien joué : ' + (prs.length > 1 ? 'de nouveaux records !' : 'un nouveau record !') : 'Séance enregistrée. Pas de record cette fois : la régularité compte plus que chaque séance.'))) + '</p></div>';
+  return h + '<button type="button" class="btn primary big" data-act="close-summary">Retour à Aujourd’hui</button></div>';
+}
+const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 
 const finished = (it, st) => it.kind === 'check' ? !!st.done : st.sets.length > 0 && st.sets.every(s => s.done);
 // Reps affichées : celles notées, sinon celles visées pour cette série, sinon le bas de la fourchette
@@ -100,7 +123,7 @@ function setLine(it, w, i){
   if (!s.done) return '<div class="set-line next"><span class="sn">' + n + '</span><span class="sl-v">' + esc(txt) + '</span></div>';
   // Nom pour les lecteurs d'écran : l'action (texte caché), puis le texte visible
   const act = it.kind === 'plyo' ? 'done' : 'set-edit'; const lab = it.kind === 'plyo' ? 'Annuler la validation de la série' : 'Corriger la série';
-  return '<button type="button" class="set-line done" data-act="' + act + '" data-ex="' + esc(it.ex) + '" data-i="' + i + '"><span class="sn"><span class="sr">' + lab + ' </span>' + n + '</span><span class="sl-v">' + esc(txt) + '</span><span class="sl-ok" aria-hidden="true">✓</span></button>';
+  return '<button type="button" class="set-line done' + (S.justDone === it.ex + ':' + i ? ' flash' : '') + '" data-act="' + act + '" data-ex="' + esc(it.ex) + '" data-i="' + i + '"><span class="sn"><span class="sr">' + lab + ' </span>' + n + '</span><span class="sl-v">' + esc(txt) + '</span><span class="sl-ok" aria-hidden="true">✓</span></button>';
 }
 
 // Question des reps en réserve, juste après la dernière série : la valeur visée est signalée, jamais choisie à la place de la personne

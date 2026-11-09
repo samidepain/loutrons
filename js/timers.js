@@ -11,7 +11,7 @@ function beep(){
     o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + 0.55); } } catch (e) {}
   try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
 }
-export function startRest(sec, label){ S.restEnd = Date.now() + sec * 1000; S.restLabel = label; S.restDoneAt = 0; ensureTick(); updateRest(); }
+export function startRest(sec, label){ S.restEnd = Date.now() + sec * 1000; S.restTotal = sec; S.restLabel = label; S.restDoneAt = 0; ensureTick(); updateRest(); }
 export function stopRest(){ S.restEnd = 0; S.restDoneAt = 0; updateRest(); }
 export function ensureTick(){ if (!tick) tick = setInterval(onTick, 250); }
 function onTick(){
@@ -31,10 +31,12 @@ export function updateRest(){
     const left = Math.max(0, Math.ceil((S.restEnd - Date.now()) / 1000));
     $('#rest-time').textContent = Math.floor(left / 60) + ':' + pad(left % 60);
     $('#rest-label').textContent = S.restLabel;
+    // Anneau : la part du repos qui reste (« +15 s » agrandit le total)
+    const tot = Math.max(S.restTotal || 0, left) || 1; $('#rest-arc').setAttribute('stroke-dashoffset', (314.2 * (1 - left / tot)).toFixed(1));
     bar.hidden = false; bar.classList.remove('end');
     if (left <= 0) { S.restEnd = 0; S.restDoneAt = Date.now(); beep(); }
   } else if (S.restDoneAt && Date.now() - S.restDoneAt < 4000) {
-    $('#rest-time').textContent = '0:00'; $('#rest-label').textContent = 'Repos terminé, série suivante.';
+    $('#rest-time').textContent = '0:00'; $('#rest-label').textContent = 'Repos terminé, série suivante.'; $('#rest-arc').setAttribute('stroke-dashoffset', '0');
     bar.hidden = false; bar.classList.add('end');
   } else { S.restDoneAt = 0; bar.hidden = true; }
 }

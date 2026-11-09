@@ -2,7 +2,7 @@
 import { addDays, capFirst, esc, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, num, parseIso, today, WEEKDAYS, withDot } from '../util.js';
 import { DAY_ORDER, DAY_SHORT, KINDS, MUSCLES, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
-import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, perWeekOf, planDay, plannedDates, plannedSessions, programOf, rotationOf, searchEx, settings, sportInfo, sportOn, startDate, tplDef, tplEst, tplItems, weekInfo } from '../data.js';
+import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, nextSession, perWeekOf, planDay, plannedDates, plannedSessions, programOf, rotationOf, searchEx, settings, sportInfo, sportOn, startDate, tplDef, tplEst, tplItems, weekInfo } from '../data.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
 
@@ -26,15 +26,17 @@ function programCard(){
 export function noTplCard(){
   return '<section class="card"><h2>Crée ta première séance</h2><p class="muted">Donne-lui un nom, puis ajoute tes exercices : s’il en manque un, crée-le depuis la liste.</p><button type="button" class="btn primary big" data-act="go-new-tpl">Créer une séance</button></section>';
 }
+// Séances : la prochaine de la rotation en carte vedette avec « Commencer » en orange, les autres en gris ; « Créer » en bas
 function viewTemplates(){
-  let h = programCard() + '<button type="button" class="btn primary" data-act="new-tpl">+ Créer une séance</button>';
-  allTpl().forEach(t => {
-    const its = tplItems(t);
-    h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>' + esc(t.name) + '</h3><span class="muted small">' + esc(t.focus || '') + (t.focus ? ' · ' : '') + its.length + ' exercices · environ ' + tplEst(t) + ' min' + (t.edited ? ' · modifiée' : '') + (!t.builtin ? ' · perso' : '') + '</span></div></div>';
+  const next = nextSession(); let h = programCard();
+  const tpls = allTpl(); const first = tpls.filter(t => t.id === next);
+  first.concat(tpls.filter(t => t.id !== next)).forEach(t => {
+    const its = tplItems(t); const up = t.id === next;
+    h += '<section class="card tpl' + (up ? ' hero' : '') + '"><div class="row between"><div class="stack" style="gap:2px">' + (up ? '<span class="label">Ta prochaine séance</span>' : '') + '<h2 class="tpl-name">' + esc(t.name) + '</h2><span class="muted small">' + esc(t.focus || '') + (t.focus ? ' · ' : '') + its.length + ' exercices · environ ' + tplEst(t) + ' min' + (t.edited ? ' · modifiée' : '') + (!t.builtin ? ' · perso' : '') + '</span></div></div>';
     h += '<p class="small muted">' + esc(its.map(it => { const e = exDef(it.ex); return e ? e.name : '?'; }).join(' · ')) + '</p>';
-    h += '<div class="row"><button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '">Commencer</button><button type="button" class="btn" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier</button></div></section>';
+    h += '<div class="row"><button type="button" class="btn' + (up ? ' primary' : '') + '" data-act="start" data-v="' + esc(t.id) + '">Commencer</button><button type="button" class="btn" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier</button></div></section>';
   });
-  return h;
+  return h + '<button type="button" class="btn big" data-act="new-tpl">+ Créer une séance</button>';
 }
 function viewExercises(){
   const n = allEx().filter(e => e.kind !== 'plyo' || jumpsOn()).length;

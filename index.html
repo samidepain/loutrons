@@ -37,6 +37,8 @@
   --glow-1:0 1px 4px rgba(168,67,0,.18); --glow-2:0 0 0 1px rgba(168,67,0,.45),0 4px 14px rgba(255,122,26,.22); --glow-3:0 10px 22px -8px rgba(230,90,0,.6);
   --glass:rgba(255,255,255,.72); --glass-line:rgba(0,0,0,.07); --halo:rgba(255,122,26,.10);
   --ring-glow:0 0 3px rgba(255,122,26,.3);
+  --grad-gold:linear-gradient(135deg,#FFE08A 0%,#FFB347 55%,#FF7A1A 100%); --edge-gold:linear-gradient(140deg,#E0A21A,#FFB347 40%,rgba(255,122,26,.2) 75%); --ambient-gold:rgba(255,190,70,.16); --gold-ink:#8A5A00;
+  --glow-gold:0 0 0 4px rgba(255,190,70,.2),0 6px 16px -4px rgba(220,140,0,.45);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#000000; --surface:#141414; --surface-2:#1F1F1F; --line:#2E2E2E;
@@ -53,6 +55,8 @@
   --glow-1:0 0 10px rgba(255,122,26,.4); --glow-2:0 0 0 1px rgba(255,140,50,.55),0 0 18px rgba(255,122,26,.4); --glow-3:0 10px 30px -6px rgba(255,105,20,.8),0 0 46px rgba(255,90,0,.35);
   --glass:rgba(24,24,24,.62); --glass-line:rgba(255,255,255,.1); --halo:rgba(255,122,26,.16);
   --ring-glow:0 0 6px rgba(255,122,26,.75);
+  --grad-gold:linear-gradient(135deg,#FFE08A 0%,#FFB347 55%,#FF7A1A 100%); --edge-gold:linear-gradient(140deg,#FFE08A,#FFB347 40%,rgba(255,122,26,.25) 75%); --ambient-gold:rgba(255,190,70,.24); --gold-ink:#FFC85C;
+  --glow-gold:0 0 0 4px rgba(255,190,70,.14),0 0 26px rgba(255,180,60,.55);
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -70,10 +74,12 @@
   --glow-1:0 0 10px rgba(255,122,26,.4); --glow-2:0 0 0 1px rgba(255,140,50,.55),0 0 18px rgba(255,122,26,.4); --glow-3:0 10px 30px -6px rgba(255,105,20,.8),0 0 46px rgba(255,90,0,.35);
   --glass:rgba(24,24,24,.62); --glass-line:rgba(255,255,255,.1); --halo:rgba(255,122,26,.16);
   --ring-glow:0 0 6px rgba(255,122,26,.75);
+  --grad-gold:linear-gradient(135deg,#FFE08A 0%,#FFB347 55%,#FF7A1A 100%); --edge-gold:linear-gradient(140deg,#FFE08A,#FFB347 40%,rgba(255,122,26,.25) 75%); --ambient-gold:rgba(255,190,70,.24); --gold-ink:#FFC85C;
+  --glow-gold:0 0 0 4px rgba(255,190,70,.14),0 0 26px rgba(255,180,60,.55);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-/* Halo d'écran : la « lumière de la salle » en haut de chaque écran, qui défile avec lui */
+/* Halo d'écran : la « lumière de la salle » en haut de chaque écran, qui défile avec lui (pas pendant la séance : concentration) */
 body{background:radial-gradient(60% 100% at 50% 0%,var(--halo),transparent 70%) center top/100% 420px no-repeat,var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.45;-webkit-text-size-adjust:100%;overflow-x:hidden}
 /* Appui : les boutons s'enfoncent un peu, les lignes de liste se colorent, comme dans les applis du téléphone */
 button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -84,6 +90,7 @@ button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .pick:active{background:var(--line)}
 .hitem:active{background:var(--surface-2)}
 .link:active{opacity:.55}
+body:has(#app .sess-head){background:var(--bg)}
 /* Passage d'un écran à l'autre (js/nav.js) : ancien écran dans un calque fixe, voile sur l'écran du dessous */
 .nav-layer{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:1}
 .nav-layer.over{z-index:3}
@@ -210,7 +217,7 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
 .seg .chip{white-space:nowrap;font-family:var(--f-body);font-weight:600;font-size:15px}
 /* Sous-onglets et cases posés sur le fond de l'écran : matière des cartes, pour rester visibles sur le fond clair */
-.seg .chip:not(.on),#app > .stats .stat{background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh)}
+.seg .chip:not(.on),#app > .stats .stat,.end .stat{background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh)}
 .toggle{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .toggle:first-of-type{border-top:none}
 .toggle input{width:22px;height:22px;margin-top:2px;accent-color:var(--accent);flex:none}
@@ -271,8 +278,12 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 .ex-h .exname{margin:0}
 .ex-acts{gap:8px;margin-top:6px}
 /* Série en cours : charge et reps avec − et +, puis « Valider la série » */
-.cur-set{display:flex;flex-direction:column;gap:10px;background:var(--surface-2);border-radius:14px;padding:12px}
-.stepper{display:grid;grid-template-columns:58px 44px minmax(0,1fr) 44px;gap:8px;align-items:center}
+/* Série en cours : la vedette de l'écran (liseré lumineux et lumière ambiante), − et + de 48 px, chiffres en 26 px */
+.cur-set{display:flex;flex-direction:column;gap:10px;border:1px solid transparent;background:radial-gradient(90% 120% at 100% 0%,var(--ambient),transparent 60%) padding-box,linear-gradient(var(--surface-2),var(--surface-2)) padding-box,var(--edge) border-box;border-radius:16px;padding:12px}
+.stepper{display:grid;grid-template-columns:58px 48px minmax(0,1fr) 48px;gap:8px;align-items:center}
+.cur-set .step{width:48px;height:48px}
+.cur-set .fld{min-height:50px}
+.cur-set .fld input{font-size:26px}
 .st-lab{font-size:15px;color:var(--muted)}
 .step{width:44px;height:44px;border-radius:50%;border:none;background:var(--well);color:var(--ink);font-size:26px;font-weight:700;line-height:1;transition:transform .14s}
 .step:active{transform:scale(.93)}
@@ -296,10 +307,18 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 /* Texte lu par les lecteurs d'écran seulement */
 .sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .set-line.done:active{background:var(--surface-2)}
+/* Série tout juste validée : contour orange qui s'allume puis s'éteint, coche qui apparaît (une fois) */
+.set-line{position:relative}
+.set-line.flash::after{content:"";position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 0 1.5px var(--accent),var(--glow-1);opacity:0;animation:setflash .6s ease-out;pointer-events:none}
+@keyframes setflash{25%{opacity:1}}
+.set-line.flash .sl-ok{display:inline-block;animation:okpop .3s cubic-bezier(.32,.72,0,1)}
+@keyframes okpop{from{transform:scale(.4);opacity:0}}
 .set-line.next{color:var(--muted)}
 .set-line.next .sl-v{font-weight:400}
 @media (max-width:360px){
   .stepper{grid-template-columns:44px 44px minmax(0,1fr) 44px;gap:8px}
+  .cur-set .step{width:44px;height:44px}
+  .cur-set .fld input{font-size:21px}
   .st-lab{font-size:13px}
   .cur-set{padding:10px}
   .pick.ex-line{padding:7px 12px}
@@ -366,6 +385,30 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .pick .m{font-size:15px;color:var(--muted)}
 .pick.on{box-shadow:inset 0 0 0 2px var(--accent-ink),var(--glow-2)}
 .card.welcome{align-items:center;text-align:center}
+.tpl .tpl-name{font-size:24px;overflow-wrap:anywhere}
+.tpl.hero .tpl-name{font-size:30px}
+/* Record : carte dorée (liseré or, lumière ambiante), trophée rond en dégradé or */
+.card.gold{border:1px solid transparent;background:radial-gradient(90% 120% at 0% 0%,var(--ambient-gold),transparent 60%) padding-box,linear-gradient(180deg,var(--card-top),var(--card-bot)) padding-box,var(--edge-gold) border-box}
+.card.gold h2{color:var(--gold-ink)}
+.trophy{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--grad-gold);color:var(--on-accent);box-shadow:var(--glow-gold)}
+.trophy svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Fin de séance : anneau des séries, chiffres, effort, records, Émile ; entrée animée une seule fois (.enter) */
+.end{display:flex;flex-direction:column;gap:16px}
+.end-top{display:flex;align-items:center;gap:16px;min-width:0}
+.end-top .ring{width:112px;height:112px}
+.end-top .ring .c{display:flex;flex-direction:column;align-items:center;gap:2px}
+.end-n{font-size:34px}
+.end-t{min-width:0}
+.end-t h1{overflow-wrap:anywhere}
+.end-emile{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.end-emile .who{font-weight:600;color:var(--good)}
+.end-logo{width:96px;height:96px;border-radius:22px;box-shadow:0 0 48px 8px var(--ambient)}
+.end.enter .ring .pg{animation:ringfill .7s cubic-bezier(.32,.72,0,1)}
+@keyframes ringfill{from{stroke-dashoffset:314.2}}
+.end.enter .end-emile{animation:rise .6s cubic-bezier(.32,.72,0,1) .25s backwards}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}}
+.end.enter .card.gold{animation:pop .6s cubic-bezier(.32,.72,0,1) .4s backwards}
+@keyframes pop{0%{transform:scale(.9);opacity:0}60%{transform:scale(1.02);opacity:1}100%{transform:none}}
 .hero-logo{display:block;width:128px;height:128px}
 
 /* Barres fixes */
@@ -379,13 +422,18 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.top,.tabs{background:var(--bg)}}
 .tab .dot{position:absolute;top:10px;right:calc(50% - 18px);width:8px;height:8px;border-radius:50%;background:var(--accent)}
 .restbar{position:fixed;left:0;right:0;bottom:calc(var(--tabs-h) + env(safe-area-inset-bottom,0px));z-index:29;padding:0 16px 10px}
-/* Minuteur : le temps et les boutons sur une ligne, le nom de l'exercice dessous sur toute la largeur */
-.restbar-in{max-width:608px;margin:0 auto;background:var(--accent);color:var(--on-accent);border-radius:16px;padding:8px 14px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+/* Minuteur en verre : anneau du temps qui reste, le temps et les boutons sur une ligne, le nom de l'exercice dessous sur toute la largeur */
+.restbar-in{max-width:608px;margin:0 auto;background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--glass-line);color:var(--ink);border-radius:20px;padding:8px 12px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.rest-ring.ring{width:44px;height:44px}
+.rest-ring .tr,.rest-ring .pg{stroke-width:12}
+.rest-ring .pg{transition:stroke-dashoffset .25s linear}
+.restbar.end .rest-ring .pg{stroke:var(--good);filter:none}
+.restbar.end .rest-ring{animation:okpop .5s cubic-bezier(.32,.72,0,1)}
+.restbar.end .rl{color:var(--good)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.restbar-in{background:var(--surface)}}
 .restbar .rt{font-family:var(--f-display);font-size:30px;font-weight:800;font-stretch:100%;font-variant-numeric:tabular-nums;min-width:72px;margin-right:auto}
 .restbar .rl{order:3;flex-basis:100%;font-size:15px;font-weight:600;min-width:0}
-.restbar button{background:transparent;color:inherit;border:2px solid currentColor;border-radius:999px;padding:6px 14px;font-weight:700;min-height:44px}
-.restbar :focus-visible{outline-color:var(--on-accent)}
-.restbar.end .restbar-in{background:var(--good);color:#fff}
+.restbar button{background:var(--surface-2);color:var(--ink);border:none;border-radius:999px;padding:6px 14px;font-weight:700;min-height:44px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs-h) + 84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:15px;max-width:calc(100% - 32px);text-align:center}
 #restbar:not([hidden]) ~ .toast{bottom:calc(var(--tabs-h) + 140px + env(safe-area-inset-bottom,0px))}
 .empty{color:var(--muted);font-size:15px;padding:8px 0}
@@ -508,6 +556,7 @@ button.plus:active{transform:scale(.93)}
 <main id="app"><p class="empty">Chargement du carnet…</p></main>
 
 <div id="restbar" class="restbar" hidden><div class="restbar-in">
+  <span class="ring rest-ring" aria-hidden="true"><svg viewBox="0 0 120 120"><defs><linearGradient id="rest-g" x1="0" y1="0" x2="1" y2="1"><stop class="s1" offset="0"/><stop class="s2" offset=".5"/><stop class="s3" offset="1"/></linearGradient></defs><circle class="tr" cx="60" cy="60" r="50"/><circle class="pg" id="rest-arc" cx="60" cy="60" r="50" stroke="url(#rest-g)" stroke-dasharray="314.2" stroke-dashoffset="0"/></svg></span>
   <span class="rt" id="rest-time">0:00</span>
   <span class="rl" id="rest-label">Repos</span>
   <button type="button" data-act="rest-add">+15 s</button>

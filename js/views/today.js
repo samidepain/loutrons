@@ -13,8 +13,8 @@ import { emile, emileQueue, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
 
-// Choix de l'effort d'une séance terminée (il règle sa dépense)
-function effortChoice(sw){
+// Choix de l'effort d'une séance terminée (il règle sa dépense) ; aussi sur l'écran de fin de séance
+export function effortChoice(sw){
   const ef = effortOf(sw); const kc = sessionKcal(sw, bodyweight());
   return '<div class="stack" style="gap:6px"><span class="label">Effort de la séance</span><div class="chips" role="group">' + Object.keys(EFFORT).map(k => '<button type="button" class="chip txt' + (ef === k ? ' on' : '') + '" data-act="effort" data-v="' + k + '" data-w="' + esc(sw.id) + '" aria-pressed="' + (ef === k) + '">' + EFFORT[k].label + '</button>').join('') + '</div>'
     + '<p class="small muted">' + esc(EFFORT[ef].desc) + '. ' + (kc == null ? 'Indique ton poids pour estimer les calories.' : 'Environ ' + Math.round(kc / 10) * 10 + ' kcal dépensées en ' + sessionMin(sw) + ' min.') + '</p></div>';
@@ -50,13 +50,6 @@ function emileCards(d, wk, goal){
   // Retour après plus de 14 jours sans séance : la reprise est expliquée (rang 2, comme une alerte)
   const gap = S.loaded && !activeWorkout() && !workouts().some(w => w.date === d && w.status === 'terminée') ? lastSessionGap(d) : null;
   if (gap != null && gap > 14) q.push({ rank:2, html: emile('<p>' + esc(nbsp(returnTip(gap))) + '</p>', { key:'retour:' + addDays(d, -gap) }) });
-  if (S.summary) {
-    const sw = S.docs.get(S.summary.id);
-    let b = sw ? '<p class="muted">' + esc(wName(sw)) + ' · ' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' : '';
-    b += S.summary.prs.length ? '<p>' + esc(hey('Bien joué : ' + (S.summary.prs.length > 1 ? 'de nouveaux records !' : 'un nouveau record !'))) + '</p><div class="stack" style="gap:4px">' + S.summary.prs.map(p => '<p class="small">' + esc(p) + '</p>').join('') + '</div>'
-      : '<p class="small">' + esc(hey('Pas de record cette fois. La régularité compte plus que chaque séance.')) + '</p>';
-    q.push({ rank:1, html: emile(b, { title:'Séance enregistrée', tone:'good', close:'close-summary' }) });
-  }
   q.push({ rank:1, html: checkCard() });
   if (S.loaded) {
     const bb = wk.bw === 6 ? wk.block : (wk.bw === 1 && wk.block > 1 ? wk.block - 1 : 0);
