@@ -359,6 +359,25 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .ring.xxs{width:22px;height:22px}
 .ring.xxs .tr,.ring.xxs .pg{stroke-width:16}
 .ring-row{display:flex;align-items:center;gap:14px;min-width:0}
+.ring.md{width:112px;height:112px}
+.ring.md .c{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 8px}
+.day-n{font-size:26px}
+/* Journal vide : piste en pointillés, pour ne pas confondre avec « 0 » */
+.ring.empty .tr{stroke-dasharray:4 7}
+/* Dépassé (calories au-delà de 110 %, lipides au-delà du plafond) : arc en ambre */
+.ring.over .pg{stroke:var(--warn);filter:none}
+.macros{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}
+.macro{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;font-size:14px}
+.macro .label{font-size:13px}
+@media (max-width:360px){.ring.md{width:96px;height:96px}.day-n{font-size:22px}}
+/* Repas : nom, kcal et « + » rond sur une ligne */
+.meal-h{display:flex;align-items:center;gap:10px}
+.meal-t{flex:1;gap:0}
+/* Fenêtre d'ajout : recherche en grand, scanner en carré orange */
+.fd-search{display:flex;gap:8px;align-items:stretch}
+.fd-search input{flex:1;min-width:0;width:auto;min-height:52px;border-radius:16px;font-size:17px;padding-inline:16px}
+.scan-btn.btn{width:52px;min-height:52px;padding:0;border-radius:16px;flex:none;display:grid;place-items:center;box-shadow:var(--glow-3),inset 0 1px 0 rgba(255,255,255,.45)}
+.scan-btn svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* Petits écrans : le compteur de la semaine reste en texte, pour garder « Voir le mois » sur la même ligne */
 @media (max-width:360px){.cal .ring.xs{display:none}}
 .ring-row > .stack,.ring-row > .kcal{min-width:0}

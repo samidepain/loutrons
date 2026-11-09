@@ -230,6 +230,9 @@ En clair, les lumières deviennent des ombres colorées douces : elles gardent l
 | Barre de progression | `.bar > i` (fine) ; `.mbar > i` (+ `b` pour un repère) dans `.mrow` |
 | Anneau de progression (version 3.1) | `ring(v, { label, html, cls })` dans `js/ring.js` : piste grise, arc en dégradé lumineux, contenu au centre (`.c`) ; tailles `.ring` 132 px, `.sm` 64, `.xs` 46, `.xxs` 22 ; sans `label`, il est décoratif (le texte voisin dit la valeur). À côté d'un texte : `.ring-row` |
 | Grand chiffre et son unité | `.kcal` > `.v.num` + `small` (unité grise) |
+| Journée du journal (Alimentation, version 3.3) | `section.card.hero.day-card` : anneau `.ring.md` (reste à manger au centre ; `.empty` : piste en pointillés et « Rien de noté », jamais « 0 » ; `.over` : arc en ambre au-delà de 110 %), `.macros` (3 × `.macro` : anneau `.xs` décoratif, nom, valeur sur l'objectif ; lipides `.over` au-delà du plafond), le reste sous `details.cue` « Détails » |
+| En-tête d'un repas | `.meal-h` > `.stack.meal-t` (nom, kcal dessous) + `button.plus` (`fd-add`) |
+| Recherche avec scanner | `.fd-search` > `input[type=search]` (52 px, 17 px) + `.btn.primary.scan-btn` (carré orange lumineux, icône en SVG, `aria-label`) |
 | Tableau | `.scroll > table.tbl` |
 | Détail repliable | `details.cue > summary` |
 | Groupe (superset) | `.group > .gh` |

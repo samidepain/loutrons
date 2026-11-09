@@ -6,6 +6,7 @@ import { startScanner } from '../scanner.js';
 import { emile, hey } from '../emile.js';
 import { dayPlan } from './goal.js';
 import { ownRecipe, recipeFoods } from '../recipes.js';
+import { ring } from '../ring.js';
 
 const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment', rec:'Recette type', recipe:'Ta recette' };
 const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fmtInt(x);
@@ -63,6 +64,10 @@ function bar(label, v, goal, unit, max){
   const pct = goal ? Math.min(100, v / goal * 100) : 0;
   return '<div class="mrow fd"><span>' + label + '</span><span class="mbar"><i style="width:' + pct.toFixed(1) + '%' + (max && v > goal ? ';background:var(--warn)' : '') + '"></i></span><span class="v num">' + q1(v) + (goal ? ' / ' + q1(goal) : '') + ' ' + unit + '</span></div>';
 }
+// Macro du jour : petit anneau (décoratif) et valeur sur l'objectif ; max : plafond (lipides), dépassé en ambre
+function macro(label, v, goal, max){
+  return '<div class="macro">' + ring(goal ? v / goal : 0, { cls:'xs' + (max && goal && v > goal ? ' over' : '') }) + '<span class="label">' + label + '</span><span class="num">' + q1(v) + (goal ? ' / ' + q1(goal) : '') + '&nbsp;g</span></div>';
+}
 export function viewFood(){
   if (S.food) return viewFoodAdd();
   const day = S.foodDay || today(); const doc = dayDoc(day); const t = totals(doc.items); const pl = dayPlan(day); const has = pl.status !== 'missing';
@@ -81,19 +86,26 @@ export function viewFood(){
     }
     h += emile('<p>' + esc(m) + '</p>', { tone, key:'food:' + day + ':' + kind });
   }
-  // Totaux du jour, comparés aux besoins du jour (séances et activités comprises) et aux repères
-  h += '<section class="card"><div class="row between"><h3>Ta journée</h3>' + (has ? '<span class="muted small">' + (pl.extra ? 'activités comprises' : 'objectif du jour') + '</span>' : '') + '</div>';
-  h += '<div class="kcal"><span class="v num">' + fmtInt(t.kcal) + '</span>' + (has ? '<span class="muted"> / ' + fmtInt(pl.kcal) + ' kcal</span>' : '<span class="muted"> kcal</span>') + '</div>';
-  if (has && pl.extra) h += '<p class="muted small">' + fmtInt(pl.base0) + ' kcal de base + ' + fmtInt(pl.extra) + ' kcal de séances et d’activités.</p>';
-  if (has) h += '<div class="mbar big"><i style="width:' + Math.min(100, t.kcal / pl.kcal * 100).toFixed(1) + '%' + (t.kcal > pl.kcal * 1.1 ? ';background:var(--warn)' : '') + '"></i></div>';
-  h += '<div class="stack" style="gap:6px">' + bar('Protéines', t.p, has ? pl.protein[0] : 0, 'g') + bar('Glucides', t.c, has ? pl.carbs : 0, 'g') + bar('Lipides', t.f, has ? pl.fat[1] : 0, 'g', true) + bar('Fibres', t.fib, LIMITS.fib, 'g') + '</div>';
+  // Totaux du jour, comparés aux besoins du jour (séances et activités comprises) et aux repères :
+  // anneau des calories, trois petits anneaux des macros, le reste sous « Détails ». Journal vide : anneau en pointillés, pas de « 0 ».
+  const empty = !doc.items.length; const over = has && t.kcal > pl.kcal * 1.1; const rest = has ? pl.kcal - t.kcal : 0;
+  h += '<section class="card hero day-card"><div class="row between"><h3>Ta journée</h3>' + (has ? '<span class="muted small">' + (pl.extra ? 'activités comprises' : 'objectif du jour') + '</span>' : '') + '</div>';
+  const centre = empty ? '<span class="muted small">Rien de noté</span>' : has ? '<b class="num day-n">' + fmtInt(Math.abs(rest)) + '</b><span class="muted small">' + (rest >= 0 ? 'à manger' : 'en trop') + '</span>' : '<b class="num day-n">' + fmtInt(t.kcal) + '</b><span class="muted small">kcal</span>';
+  h += '<div class="ring-row">' + ring(has ? t.kcal / pl.kcal : 0, { cls:'md' + (empty ? ' empty' : '') + (over ? ' over' : ''), label: empty ? 'Rien de noté' : fmtInt(t.kcal) + ' kcal mangées' + (has ? ' sur ' + fmtInt(pl.kcal) : ''), html:centre })
+    + (empty && !has ? '<p class="muted">Note ton premier repas de la journée.</p>' : '<div class="kcal"><p><span class="v num">' + fmtInt(empty ? pl.kcal : t.kcal) + '</span><small>kcal</small></p><p class="muted small">' + (empty ? 'ton objectif du jour' : has ? esc(nbsp('mangées sur ' + fmtInt(pl.kcal))) : 'mangées') + '</p>'
+    + (has && pl.extra ? '<p class="muted small">' + esc(nbsp(fmtInt(pl.base0) + ' de base + ' + fmtInt(pl.extra) + ' de séances et d’activités')) + '</p>' : '') + '</div>') + '</div>';
+  if (!empty) h += '<div class="macros">' + macro('Protéines', t.p, has ? pl.protein[0] : 0) + macro('Glucides', t.c, has ? pl.carbs : 0) + macro('Lipides', t.f, has ? pl.fat[1] : 0, true) + '</div>';
   const sfMax = has ? pl.kcal * LIMITS.sfPct / 9 : null;
-  h += '<p class="small muted">Sucres ' + q1(t.s) + ' g (repère : moins de ' + LIMITS.s + ' g hors lait) · saturés ' + q1(t.sf) + ' g' + (sfMax ? ' (au plus ' + fmtInt(sfMax) + ' g)' : '') + ' · sel ' + q1(t.salt) + ' g (moins de ' + LIMITS.salt + ' g)</p>';
-  if (t.missing.length && doc.items.length) h += '<p class="muted small">Valeurs inconnues pour certains aliments (' + t.missing.map(k => ({ p:'protéines', c:'glucides', s:'sucres', f:'lipides', sf:'saturés', fib:'fibres', salt:'sel' })[k]).filter(Boolean).join(', ') + ') : les totaux peuvent être un peu bas.</p>';
+  if (!empty) {
+    h += '<details class="cue"><summary>Détails : fibres, sucres, saturés, sel</summary>' + bar('Fibres', t.fib, LIMITS.fib, 'g');
+    h += '<p class="small muted">Sucres ' + q1(t.s) + ' g (repère : moins de ' + LIMITS.s + ' g hors lait) · saturés ' + q1(t.sf) + ' g' + (sfMax ? ' (au plus ' + fmtInt(sfMax) + ' g)' : '') + ' · sel ' + q1(t.salt) + ' g (moins de ' + LIMITS.salt + ' g)</p></details>';
+  }
+  if (t.missing.length && !empty) h += '<p class="muted small">Valeurs inconnues pour certains aliments (' + t.missing.map(k => ({ p:'protéines', c:'glucides', s:'sucres', f:'lipides', sf:'saturés', fib:'fibres', salt:'sel' })[k]).filter(Boolean).join(', ') + ') : les totaux peuvent être un peu bas.</p>';
   h += '</section>';
   MEALS.forEach(([m, label]) => {
     const its = doc.items.filter(i => i.meal === m); const kc = its.reduce((a, i) => a + (scale(i.per100, i.g).kcal || 0), 0);
-    h += '<section class="card meal" data-meal="' + m + '"><div class="row between"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + fmtInt(kc) + ' kcal</span>' : '') + '</div>';
+    // En-tête du repas : nom, kcal, et « + » rond qui ouvre l'ajout
+    h += '<section class="card meal" data-meal="' + m + '"><div class="meal-h"><div class="stack meal-t"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + fmtInt(kc) + ' kcal</span>' : '') + '</div>' + plusBtn('fd-add', ' data-v="' + m + '"', 'Ajouter ' + ADD_TO[m]) + '</div>';
     h += its.map(i => '<button type="button" class="pick" data-act="fd-edit" data-v="' + esc(i.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(i.name) + '</span><span class="m">' + (i.brand ? esc(i.brand) + ' · ' : '') + fmtKg(i.g) + ' g</span></span><span class="num">' + fmtInt(scale(i.per100, i.g).kcal || 0) + ' kcal</span></button>').join('');
     // Repas vide : « Comme hier » (repas passé des 7 derniers jours) et le premier habituel ; repas noté : « Enregistrer ce repas » dès 2 aliments
     if (!its.length) {
@@ -101,12 +113,12 @@ export function viewFood(){
       if (p) h += quickPast(p, m, 'Comme ' + mealLabel(p.date, day), day);
       if (hab) h += quickFood(hab, m);
     }
-    h += '<button type="button" class="btn sm" data-act="fd-add" data-v="' + m + '">+ Ajouter</button>';
     if (its.length >= 2) h += '<button type="button" class="link" data-act="fd-save-meal" data-m="' + m + '">Enregistrer ce repas</button>';
     h += '</section>';
   });
   return h + '<p class="muted small">Données : table Ciqual 2025 de l’ANSES (licence CC BY 4.0) et Open Food Facts (licence ODbL). Les besoins viennent de ton profil.</p>';
 }
+const BARCODE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>';
 // Ajout d'un aliment : recherche, scan, non trouvé, création, quantité
 function viewFoodAdd(){
   const F = S.food;
@@ -178,8 +190,9 @@ function viewFoodAdd(){
   }
   // Recherche
   let h = head('Ajouter un aliment') + mealChips;
-  h += '<div class="row"><button type="button" class="btn primary" data-act="fd-scan">Scanner un code-barres</button><button type="button" class="btn" data-act="fd-create">Créer un aliment</button><button type="button" class="btn" data-act="rec-new">Créer une recette</button></div>';
-  h += '<input class="plain" type="search" id="fd-q" data-fq="1" placeholder="Rechercher : pomme, riz, bolognaise…" aria-label="Rechercher un aliment" value="' + esc(F.q || '') + '" autocomplete="off" enterkeyhint="search">';
+  // Recherche en grand, scanner en carré orange à côté (l'action rapide la plus forte), créations en dessous
+  h += '<div class="fd-search"><input class="plain" type="search" id="fd-q" data-fq="1" placeholder="Rechercher : pomme, riz, bolognaise…" aria-label="Rechercher un aliment" value="' + esc(F.q || '') + '" autocomplete="off" enterkeyhint="search"><button type="button" class="btn primary scan-btn" data-act="fd-scan" aria-label="Scanner un code-barres">' + BARCODE + '</button></div>';
+  h += '<div class="row"><button type="button" class="btn sm" data-act="fd-create">Créer un aliment</button><button type="button" class="btn sm" data-act="rec-new">Créer une recette</button></div>';
   return h + '<div class="stack" id="fd-list">' + foodList() + '</div>';
 }
 // Éditeur de recette : ingrédients trouvés (aliments notés, créés, table Ciqual ; pas d'autres recettes)
