@@ -18,6 +18,8 @@ import { navigate, screenOf } from './nav.js';
 import { viewActivity } from './views/activity.js';
 import { viewMovement } from './views/movement.js';
 
+// Trophée des records (carte dorée d'Aujourd'hui)
+export const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 const ICONS = {
   today:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   training:'<svg viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',

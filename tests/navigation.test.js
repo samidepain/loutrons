@@ -5,6 +5,7 @@ import { activityFamily, dayFamilies } from '../js/data.js';
 import { emileQueue } from '../js/emile.js';
 import { exerciseProgress, recordLog } from '../js/engine.js';
 import { donnees, jour, reglages, seance, docs } from './aide.js';
+import { greeting } from '../js/util.js';
 
 afterEach(() => mock.timers.reset());
 
@@ -127,4 +128,9 @@ test('records : aucun sans séance terminée, ni avec une seule séance par exer
   jour('2026-11-04');
   donnees(docs(reglages(), seance('2026-11-02', { ua_bench: { kg: 50, reps: [8] } })));
   assert.deepEqual(recordLog(), []);
+});
+
+test('salutation : nuit avant 5 h, matin avant midi, après-midi avant 18 h, soir ensuite', () => {
+  assert.equal(greeting(4), 'Bonne nuit'); assert.equal(greeting(5), 'Bonjour'); assert.equal(greeting(11), 'Bonjour');
+  assert.equal(greeting(12), 'Bon après-midi'); assert.equal(greeting(17), 'Bon après-midi'); assert.equal(greeting(18), 'Bonsoir');
 });

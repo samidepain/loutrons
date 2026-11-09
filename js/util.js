@@ -27,6 +27,8 @@ export const clone = o => JSON.parse(JSON.stringify(o));
 export const rid = () => Math.random().toString(36).slice(2, 8);
 export function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
 export function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+// Salutation selon l'heure (0 à 23)
+export const greeting = h => h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
 export const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 // Temps de repos lisible : « 45 s », « 1 min 30 », « 2 min »
 export const fmtRest = sec => { const s = Math.round(Number(sec) || 0); if (s < 60) return s + ' s'; const m = Math.floor(s / 60), r = s % 60; return m + ' min' + (r ? ' ' + String(r).padStart(2, '0') : ''); };
