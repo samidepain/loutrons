@@ -14,7 +14,7 @@ import { viewDraft } from './views/editors.js';
 import { viewFiche } from './views/fiche.js';
 import { foodAfterRender, viewFood } from './views/food.js';
 import { nutritionOf } from './views/goal.js';
-import { navigate } from './nav.js';
+import { navigate, screenOf } from './nav.js';
 import { viewActivity } from './views/activity.js';
 import { viewMovement } from './views/movement.js';
 
@@ -47,6 +47,9 @@ export function render(){
 }
 function paint(){
   renderTabs();
+  // En-tête « LOUTRONS » seulement sur Aujourd'hui et l'accueil ; ailleurs, le titre de l'écran sert d'en-tête (le rond du profil reste
+  // en haut à droite), et dans une fenêtre qui monte du bas il n'y a pas de rond du profil (Dark Glow, version 3.6)
+  const sc = screenOf(); document.body.classList.toggle('brandless', !(sc.key === 'today' || (S.setup && S.setup.mode === 'welcome'))); document.body.classList.toggle('in-sheet', !!sc.sheet);
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
   $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity()

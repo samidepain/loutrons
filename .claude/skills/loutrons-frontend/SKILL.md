@@ -103,7 +103,7 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 - **Où sont les choses** (version 2.8, séance en 2.9) :
   - **Aujourd'hui**, dans l'ordre : salut et date ; la séance du jour (prévue, en cours, faite, ou jour de repos ou de sport) ; « Ta semaine » ; « Ton alimentation » si le suivi est activé ; un seul conseil d'Émile ; « Ton suivi du jour » en lignes compactes (eau, poids et sommeil, activités, genou). Le haut tient sans défilement à 390 × 844 : ne rien ajouter au-dessus du conseil d'Émile ;
   - **Entraînement › Séances** : « Ton programme » (changer de programme, changer la rotation) et les séances ; **› Exercices** : la liste, et les exercices masqués tout en bas ; **› Planning** : « Ta rotation », « Prévoir tes séances », « Cette semaine » (semaine chargée, décharge anticipée), « Réglages de l'entraînement » (début du programme, options genou, détente et sport, jours de sport) ;
-  - **Profil** : toi, ton alimentation, apparence, tes données, La science, et une ligne vers les réglages de l'entraînement ;
+  - **Profil** : en-tête (initiale, ancienneté, 3 chiffres), « Toi » et « Ton alimentation » en lignes de réglage (`p-…`, dont `p-act` et `p-goal` ; « Modifier » depuis Aujourd'hui ouvre `p-goal`), apparence, tes données, La science, et une ligne vers les réglages de l'entraînement ;
   - **fiche d'un exercice** : ouverte depuis Entraînement › Exercices ou Progrès › « Tes exercices » ; `S.ficheFrom` (`'exercices' | 'progress'`) nomme le retour.
   - **séance en cours** (Entraînement) : un seul exercice ouvert (ou un superset), les autres repliés en lignes ; `sessionFocus(w, { open, ask })` (`js/data.js`) dit lesquels sont ouverts, quelle série est en cours et si la question des reps en réserve attend ;
   - **« Voir le mouvement »** : fenêtre (`S.move`, `sheet:'move'`) ouverte depuis l'exercice ouvert ; le même bloc est dans la fiche ;
@@ -185,7 +185,7 @@ En clair, les lumières deviennent des ombres colorées douces : elles gardent l
 - Un bloc gris posé directement sur le fond de l'écran (sous-onglets `.seg`, `.stats` hors carte) prend la matière des cartes, sinon il disparaît sur le fond clair.
 
 **Marque et mascotte** :
-- « LOUTRONS » en majuscules dans l'en-tête, « Loutrons » dans les phrases.
+- « LOUTRONS » en majuscules dans l'en-tête, « Loutrons » dans les phrases. Depuis la version 3.6, la barre « LOUTRONS » n'apparaît que sur Aujourd'hui et l'accueil : ailleurs (`body.brandless`, posé par `paint()`), le titre de l'écran sert d'en-tête et le rond du profil flotte en haut à droite (le premier élément de `#app` garde 48 px à droite pour lui) ; dans une fenêtre qui monte du bas (`body.in-sheet`), pas de rond du profil.
 - Le logo est dans `icons/logo.png` : la loutre et sa barre sur fond noir, sans anneau ni halo dans l'en-tête (version 2.6). Une lumière ambiante douce (`--ambient`) derrière Émile est permise seulement dans les états vides et les réussites (validé en version 3.0). Source : `icons/source/logo-loutrons-simple.png`, tirée de l'original `icons/source/logo-loutrons.webp`. On ne le redessine pas.
 - **Émile** signe les conseils (`emile()` dans `js/emile.js`) :
   - il appelle la personne « loutron », « loutronne » ou par son prénom (`hey()`, `callName()`) ;

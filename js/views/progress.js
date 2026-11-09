@@ -90,7 +90,7 @@ function viewProgress(){
 export function viewBilan(block){
   if (!S.loaded) return '<p class="empty">Chargement…</p>';
   const R = blockReport(block);
-  let h = '<div class="row"><button type="button" class="link" data-act="bilan-close" data-back>‹ Retour</button></div><h1>Bilan du bloc ' + block + '</h1>';
+  let h = '<div class="row"><button type="button" class="link" data-act="bilan-close" data-back>‹ ' + (S.view === 'today' ? 'Aujourd’hui' : 'Progrès') + '</button></div><h1>Bilan du bloc ' + block + '</h1>';
   h += '<p class="muted">' + esc(fmtDate(R.r.from)) + ' – ' + esc(fmtDate(R.r.to)) + (R.finished ? '' : ' · en cours, ' + R.weeks + ' semaine' + (R.weeks > 1 ? 's' : '') + ' écoulée' + (R.weeks > 1 ? 's' : '')) + '</p>';
   const avgF = R.forces.length ? R.forces.reduce((a, f) => a + f.pct, 0) / R.forces.length : null;
   h += '<div class="stats"><div class="stat"><span class="v num">' + R.done.length + '<span class="small muted">/' + R.planned + '</span></span><span class="l">séances faites</span></div><div class="stat"><span class="v num">' + (avgF == null ? '—' : (avgF >= 0 ? '+' : '') + fmtKg(Math.round(avgF * 10) / 10) + '%') + '</span><span class="l">force moyenne</span></div>' + (jumpsOn() ? '<div class="stat"><span class="v num">' + (R.test ? fmtKg(R.test.cm) : '—') + '</span><span class="l">détente (cm)</span></div>' : '<div class="stat"><span class="v num">' + R.weeks + '</span><span class="l">semaine' + (R.weeks > 1 ? 's' : '') + '</span></div>') + '</div>';

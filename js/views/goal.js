@@ -7,6 +7,7 @@ import { ACTIVITY, adjustFor, CHECK, GAIN, LOSS, planFor, weightTrend, withExtra
 import { dayEnergy } from '../energy.js';
 import { emile, hey } from '../emile.js';
 import { dayDoc, fullDay, totals } from '../food.js';
+import { lineCard } from './activity.js';
 
 export const nutritionOf = () => settings().nutrition || {};
 // Données de la personne : réglages et dernière pesée, ou ce qui est saisi à l'accueil
@@ -114,23 +115,34 @@ export function needs(pl, compact){
   return h;
 }
 // Formulaire : activité, objectif, poids et date visés, puis avis d'Émile et besoins. n : { activity, goal, target, by }
-export function goalForm(n, pl){
+// Activité au quotidien (choix dans une liste)
+function actPicks(n){
   let h = '<div class="stack" style="gap:6px"><span class="label">Ton activité au quotidien, hors sport</span>';
   Object.keys(ACTIVITY).forEach(k => { const a = ACTIVITY[k]; h += '<button type="button" class="pick' + (n.activity === k ? ' on' : '') + '" data-act="n-act" data-v="' + k + '" aria-pressed="' + (n.activity === k) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(a.label) + '</span><span class="m">' + esc(a.desc) + '</span></span><span aria-hidden="true">' + (n.activity === k ? '✓' : '') + '</span></button>'; });
-  h += '</div><div class="stack" style="gap:6px"><span class="label">Ton objectif</span><div class="chips" role="group">' + [['lose', 'Perdre de la masse grasse'], ['keep', 'Maintenir mon poids'], ['gain', 'Prendre de la masse musculaire']].map(o => '<button type="button" class="chip txt' + ((n.goal || 'keep') === o[0] ? ' on' : '') + '" data-act="n-goal" data-v="' + o[0] + '" aria-pressed="' + ((n.goal || 'keep') === o[0]) + '">' + o[1] + '</button>').join('') + '</div></div>';
+  return h + '</div>';
+}
+// Objectif : perdre, maintenir ou prendre, avec poids et date visés
+function goalPicks(n){
+  let h = '<div class="stack" style="gap:6px"><span class="label">Ton objectif</span><div class="chips" role="group">' + [['lose', 'Perdre de la masse grasse'], ['keep', 'Maintenir mon poids'], ['gain', 'Prendre de la masse musculaire']].map(o => '<button type="button" class="chip txt' + ((n.goal || 'keep') === o[0] ? ' on' : '') + '" data-act="n-goal" data-v="' + o[0] + '" aria-pressed="' + ((n.goal || 'keep') === o[0]) + '">' + o[1] + '</button>').join('') + '</div></div>';
   if (n.goal === 'lose' || n.goal === 'gain') {
     h += '<div class="fields"><label class="f"><span>Poids visé (kg)</span><input class="n" id="n-target" data-n="target" inputmode="decimal" value="' + esc(n.target == null || n.target === '' ? '' : fmtKg(num(n.target))) + '" placeholder="ex. ' + (n.goal === 'lose' ? '72' : '78') + '"></label>';
     h += '<label class="f"><span>Date visée</span><input type="date" id="n-by" data-n="by" value="' + esc(n.by || '') + '" min="' + addDays(today(), 7) + '"></label></div>';
   }
-  return h + verdict(pl, n) + needs(pl);
+  return h;
+}
+export function goalForm(n, pl){
+  return actPicks(n) + goalPicks(n) + verdict(pl, n) + needs(pl);
 }
 // Carte du profil : proposer le suivi, ou le régler
 export function goalProfileCard(){
   const n = nutritionOf();
   let h = '<section class="card" id="goal-card"><h3>Ton alimentation</h3>';
   if (!n.on) return h + emile('<p>Veux-tu suivre ton alimentation ? Je calcule tes besoins en calories et en protéines, et un rythme réaliste pour perdre de la masse grasse ou prendre de la masse musculaire.</p><button type="button" class="btn primary" data-act="n-on" data-v="1">Oui, je veux suivre</button>') + '</section>';
-  h += '<p class="muted small">Je me sers de ta date de naissance, de ta taille, de ton poids et de « loutron ou loutronne », ci-dessus.</p>';
-  return h + goalForm(n, myPlan()) + checkSummary(n) + '<button type="button" class="btn ghost" data-act="n-on" data-v="0">Arrêter le suivi</button></section>';
+  // Suivi activé : deux lignes de réglage (comme « Toi »), puis l'avis d'Émile, les besoins et le point des 2 semaines
+  const pl = myPlan(); const G = { lose:'Perdre de la masse grasse', keep:'Maintenir mon poids', gain:'Prendre de la masse musculaire' };
+  return '<h2 id="goal-card">Ton alimentation</h2>' + lineCard('p-act', 'Activité au quotidien', (ACTIVITY[n.activity] || {}).label || 'À indiquer', '', actPicks(n))
+    + lineCard('p-goal', 'Objectif', G[n.goal || 'keep'] + (n.goal !== 'keep' && num(n.target) ? ' · ' + fmtKg(num(n.target)) + ' kg' : ''), '', goalPicks(n))
+    + '<section class="card">' + verdict(pl, n) + needs(pl) + checkSummary(n) + '<button type="button" class="btn ghost" data-act="n-on" data-v="0">Arrêter le suivi</button></section>';
 }
 const CHECK_DONE = { change:'ajustement refusé', ontrack:'dans le plan', offplan:'journal loin de l’objectif, rien changé', notfollowed:'objectif pas suivi, rien changé', limit:'limite atteinte, rien changé', skip:'passé, pas assez de pesées' };
 const signedKcal = x => (x > 0 ? '+' : '−') + fmtInt(Math.abs(x)) + ' kcal';

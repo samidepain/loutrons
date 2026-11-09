@@ -110,6 +110,13 @@ button{cursor:pointer}
 .small{font-size:15px}
 .label{font-size:15px;font-weight:600;color:var(--muted)}
 
+/* Hors d'Aujourd'hui : plus de barre « LOUTRONS » ; le rond du profil flotte en haut à droite, à côté du titre de l'écran */
+body.brandless .top{position:absolute;left:0;right:0;background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+body.brandless .brand{visibility:hidden}
+body.in-sheet .top{display:none}
+body.brandless:not(.in-sheet) #app > :first-child:not(.sess-head){padding-right:48px}
+body.brandless .sess-head{top:env(safe-area-inset-top,0px)}
+body.brandless .sess-head > .row:first-child{padding-right:48px}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
 .top-in{max-width:640px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:800;font-stretch:125%;font-size:20px;letter-spacing:.02em;text-transform:uppercase}
