@@ -165,6 +165,23 @@ export function findPRs(w){
   });
   return out;
 }
+// Records sur tout l'historique, sans rien stocker (Progrès › « Tes records », trophée de l'historique) : séance par séance,
+// un exercice dont la force estimée (Epley) dépasse sa meilleure des séances d'avant. Sa première séance n'est pas un record (comme findPRs).
+// Du plus récent au plus ancien : { date, w, name, kg, gain }.
+export function recordLog(){
+  const bw = bodyweight() || 0; const best = {}; const out = [];
+  workouts().filter(w => w.status === 'terminée').sort((a, b) => a.date === b.date ? (a.startedAt || 0) - (b.startedAt || 0) : a.date < b.date ? -1 : 1).forEach(w => {
+    itemsOf(w).forEach(it => {
+      if (it.kind !== 'load' && it.kind !== 'bw') return;
+      const vs = validSets(w.ex && w.ex[it.ex] && w.ex[it.ex].sets); if (!vs.length) return;
+      const top = Math.max.apply(null, vs.map(s => e1rm((it.kind === 'bw' ? bw : 0) + (num(s.kg) || 0), num(s.reps))));
+      const id = canon(it.ex); const old = best[id];
+      if (old != null && top > old + 0.01) out.push({ date:w.date, w:w.id, name:it.name, kg:Math.round(top), gain:Math.round((top - old) * 10) / 10 });
+      if (old == null || top > old) best[id] = top;
+    });
+  });
+  return out.reverse();
+}
 export function muscleDone(from, to){
   const m = {}; MUSCLES.forEach(x => { m[x] = 0; });
   workouts().filter(w => w.date >= from && w.date <= to).forEach(w => {

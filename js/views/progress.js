@@ -2,13 +2,14 @@
 import { addDays, esc, fmtDate, fmtKg, mondayOf, num, parseIso, today, withDot } from '../util.js';
 import { JUMP_PROTOCOL, MUSCLES } from '../library.js';
 import { S } from '../store.js';
-import { allEx, blockRange, bodyDocs, bodyweight, canon, history, jumpsOn, kneeEntries, kneeOn, perWeekOf, settings, testForBlock, weekInfo, workouts } from '../data.js';
-import { blockReport, exerciseProgress, fatigueCheck, muscleDone, musclePlanned, setScore } from '../engine.js';
-import { chart } from '../chart.js';
+import { allEx, blockRange, bodyDocs, bodyweight, canon, history, jumpsOn, kneeEntries, kneeOn, nextSession, perWeekOf, settings, testForBlock, tplDef, weekInfo, workouts } from '../data.js';
+import { blockReport, exerciseProgress, fatigueCheck, muscleDone, musclePlanned, recordLog, setScore } from '../engine.js';
+import { chart, spark } from '../chart.js';
 import { viewHistory } from './history.js';
 import { emile } from '../emile.js';
 import { myPlan, nutritionOf } from './goal.js';
 
+const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 const PRTABS = [['stats','Résumé'],['history','Historique']];
 export function viewProgressPage(){
   const h = '<h1>Progrès</h1><div class="seg" role="tablist">' + PRTABS.map(t => '<button type="button" class="chip' + (S.progressTab === t[0] ? ' on' : '') + '" data-act="prtab" data-v="' + t[0] + '" role="tab" aria-selected="' + (S.progressTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
@@ -20,7 +21,20 @@ function viewProgress(){
   const last28 = ws.filter(w => w.date > addDays(d, -28)); const wk = weekInfo(d);
   const perWeek = perWeekOf();
   let h = '';
-  h += '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">séances au total</span></div><div class="stat"><span class="v num">' + last28.length + '<span class="small muted">/' + perWeek * 4 + '</span></span><span class="l">sur 4 semaines</span></div><div class="stat"><span class="v num">' + wk.n + '</span><span class="l">semaine du programme</span></div></div>';
+  // Premier lancement : Émile (logo, lumière douce) plutôt que des cases à zéro
+  if (!ws.length) {
+    const nx = nextSession(); const t = nx && tplDef(nx);
+    return h + '<section class="card empty-state"><img class="end-logo" src="icons/logo.png" alt="" width="96" height="96"><h2>Ta progression commence ici</h2><p class="muted">Après ta première séance, tu verras ici tes chiffres, tes records et tes courbes.</p>'
+      + (t ? '<button type="button" class="btn primary big" data-act="start" data-v="' + esc(nx) + '">Commencer ' + esc(t.name) + '</button>' : '') + '</section>';
+  }
+  // Séances par semaine sur les 8 dernières semaines (mini-courbe)
+  const mon0 = mondayOf(d); const perW = [7, 6, 5, 4, 3, 2, 1, 0].map(k => { const a = addDays(mon0, -7 * k); return ws.filter(w => w.date >= a && w.date <= addDays(a, 6)).length; });
+  h += '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">séances au total</span></div><div class="stat"><span class="v num">' + last28.length + '<small>/' + perWeek * 4 + '</small></span><span class="l">sur 4 semaines</span>' + spark(perW) + '</div><div class="stat"><span class="v num">' + wk.n + '</span><span class="l">semaine du programme</span></div></div>';
+  // Tes records : les 5 derniers, calculés sur tout l'historique
+  const recs = recordLog();
+  h += recs.length ? '<section class="card gold"><div class="ring-row"><span class="trophy" aria-hidden="true">' + TROPHY + '</span><div class="stack" style="gap:2px"><h2>Tes records</h2><span class="muted small">' + recs.length + ' depuis le début · force estimée</span></div></div>'
+      + recs.slice(0, 5).map(r => '<p class="rec-line"><span>' + esc(r.name) + '</span><span class="num">' + fmtKg(r.kg) + '&nbsp;kg <span class="muted small">+' + fmtKg(r.gain) + ' · ' + esc(fmtDate(r.date)) + '</span></span></p>').join('') + '</section>'
+    : '<section class="card"><h3>Tes records</h3>' + emile('<p>Ton premier record arrivera vite : continue à noter tes séries et tes reps en réserve.</p>') + '</section>';
 
   const fat = fatigueCheck();
   if (fat) h += emile('<p>Baisse de force sur ' + fat.drops.length + ' exercices cette semaine. Regarde l’onglet Aujourd’hui pour avancer la décharge.</p>', { title:'Fatigue probable', tone:'warn', key:'fatigue-p:' + mondayOf(today()) });
@@ -31,12 +45,13 @@ function viewProgress(){
   // Séries par muscle
   const mon = mondayOf(d); const doneW = muscleDone(mon, addDays(mon, 6)); const lastW = muscleDone(addDays(mon, -7), addDays(mon, -1)); const plan = musclePlanned();
   const maxV = Math.max(20, ...MUSCLES.map(x => Math.max(doneW[x], plan[x], lastW[x])));
-  h += '<section class="card"><div class="stack"><h3>Séries par muscle cette semaine</h3><p class="muted small">Une série compte 1 sur le muscle principal, 0,5 sur les secondaires (Pelland et al., 2026) : plus de séries rapporte plus, mais de moins en moins.</p></div>';
+  h += '<section class="card"><h3>Séries par muscle cette semaine</h3>';
   h += '<div class="legend"><span><i style="background:var(--accent)"></i>Fait cette semaine</span><span><i style="background:var(--court)"></i>Prévu par ton planning</span></div>';
   MUSCLES.forEach(x => {
     h += '<div class="mrow"><span>' + esc(x) + '</span><span class="mbar"><i style="width:' + (doneW[x] / maxV * 100).toFixed(1) + '%"></i><b style="left:' + (plan[x] / maxV * 100).toFixed(1) + '%"></b></span><span class="v num">' + fmtKg(doneW[x]) + ' / ' + fmtKg(plan[x]) + '</span></div>';
   });
-  h += '<p class="muted small">Semaine dernière : ' + MUSCLES.filter(x => lastW[x] > 0).map(x => x + ' ' + fmtKg(lastW[x])).join(' · ') + (MUSCLES.some(x => lastW[x] > 0) ? '' : 'aucune série enregistrée') + '.</p></section>';
+  h += '<p class="muted small">Semaine dernière : ' + MUSCLES.filter(x => lastW[x] > 0).map(x => x + ' ' + fmtKg(lastW[x])).join(' · ') + (MUSCLES.some(x => lastW[x] > 0) ? '' : 'aucune série enregistrée') + '.</p>';
+  h += '<details class="cue"><summary>Pourquoi ces chiffres ?</summary><p class="muted">Une série compte 1 sur le muscle principal, 0,5 sur les secondaires (Pelland et al., 2026) : plus de séries rapporte plus, mais de moins en moins.</p></details></section>';
 
   // Tes exercices : ceux déjà faits, du plus récent au plus ancien, avec leur dernière meilleure série ; une ligne ouvre la fiche (progrès, courbe)
   const used = new Set(); workouts().forEach(w => Object.keys(w.ex || {}).forEach(k => used.add(canon(k))));

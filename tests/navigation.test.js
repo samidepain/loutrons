@@ -3,7 +3,7 @@ import { test, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { activityFamily, dayFamilies } from '../js/data.js';
 import { emileQueue } from '../js/emile.js';
-import { exerciseProgress } from '../js/engine.js';
+import { exerciseProgress, recordLog } from '../js/engine.js';
 import { donnees, jour, reglages, seance, docs } from './aide.js';
 
 afterEach(() => mock.timers.reset());
@@ -108,4 +108,23 @@ test('progrès d’un exercice : une séance de décharge est marquée comme tel
   jour('2026-11-04');
   donnees(docs(reglages(), seance('2026-11-02', { ua_bench: { kg: 50, reps: [8] } }, { deload: true })));
   assert.equal(exerciseProgress('ua_bench').last[0].deload, true);
+});
+
+test('records : une séance qui dépasse la force estimée des séances d’avant, jamais la première, du plus récent au plus ancien', () => {
+  jour('2026-11-04');
+  donnees(docs(reglages(),
+    seance('2026-10-20', { ua_bench: { kg: 50, reps: [8] } }),
+    seance('2026-10-23', { ua_bench: { kg: 50, reps: [6] } }),
+    seance('2026-10-27', { ua_bench: { kg: 52.5, reps: [8] } }),
+    seance('2026-11-02', { ua_bench: { kg: 55, reps: [8] } })));
+  const r = recordLog();
+  assert.deepEqual(r.map(x => x.date), ['2026-11-02', '2026-10-27']);
+  assert.equal(r[0].kg, 70);
+  assert.equal(r[1].gain, 3.2);
+});
+
+test('records : aucun sans séance terminée, ni avec une seule séance par exercice', () => {
+  jour('2026-11-04');
+  donnees(docs(reglages(), seance('2026-11-02', { ua_bench: { kg: 50, reps: [8] } })));
+  assert.deepEqual(recordLog(), []);
 });

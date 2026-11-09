@@ -2,6 +2,12 @@
 import { esc, fmtDate, fmtKg, iso } from './util.js';
 
 function niceStep(span, n){ const raw = span / n; const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+// Mini-courbe d'une case de chiffres (décorative : la valeur est écrite à côté)
+export function spark(vals){
+  if (vals.length < 2) return '';
+  const W = 100, H = 28, mx = Math.max(1, ...vals); const X = i => (i / (vals.length - 1) * W).toFixed(1), Y = v => (H - 3 - v / mx * (H - 6)).toFixed(1);
+  return '<svg class="spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true"><path d="' + vals.map((v, i) => (i ? 'L' : 'M') + X(i) + ' ' + Y(v)).join(' ') + '"/></svg>';
+}
 export function chart(series, o){
   o = o || {};
   const all = [].concat.apply([], series.map(s => s.pts));
@@ -34,9 +40,9 @@ export function chart(series, o){
     if (s.line !== false && pts.length > 1) {
       const d = pts.map((p, i) => (i ? 'L' : 'M') + X(p.x).toFixed(1) + ' ' + Y(p.y).toFixed(1)).join(' ');
       if (si === 0 && o.area !== false) g += '<path d="' + d + ' L' + X(pts[pts.length - 1].x).toFixed(1) + ' ' + (H - B) + ' L' + X(pts[0].x).toFixed(1) + ' ' + (H - B) + ' Z" style="fill:' + c + '" fill-opacity="0.12"/>';
-      g += '<path d="' + d + '" fill="none" style="stroke:' + c + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+      g += '<path' + (s.color ? '' : ' class="ln"') + ' d="' + d + '" fill="none" style="stroke:' + c + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
     }
-    pts.forEach((p, i) => { g += '<circle cx="' + X(p.x).toFixed(1) + '" cy="' + Y(p.y).toFixed(1) + '" r="' + (i === pts.length - 1 ? 4.5 : 2.8) + '" style="fill:' + c + '"/>'; });
+    pts.forEach((p, i) => { const last = i === pts.length - 1; g += '<circle' + (last && !s.color ? ' class="pt-last"' : '') + ' cx="' + X(p.x).toFixed(1) + '" cy="' + Y(p.y).toFixed(1) + '" r="' + (last ? 4.5 : 2.8) + '" style="fill:' + c + '"/>'; });
   });
   return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(o.label || 'Graphique') + '">' + g + '</svg>';
 }

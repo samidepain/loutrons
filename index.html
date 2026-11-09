@@ -333,6 +333,11 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 /* Progrès */
 .chart{width:100%;height:auto;display:block}
 .chart text{font-family:var(--f-body);font-size:11px;fill:var(--muted)}
+/* Courbe principale lumineuse, dernier point entouré ; mini-courbe des cases */
+.chart .ln{filter:drop-shadow(var(--ring-glow))}
+.chart .pt-last{stroke:var(--bg);stroke-width:2;filter:drop-shadow(var(--ring-glow))}
+.spark{display:block;width:100%;height:24px;margin-top:4px;overflow:visible}
+.spark path{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
 .tbl{width:100%;border-collapse:collapse;font-size:15px}
 .tbl th{font-size:13px;color:var(--muted);text-align:left;font-weight:600;padding:6px 4px;border-bottom:1px solid var(--line)}
 .tbl td{padding:8px 4px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -382,7 +387,7 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 @media (max-width:360px){.cal .ring.xs{display:none}}
 .ring-row > .stack,.ring-row > .kcal{min-width:0}
 .mrow{display:grid;grid-template-columns:88px minmax(0,1fr) 74px;gap:8px;align-items:center;font-size:14px}
-.mbar{position:relative;height:12px;background:var(--surface-2);border-radius:999px}
+.mbar{position:relative;height:14px;background:var(--surface-2);border-radius:999px}
 .mbar i{position:absolute;left:0;top:0;bottom:0;background:var(--grad-fire);border-radius:999px}
 .mbar b{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1px;background:var(--court);border-radius:2px}
 .mrow .v{text-align:right;font-variant-numeric:tabular-nums}
@@ -420,6 +425,13 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .end-t{min-width:0}
 .end-t h1{overflow-wrap:anywhere}
 .end-emile{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.empty-state{align-items:center;text-align:center;padding-block:24px}
+/* Records : une ligne par record (exercice à gauche, force estimée à droite) ; trophée doré dans l'historique */
+.rec-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:8px}
+.rec-line > span:first-child{min-width:0;overflow-wrap:anywhere;font-weight:600}
+.rec-line .num{flex:none;text-align:right;font-weight:800}
+.hist-pr{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--grad-gold);color:var(--on-accent);vertical-align:2px;box-shadow:var(--glow-gold)}
+.hist-pr svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .end-emile .who{font-weight:600;color:var(--good)}
 .end-logo{width:96px;height:96px;border-radius:22px;box-shadow:0 0 48px 8px var(--ambient)}
 .end.enter .ring .pg{animation:ringfill .7s cubic-bezier(.32,.72,0,1)}
