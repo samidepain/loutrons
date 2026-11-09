@@ -67,5 +67,5 @@ function viewSetupFood(U){
   return h + '<button type="button" class="btn primary big" data-act="setup-done">C’est parti</button>';
 }
 function importCard(){
-  return '<section class="card"><h3>Tu as déjà une sauvegarde ?</h3><p class="muted small">Importe ton fichier d’export pour retrouver tes séances et tes réglages.</p><label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label></section>';
+  return '<section class="card"><h3>Tu as déjà une sauvegarde ?</h3><p class="muted small">Importe ton fichier d’export pour retrouver tes séances et tes réglages.</p><label class="btn file-btn"><input type="file" id="import-file" accept=".json,application/json">Importer une sauvegarde (JSON)</label></section>';
 }

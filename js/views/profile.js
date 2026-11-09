@@ -1,7 +1,9 @@
 // Écran Profil : ce qui te concerne, ton alimentation, apparence, sauvegarde, et « La science » ; les réglages de l'entraînement sont dans Entraînement › Planning.
-import { esc, fmtDate, fmtDateLong, fmtKg, num, today, withDot } from '../util.js';
+import { esc, fmtDate, fmtDateLong, fmtDateYear, fmtKg, fmtMonth, num, today, withDot } from '../util.js';
 import { S } from '../store.js';
-import { bodyDocs, jumpsOn, kneeOn, settings } from '../data.js';
+import { bodyDocs, jumpsOn, kneeOn, settings, startDate, weekInfo, workouts } from '../data.js';
+import { recordLog } from '../engine.js';
+import { lineCard } from './activity.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
 import { goalProfileCard } from './goal.js';
@@ -15,16 +17,23 @@ export function sexChips(act, val){
 const FROM = { today:'Aujourd’hui', training:'Entraînement', food:'Alimentation', progress:'Progrès' };
 export function viewProfile(){
   const s = settings(); const pesees = bodyDocs().filter(b => num(b.weight) > 0); const last = pesees[pesees.length - 1];
-  let h = '<div class="row"><button type="button" class="link" data-act="profile-back" data-back>‹ ' + (FROM[S.from] || FROM.today) + '</button></div><h1>Profil</h1>';
-  h += '<section class="card"><h3>Toi</h3><label class="f"><span>Prénom ou pseudo</span><input id="set-name" value="' + esc(s.name || '') + '" autocomplete="nickname"></label>';
-  h += sexChips('set-sex', s.sex);
-  h += '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>';
-  h += '<div class="fields"><label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>';
-  h += '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label></div>';
-  h += '<p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est noté à la date du jour ; seul le prénom ou pseudo est obligatoire.</p></section>';
+  let h = '<div class="row"><button type="button" class="link" data-act="profile-back" data-back>‹ ' + (FROM[S.from] || FROM.today) + '</button></div>';
+  // En-tête : initiale en grand, prénom, ancienneté, puis séances, semaines et records
+  const ws = workouts().filter(w => w.status === 'terminée'); const since = s.created || (ws[0] && ws[0].date) || startDate(); const who = String(s.name || '').trim();
+  h += '<section class="prof-head"><span class="prof-ini" aria-hidden="true">' + esc((who[0] || '?').toUpperCase()) + '</span><div class="stack" style="gap:2px"><h1>' + esc(who || 'Profil') + '</h1><span class="muted">' + esc((s.sex === 'f' ? 'Loutronne' : s.sex === 'm' ? 'Loutron' : 'Sur Loutrons') + ' depuis ' + fmtMonth(since.slice(0, 7))) + '</span></div></section>';
+  h += '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">' + (ws.length > 1 ? 'séances' : 'séance') + '</span></div><div class="stat"><span class="v num">' + weekInfo(today()).n + '</span><span class="l">' + (weekInfo(today()).n > 1 ? 'semaines' : 'semaine') + '</span></div><div class="stat"><span class="v num">' + recordLog().length + '</span><span class="l">records</span></div></div>';
+  // Toi : une ligne par réglage (nom à gauche, valeur à droite), qui s'ouvre sur place ; enregistré à la sortie du champ, comme avant
+  const vide = 'À indiquer'; const age = s.birth ? Math.floor((Date.parse(today()) - Date.parse(s.birth)) / 31557600000) : null;
+  h += '<h2>Toi</h2>';
+  h += lineCard('p-name', 'Prénom ou pseudo', who || vide, '', '<label class="f"><span>Prénom ou pseudo (obligatoire)</span><input id="set-name" value="' + esc(s.name || '') + '" autocomplete="nickname"></label>');
+  h += lineCard('p-sex', 'Loutron ou loutronne', s.sex === 'm' ? 'Loutron' : s.sex === 'f' ? 'Loutronne' : vide, '', sexChips('set-sex', s.sex));
+  h += lineCard('p-birth', 'Date de naissance', s.birth ? fmtDateYear(s.birth) + ' · ' + age + ' ans' : vide, '', '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>');
+  h += lineCard('p-height', 'Taille', s.height == null ? vide : fmtKg(num(s.height)) + ' cm', '', '<label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>');
+  h += lineCard('p-weight', 'Poids', last ? fmtKg(num(last.weight)) + ' kg' : vide, '', '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label><p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est noté à la date du jour.</p>');
   h += goalProfileCard();
   const t = s.theme || 'auto';
-  h += '<section class="card"><h3>Apparence</h3><div class="chips" role="group">' + [['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(o => '<button type="button" class="chip txt' + (t === o[0] ? ' on' : '') + '" data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (t === o[0]) + '">' + o[1] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
+  // Apparence : trois vignettes qui montrent chaque thème (automatique : moitié claire, moitié sombre)
+  h += '<section class="card"><h3>Apparence</h3><div class="theme-picks" role="group" aria-label="Apparence">' + [['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(o => '<button type="button" class="theme-pick' + (t === o[0] ? ' on' : '') + '" data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (t === o[0]) + '"><span class="tp tp-' + o[0] + '" aria-hidden="true"><i></i><i></i></span>' + o[1] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
   h += '<button type="button" class="pick" data-act="go-planning"><span class="stack" style="gap:2px"><span class="n">Réglages de l’entraînement</span><span class="m">Début du programme, options genou, détente et sport, exercices masqués : dans Entraînement</span></span><span aria-hidden="true">›</span></button>';
   h += viewSettingsCards();
   h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>La science</h3><span class="muted small">Comment l’appli fixe tes objectifs, et ses sources.</span></div><button type="button" class="btn" data-act="science">Lire</button></div></section>';
@@ -41,7 +50,7 @@ function viewSettingsCards(){
   h += '<p class="small"><b>' + (s.lastExport ? esc(withDot('Dernière sauvegarde : ' + fmtDateLong(s.lastExport))) : 'Aucune sauvegarde pour l’instant.') + '</b> Seul l’export JSON compte comme sauvegarde.</p>';
   h += '<div class="row"><button type="button" class="btn" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
   if (useShare('json')) h += '<p class="muted small">«&nbsp;Exporter&nbsp;» ouvre le menu de partage&nbsp;: choisis «&nbsp;Enregistrer dans Fichiers&nbsp;» pour garder une copie, ou envoie le fichier.</p>';
-  h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
+  h += '<label class="btn file-btn"><input type="file" id="import-file" accept=".json,application/json">Importer une sauvegarde (JSON)</label>';
   h += '</section>';
   return h;
 }

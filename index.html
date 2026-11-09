@@ -217,7 +217,7 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
 .seg .chip{white-space:nowrap;font-family:var(--f-body);font-weight:600;font-size:15px}
 /* Sous-onglets et cases posés sur le fond de l'écran : matière des cartes, pour rester visibles sur le fond clair */
-.seg .chip:not(.on),#app > .stats .stat,.end .stat{background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh)}
+.seg .chip:not(.on),#app > .stats .stat,.end .stat,#app > .pick{background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh)}
 .toggle{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .toggle:first-of-type{border-top:none}
 .toggle input{width:22px;height:22px;margin-top:2px;accent-color:var(--accent);flex:none}
@@ -426,6 +426,28 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .end-t h1{overflow-wrap:anywhere}
 .end-emile{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .empty-state{align-items:center;text-align:center;padding-block:24px}
+/* Profil : initiale en grand dans le dégradé lumineux, prénom, ancienneté */
+.prof-head{display:flex;align-items:center;gap:16px;min-width:0}
+.prof-head h1{overflow-wrap:anywhere}
+.prof-ini{width:72px;height:72px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--grad-fire);color:var(--on-accent);font-family:var(--f-display);font-weight:800;font-size:34px;box-shadow:var(--glow-2)}
+/* Apparence : trois vignettes ; les couleurs de l'aperçu sont celles des thèmes, quel que soit le thème affiché */
+.theme-picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.theme-pick{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px 10px;border:none;border-radius:16px;background:var(--surface-2);font-size:15px;font-weight:600;min-width:0}
+@media (max-width:360px){.theme-pick{font-size:12px;padding-inline:2px;letter-spacing:-.01em}}
+.theme-pick.on{box-shadow:inset 0 0 0 2px var(--accent-ink),var(--glow-2)}
+.tp{display:flex;flex-direction:column;gap:4px;justify-content:flex-end;width:100%;aspect-ratio:4/3;border-radius:10px;padding:8px;box-shadow:inset 0 0 0 1px var(--line)}
+.tp i{display:block;height:8px;border-radius:4px;background:#FF7A1A}
+.tp i + i{width:60%}
+.tp-dark{background:#000000}
+.tp-dark i + i{background:#1F1F1F}
+.tp-light{background:#F5F5F4}
+.tp-light i + i{background:#FFFFFF}
+.tp-auto{background:linear-gradient(135deg,#F5F5F4 50%,#000000 50%)}
+.tp-auto i + i{background:#A3A3A3}
+/* Import d'une sauvegarde : le champ de fichier natif est caché dans un bouton gris (toujours focalisable) */
+.file-btn{display:inline-flex;align-items:center;justify-content:center;position:relative;cursor:pointer;align-self:flex-start}
+.file-btn input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.file-btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 /* Records : une ligne par record (exercice à gauche, force estimée à droite) ; trophée doré dans l'historique */
 .rec-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:8px}
 .rec-line > span:first-child{min-width:0;overflow-wrap:anywhere;font-weight:600}
