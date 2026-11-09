@@ -24,19 +24,25 @@ test('chaque variable du thème clair (couleurs, dégradés, lumières, verre) e
 
 test('la couleur de lancement est celle du fond de chaque thème (balises, manifeste, render.js)', () => {
   assert.equal(clair['--bg'], '#F5F5F4');
-  assert.equal(sombreAuto['--bg'], '#000000');
+  assert.equal(sombreAuto['--bg'], '#0B0B0D');
   const metas = Object.fromEntries([...html.matchAll(/<meta name="theme-color" content="([^"]+)" media="\(prefers-color-scheme: (\w+)\)">/g)].map(m => [m[2], m[1]]));
-  assert.deepEqual(metas, { light: '#F5F5F4', dark: '#000000' });
+  assert.deepEqual(metas, { light: '#F5F5F4', dark: '#0B0B0D' });
   const man = JSON.parse(lire('manifest.webmanifest'));
-  assert.equal(man.background_color, '#000000');
-  assert.equal(man.theme_color, '#000000');
-  assert.match(lire('js/render.js'), /const THEME_COLORS = \{ light:'#F5F5F4', dark:'#000000' \};/);
+  assert.equal(man.background_color, '#0B0B0D');
+  assert.equal(man.theme_color, '#0B0B0D');
+  assert.match(lire('js/render.js'), /const THEME_COLORS = \{ light:'#F5F5F4', dark:'#0B0B0D' \};/);
 });
 
 test('chaque police déclarée dans index.html existe et est mise en cache par sw.js', () => {
   const polices = [...html.matchAll(/url\((fonts\/[^)]+)\)/g)].map(m => m[1]);
   assert.ok(polices.length > 0);
   assert.deepEqual(polices.filter(f => !existsSync(new URL('../' + f, import.meta.url)) || !enCache.has(f)), []);
+});
+
+test('les échelles du design system (espacements, rayons, texte, mouvement) sont définies une fois, hors des thèmes', () => {
+  const echelles = vars(html.match(/\/\* Échelles du design system[^\n]*\n:root\{([\s\S]*?)\n\}/)[1]);
+  for (const k of ['--s-4', '--r-md', '--r-pill', '--t-body', '--t-h1', '--ease', '--dur-tap', '--press', '--dim']) assert.ok(k in echelles, k);
+  assert.deepEqual(Object.keys(echelles).filter(k => k in clair || k in sombreAuto), []);
 });
 
 test('seul « LOUTRONS » est mis en capitales par le CSS', () => {

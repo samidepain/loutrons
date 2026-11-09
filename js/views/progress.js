@@ -16,7 +16,7 @@ export function viewProgressPage(){
   return h + (S.progressTab === 'history' ? viewHistory() : viewProgress());
 }
 function viewProgress(){
-  if (!S.loaded) return '<p class="empty">Chargement…</p>';
+  if (!S.loaded) return '<p class="loading">Chargement…</p>';
   const ws = workouts().filter(w => w.status === 'terminée'); const d = today();
   const last28 = ws.filter(w => w.date > addDays(d, -28)); const wk = weekInfo(d);
   const perWeek = perWeekOf();
@@ -88,7 +88,7 @@ function viewProgress(){
   return h + '</section>';
 }
 export function viewBilan(block){
-  if (!S.loaded) return '<p class="empty">Chargement…</p>';
+  if (!S.loaded) return '<p class="loading">Chargement…</p>';
   const R = blockReport(block);
   let h = '<div class="row"><button type="button" class="link" data-act="bilan-close" data-back>‹ ' + (S.view === 'today' ? 'Aujourd’hui' : 'Progrès') + '</button></div><h1>Bilan du bloc ' + block + '</h1>';
   h += '<p class="muted">' + esc(fmtDate(R.r.from)) + ' – ' + esc(fmtDate(R.r.to)) + (R.finished ? '' : ' · en cours, ' + R.weeks + ' semaine' + (R.weeks > 1 ? 's' : '') + ' écoulée' + (R.weeks > 1 ? 's' : '')) + '</p>';

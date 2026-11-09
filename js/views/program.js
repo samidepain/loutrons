@@ -9,7 +9,7 @@ import { VERSION } from '../version.js';
 const PTABS = [['seances','Séances'],['exercices','Exercices'],['planning','Planning']];
 export function viewProgram(){
   let h = '<h1>Entraînement</h1><div class="seg" role="tablist">' + PTABS.map(t => '<button type="button" class="chip' + (S.progTab === t[0] ? ' on' : '') + '" data-act="ptab" data-v="' + t[0] + '" role="tab" aria-selected="' + (S.progTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
-  if (!S.loaded) return h + '<p class="empty">Chargement…</p>';
+  if (!S.loaded) return h + '<p class="loading">Chargement…</p>';
   if (S.progTab === 'exercices') return h + viewExercises();
   if (S.progTab === 'planning') return h + viewPlanning();
   return h + viewTemplates();

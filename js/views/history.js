@@ -19,7 +19,7 @@ export function workoutLines(w){
   return h;
 }
 export function viewHistory(){
-  if (!S.loaded) return '<p class="empty">Chargement…</p>';
+  if (!S.loaded) return '<p class="loading">Chargement…</p>';
   const ws = workouts().reverse(); const aw = activeWorkout();
   let h = '';
   if (!ws.length) return h + '<section class="card"><p class="muted">Tes séances apparaîtront ici dès que tu en auras commencé une.</p></section>';

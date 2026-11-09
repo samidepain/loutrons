@@ -72,7 +72,7 @@ export function viewFood(){
   if (S.food) return viewFoodAdd();
   const day = S.foodDay || today(); const doc = dayDoc(day); const t = totals(doc.items); const pl = dayPlan(day); const has = pl.status !== 'missing';
   let h = '<h1>Alimentation</h1><div class="row between daynav"><button type="button" class="btn sm" data-act="fday" data-v="-1" aria-label="Jour précédent">‹</button><b>' + esc(dayLabel(day)) + '</b><button type="button" class="btn sm" data-act="fday" data-v="1" aria-label="Jour suivant"' + (day >= today() ? ' disabled' : '') + '>›</button></div>';
-  if (!S.loaded) return h + '<p class="empty">Chargement…</p>';
+  if (!S.loaded) return h + '<p class="loading">Chargement…</p>';
   // Avis d'Émile, seulement pour aujourd'hui
   if (day === today()) {
     let m = '', tone = '', kind = 'rest';
@@ -203,7 +203,7 @@ export function recList(){
   needCiqual(() => { const l = document.getElementById('rec-list'); if (l && S.food && S.food.mode === 'recipe') l.innerHTML = recList(); });
   const mine = recentFoods(200).filter(f => f.src !== 'rec' && f.src !== 'recipe'); const own = myFoods().map(o => foodFromDoc(o.id, o)).filter(f => f.src !== 'recipe' && !mine.some(m => m.key === f.key));
   const res = searchFoods([mine.concat(own), [], ciq || []], q, 8);
-  return res.map(f => { recShown.set(f.key, f); return '<button type="button" class="pick" data-act="rec-add" data-v="' + esc(f.key) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(f.name) + '</span><span class="m">' + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal/100 g</span></span><span aria-hidden="true">+</span></button>'; }).join('') || (ciq ? '<p class="muted small">Aucun aliment trouvé.</p>' : '<p class="muted small">Chargement de la table Ciqual…</p>');
+  return res.map(f => { recShown.set(f.key, f); return '<button type="button" class="pick" data-act="rec-add" data-v="' + esc(f.key) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(f.name) + '</span><span class="m">' + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal/100 g</span></span><span aria-hidden="true">+</span></button>'; }).join('') || (ciq ? '<p class="muted small">Aucun aliment trouvé.</p>' : '<p class="loading">Chargement de la table Ciqual…</p>');
 }
 export function recPreview(){
   const R = S.food.rec; const items = R.items.filter(i => i.g > 0); if (!items.length) return '';
@@ -229,7 +229,7 @@ export function foodList(){
   needCiqual(() => { if (S.food && S.food.mode === 'search') { const l = document.getElementById('fd-list'); if (l) l.innerHTML = foodList(); } });
   const res = searchFoods([mine.concat(own), recs || [], ciq || []], q, 40);
   let h = res.length ? res.map(row).join('') : ciq ? '<p class="empty">Aucun aliment trouvé. Essaie un autre mot, scanne le produit ou crée-le.</p>' : '';
-  if (!ciq) h += '<p class="muted small">Chargement de la table Ciqual…</p>';
+  if (!ciq) h += '<p class="loading">Chargement de la table Ciqual…</p>';
   else if (!ciq.length) h += '<p class="muted small">La table Ciqual n’est pas disponible pour l’instant.</p>';
   return h;
 }

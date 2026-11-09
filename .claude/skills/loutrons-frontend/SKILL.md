@@ -123,7 +123,7 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 
 | Variable | Rôle | Sombre | Clair |
 |---|---|---|---|
-| `--bg` | fond de l'écran | `#000000` | `#F5F5F4` |
+| `--bg` | fond de l'écran (version 3.8 : noir légèrement profond, le noir pur `#000000` reste pour `--well`) | `#0B0B0D` | `#F5F5F4` |
 | `--surface` | blocs à plat (ligne d'exercice repliée) ; les cartes utilisent `--card-top` → `--card-bot` | `#141414` | `#FFFFFF` |
 | `--surface-2` | champs, boutons gris, puces, lignes de liste, statistiques, jours du calendrier | `#1F1F1F` | `#EDEDEB` |
 | `--well` | contrôle posé dans un bloc déjà en `--surface-2` (`.item`, `.target`, `.cur-set`, bulle d'Émile dans une carte) | `#000000` | `#FFFFFF` |
@@ -137,11 +137,11 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | `--shade` | voile sous un écran ou une fenêtre | | |
 | `--fam-salle`, `--fam-cardio`, `--fam-collectif`, `--fam-autre` | couleur d'une famille d'activité dans le calendrier (points `.mk`) | `#FF7A1A`, `#4DA3FF`, `#B48CFF`, `#D4D4D4` | `#A84300`, `#1F6FD1`, `#7B3FD6`, `#3D3D3D` |
 | `--grad-fire` | dégradé de l'orange (ambre `#FFB347` → orange `#FF7A1A` au centre → braise `#FF4D00`) : bouton principal, sélection, barres, rond du profil | identique | identique |
-| `--card-top`, `--card-bot`, `--card-sh` | matière des cartes : dégradé vertical, reflet d'un pixel (sombre) ou ombre douce (clair) | `#1A1A1A` → `#0F0F0F` | blanc, ombre douce |
+| `--card-top`, `--card-bot`, `--card-sh` | matière des cartes : dégradé vertical, reflet d'un pixel (sombre) ou ombre douce (clair) | `#171717` → `#111111` | blanc, ombre douce |
 | `--edge`, `--ambient` | carte vedette : liseré dégradé et lumière ambiante en haut à droite | | |
 | `--glow-1`, `--glow-2`, `--glow-3` | les trois niveaux de lumière (voir plus bas) | halos orange | ombres colorées douces |
 | `--glass`, `--glass-line` | verre : en-tête et barre d'onglets (puis minuteur) | `rgba(24,24,24,.62)` | `rgba(255,255,255,.72)` |
-| `--halo` | lumière de la salle en haut de chaque écran (`body` et `.nav-top`) | orange 16 % | orange 10 % |
+| `--halo` | lumière de la salle en haut de chaque écran (`body` et `.nav-top`) | orange 8 % | orange 7 % |
 
 - L'orange signale **ce qu'on peut faire ou ce qui est en cours**. On n'en met pas partout : un écran a une seule action principale `.btn.primary`.
 - Le gris neutre (`--court`) sert aux repères secondaires. Les liens et consignes à déplier sont en `--accent-ink`.
@@ -158,6 +158,23 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | Discret, `--glow-1` | barres de progression, rond du profil, avatar d'Émile, trait de l'onglet actif, petit bouton principal | décor de repère |
 
 En clair, les lumières deviennent des ombres colorées douces : elles gardent la hiérarchie sans halo.
+
+**Lumière maîtrisée** (version 3.8) : la lumière attire le regard, elle n'est jamais le sujet. Les trois niveaux ont été adoucis (halos plus courts et moins opaques, liseré `--edge` et lumière `--ambient` divisés par deux environ, `--halo` à 8 %).
+- Pas de lumière sur un élément décoratif ou d'identité : rond du profil (`.me`), avatar d'Émile, icônes, cartes ordinaires.
+- Pas de contour orange lumineux systématique : un contour orange dit « choisi » ou « en saisie », rien d'autre.
+- Pas de nouvelle ombre orange en dur : on passe toujours par `--glow-1` à `--glow-3`, pour régler toute l'appli d'un seul endroit.
+
+**Échelles** (version 3.8, bloc `:root` commun aux deux thèmes, après les blocs de couleurs) :
+
+| Famille | Variables |
+|---|---|
+| Espacements | `--s-1` 4, `--s-2` 8, `--s-3` 12, `--s-4` 16, `--s-5` 24, `--s-6` 32 px |
+| Rayons | `--r-sm` 12, `--r-md` 16, `--r` 20 (cartes), `--r-pill` 999 px |
+| Texte | `--t-hero` 36, `--t-h1` 28, `--t-h2` 20, `--t-h3` 18, `--t-body` 17, `--t-small` 15, `--t-cap` 13 px |
+| Mouvement | `--ease` (courbe d'iOS), `--dur-tap` 140 ms, `--dur-state` 240 ms, `--dur-win` 650 ms ; appui `--press` (.96) et `--press-sm` (.93) |
+| États | `--dim` (.45) : opacité d'un contrôle désactivé |
+
+Un nouveau composant les utilise ; les anciens règles passent dessus au fil des refontes d'écran, sans tout réécrire d'un coup.
 
 **Typographie** : Archivo (un seul fichier `fonts/archivo.woff2`, 37 Ko, graisse 800, largeur 62 à 125 %) et la police du téléphone (SF Pro sur iPhone).
 
@@ -245,6 +262,9 @@ En clair, les lumières deviennent des ombres colorées douces : elles gardent l
 | Groupe (superset) | `.group > .gh` |
 | Objectif calculé | `.target` |
 | Liste vide | `p.empty` |
+| Chargement | `p.loading` (petit cercle orange qui tourne, figé si « Réduire les animations ») |
+| États communs | désactivé : opacité `--dim` (`.btn`, `.chip`, `.pick`, `.step`, `button.plus`, champs) ; survol : seulement à la souris (`@media (hover:hover) and (pointer:fine)`), jamais nécessaire ; appui : `--press` ; erreur et réussite : `.alert.bad` / `.alert.good`, `toast()` pour une confirmation brève |
+| Bouton icône | `button.plus` (44 px, « + »), `button.step` (− et +), `.emile-x` (fermer) : rond, sans lumière, `aria-label` obligatoire |
 | Texte secondaire | `.muted`, `.small`, `.label`, `.hero-date` |
 
 **Créer un composant** :
@@ -279,7 +299,7 @@ En clair, les lumières deviennent des ombres colorées douces : elles gardent l
   - dans `:root[data-theme="dark"]`.
   Une variable ajoutée ou modifiée l'est dans les trois blocs : clair, sombre automatique et sombre choisi.
 - Le choix de la personne (`settings.theme` : `auto`, `light` ou `dark`) est appliqué par `applyTheme()` dans `js/render.js`. Il est recopié dans `localStorage` (`loutrons-theme`) pour éviter un flash au lancement, et il met à jour les `meta theme-color`.
-- Les seules couleurs en dur sont celles de `THEME_COLORS` dans `render.js` (`#F5F5F4` et `#000000`, comme les `meta theme-color` ; le manifeste garde `#000000`), les teintes du dégradé et des lumières dans les variables de `:root` (ambre `#FFB347`, braise `#FF4D00`), le reflet blanc du bouton principal, les aperçus des vignettes d'apparence (`.tp-*`), le fond noir `#000000` du rond d'Émile, le blanc posé sur le vert ou le rouge (`.chk` validée, `.chip.on.hi`, minuteur terminé), le noir du scanner et les ombres. On n'en ajoute pas. `tests/theme.test.js` vérifie la couleur de lancement et l'absence de l'ancienne palette.
+- Les seules couleurs en dur sont celles de `THEME_COLORS` dans `render.js` (`#F5F5F4` et `#0B0B0D`, comme les `meta theme-color` et le manifeste), les teintes du dégradé et des lumières dans les variables de `:root` (ambre `#FFB347`, braise `#FF4D00`), le reflet blanc du bouton principal, les aperçus des vignettes d'apparence (`.tp-*`), le fond noir `#000000` du rond d'Émile, le blanc posé sur le vert ou le rouge (`.chk` validée, `.chip.on.hi`, minuteur terminé), le noir du scanner et les ombres. On n'en ajoute pas. `tests/theme.test.js` vérifie la couleur de lancement et l'absence de l'ancienne palette.
 - Les SVG utilisent `currentColor` ou les variables, comme `.bodymap` et `.chart`.
 - On vérifie **chaque écran modifié dans les deux thèmes**, puis le contraste du texte (4,5:1) et des bordures utiles (3:1).
 
