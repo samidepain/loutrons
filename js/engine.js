@@ -1,6 +1,7 @@
 // Moteur de progression : objectifs de chaque exercice, records, séries par muscle, alerte de fatigue, bilan de bloc.
 import { addDays, clamp, daysBetween, e1rm, fmtKg, lowFirst, num, roundTo, today } from './util.js';
 import { MUSCLES } from './library.js';
+import { S } from './store.js';
 import { bestE1, blockRange, blockStarts, bodyDocs, bodyweight, canon, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, lastSessionGap, maxKg, musclesOf, perWeekOf, rotationOf, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
 
 /* ================= Moteur de progression =================
@@ -168,7 +169,17 @@ export function findPRs(w){
 // Records sur tout l'historique, sans rien stocker (Progrès › « Tes records », trophée de l'historique) : séance par séance,
 // un exercice dont la force estimée (Epley) dépasse sa meilleure des séances d'avant. Sa première séance n'est pas un record (comme findPRs).
 // Du plus récent au plus ancien : { date, w, name, kg, gain }.
+// Records gardés tant que les documents n'ont pas changé (même table, même compteur d'écritures) : Aujourd'hui les relit à chaque affichage
+let recCache = { docs:null, rev:-1, val:null };
 export function recordLog(){
+  if (recCache.docs !== S.docs || recCache.rev !== S.rev) recCache = { docs:S.docs, rev:S.rev, val:computeRecords() };
+  return recCache.val;
+}
+// Dernier record, seulement s'il date de 7 jours ou moins avant le jour donné
+export function recentRecord(day){
+  const r = recordLog()[0]; return r && r.date >= addDays(day, -7) ? r : null;
+}
+function computeRecords(){
   const bw = bodyweight() || 0; const best = {}; const out = [];
   workouts().filter(w => w.status === 'terminée').sort((a, b) => a.date === b.date ? (a.startedAt || 0) - (b.startedAt || 0) : a.date < b.date ? -1 : 1).forEach(w => {
     itemsOf(w).forEach(it => {

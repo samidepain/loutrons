@@ -3,7 +3,7 @@
 import { addDays, capFirst, greeting, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
 import { activeWorkout, activities, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
-import { fatigueCheck, recordLog } from '../engine.js';
+import { fatigueCheck, recentRecord } from '../engine.js';
 import { useShare } from '../backup.js';
 import { kneeChips, TROPHY } from '../render.js';
 import { noTplCard } from './program.js';
@@ -49,7 +49,7 @@ function planCard(d, plan, aw, doneToday, tpls){
 
 // Record des 7 derniers jours (force estimée, calculé sur l'historique) : carte dorée, seulement quand il y en a un
 function recordCard(d){
-  const r = S.loaded ? recordLog()[0] : null; if (!r || r.date < addDays(d, -7)) return '';
+  const r = S.loaded ? recentRecord(d) : null; if (!r) return '';
   return '<section class="card gold"><div class="ring-row"><span class="trophy" aria-hidden="true">' + TROPHY + '</span><div class="stack rec-t"><h3>Nouveau record</h3><span class="small">' + esc(r.name) + '</span><span class="muted small num">' + esc(nbsp(fmtKg(r.kg) + ' kg estimés · +' + fmtKg(r.gain) + ' · ' + fmtDate(r.date))) + '</span></div></div></section>';
 }
 

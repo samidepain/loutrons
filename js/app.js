@@ -2,7 +2,8 @@
 import { loadDocs, S, usingIdb } from './store.js';
 import { settings, upgradeLegacy } from './data.js';
 import { applyTheme, render, renderTabs } from './render.js';
-import { initSwipeBack } from './nav.js';
+import { initSwipeBack, screenOf } from './nav.js';
+import { greeting } from './util.js';
 import './actions.js'; // écoute les clics, saisies et changements
 
 async function init(){
@@ -16,4 +17,9 @@ async function init(){
 }
 init();
 initSwipeBack(renderTabs);
+// Retour au premier plan sur Aujourd'hui : la salutation suit l'heure (seulement si elle a changé, pour ne pas redessiner pour rien)
+document.addEventListener('visibilitychange', () => {
+  const g = document.querySelector('.g-hi');
+  if (!document.hidden && S.loaded && g && screenOf().key === 'today' && g.textContent.indexOf(greeting(new Date().getHours())) !== 0) render();
+});
 if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });

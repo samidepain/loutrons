@@ -1,7 +1,8 @@
 // État de l’appli et stockage des documents (IndexedDB, ou localStorage en secours).
 import { lsGet, lsSet, toast } from './util.js';
 
-export const S = { docs:new Map(), loaded:false, view:'today',
+// rev : compteur des écritures (put, del), pour invalider les calculs gardés en mémoire
+export const S = { docs:new Map(), rev:0, loaded:false, view:'today',
   progEx:'la_hack', progTab:'seances', progressTab:'stats', calMonth:null, calDay:null, openHist:null, confirm:null, summary:null,
   restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null, setup:null, renaming:false, fiche:null, exQ:'', food:null, foodDay:null, from:null, navHint:null, act:null, adjOk:false,
   // Aujourd'hui : ligne compacte ouverte ('eau' | 'corps' | 'activites' | 'genou' | null), autres conseils d'Émile affichés
@@ -69,8 +70,8 @@ function save(id){
   if (!pending.size) queueMicrotask(flush);
   pending.add(id);
 }
-export function put(id, obj){ S.docs.set(id, obj); save(id); }
-export function del(id){ S.docs.delete(id); save(id); }
+export function put(id, obj){ S.docs.set(id, obj); S.rev++; save(id); }
+export function del(id){ S.docs.delete(id); S.rev++; save(id); }
 // Charge les documents : IndexedDB (avec migration de l’ancien stockage), sinon localStorage
 export async function loadDocs(){
   try { idb = await openIdb(); S.docs = await loadIdb(idb); }
