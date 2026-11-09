@@ -8,7 +8,7 @@
 npm test
 ```
 
-Tous les tests doivent passer (179 avec la version 2.13). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
+Tous les tests doivent passer (186 avec la version 3.7). On ajoute un test quand on modifie un calcul, l'accès aux données ou la liste des fichiers mis en cache.
 
 ## 2. Servir l'appli
 
@@ -70,6 +70,18 @@ async (page) => {
 ```
 
 Le dossier `.playwright-mcp/` est exclu de Git.
+
+**Points Dark Glow** (version 3.0 et suivantes), à regarder sur chaque écran modifié :
+- une seule lumière forte (`--glow-3`) visible à l'écran : grand bouton principal, record ou fin de séance ;
+- une seule carte vedette (`.card.hero`, `.plan`, `.cur-set`) ;
+- la sélection en orange, jamais en blanc plein ;
+- en clair, aucun bloc gris posé directement sur le fond (`--surface-2` sur `--bg`) : il disparaît ; lui donner la matière des cartes ;
+- hors d'Aujourd'hui, le titre ne passe pas sous le rond du profil ; dans une fenêtre, pas de rond du profil ;
+- un état vide (Progrès sans séance, journal vide) n'affiche jamais « 0 » comme une valeur.
+
+Un contexte neuf (`page.context().browser().newContext({ viewport, colorScheme, reducedMotion })`) donne un stockage vide sans toucher aux données du navigateur de test : c'est le plus simple pour le premier lancement, « Réduire les animations » et l'essai sans connexion (`ctx.setOffline(true)` puis `page.reload()`).
+
+Dans le navigateur intégré de Claude, quand son panneau est masqué, les animations et les transitions restent figées : un écran peut sembler vide, déborder (calque de navigation encore là) ou montrer de faux contrastes. Terminer les animations (`document.getAnimations().forEach(a => { try { a.finish(); } catch (e) {} })`) et couper les transitions avant de mesurer ou de lancer axe. Après une modification, son service worker sert encore l'ancien fichier : vider `caches`, recharger les fichiers modifiés avec `fetch(f, { cache: 'reload' })`, puis recharger la page.
 
 ## 4. Petit écran
 

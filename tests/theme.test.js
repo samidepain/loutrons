@@ -18,6 +18,10 @@ test('les deux blocs du thème sombre ont les mêmes valeurs, et chaque couleur 
   assert.deepEqual(couleurs.filter(k => !(k in sombreAuto)), []);
 });
 
+test('chaque variable du thème clair (couleurs, dégradés, lumières, verre) existe aussi dans les deux blocs sombres', () => {
+  assert.deepEqual(Object.keys(clair).filter(k => !(k in sombreAuto)).filter(k => !['--f-display', '--f-body', '--r', '--tabs-h'].includes(k)), []);
+});
+
 test('la couleur de lancement est celle du fond de chaque thème (balises, manifeste, render.js)', () => {
   assert.equal(clair['--bg'], '#F5F5F4');
   assert.equal(sombreAuto['--bg'], '#000000');
