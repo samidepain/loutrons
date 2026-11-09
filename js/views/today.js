@@ -100,7 +100,7 @@ export function viewToday(){
   const corps = [b.weight != null ? fmtKg(num(b.weight)) + ' kg' : '', b.sleep != null ? fmtKg(num(b.sleep)) + ' h' : ''].filter(Boolean).join(' · ') || 'À noter';
   let cb = '<p class="muted small">Nuit de moins de 6 h : garde 1 rep de plus en réserve.</p>';
   cb += '<div class="fields"><label class="f"><span>Poids (kg)</span><input class="n" id="b-weight" data-b="weight" inputmode="decimal" value="' + esc(b.weight == null ? '' : fmtKg(num(b.weight))) + '" placeholder="' + esc(bodyweight() ? fmtKg(bodyweight()) : 'ex. 75') + '"></label><label class="f"><span>Sommeil (h)</span><input class="n" id="b-sleep" data-b="sleep" inputmode="decimal" value="' + esc(b.sleep == null ? '' : fmtKg(num(b.sleep))) + '" placeholder="ex. 7,5"></label></div>';
-  cb += '<div class="stack" style="gap:6px"><span class="label">Qualité du sommeil</span><div class="chips">' + [1,2,3,4,5].map(v => '<button type="button" class="chip" data-act="sleepq" data-v="' + v + '" aria-pressed="' + (b.sleepQ === v) + '"' + (b.sleepQ === v ? ' style="background:var(--ink);color:var(--bg);border-color:var(--ink)"' : '') + '>' + v + '</button>').join('') + '</div><span class="muted small">1 = très mauvaise, 5 = excellente</span></div>';
+  cb += '<div class="stack" style="gap:6px"><span class="label">Qualité du sommeil</span><div class="chips">' + [1,2,3,4,5].map(v => '<button type="button" class="chip' + (b.sleepQ === v ? ' on' : '') + '" data-act="sleepq" data-v="' + v + '" aria-pressed="' + (b.sleepQ === v) + '">' + v + '</button>').join('') + '</div><span class="muted small">1 = très mauvaise, 5 = excellente</span></div>';
   h += lineCard('corps', 'Poids et sommeil', corps, '', cb);
   h += activitiesLine();
   if (kneeOn()) {

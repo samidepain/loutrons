@@ -19,14 +19,14 @@ test('les deux blocs du thème sombre ont les mêmes valeurs, et chaque couleur 
 });
 
 test('la couleur de lancement est celle du fond de chaque thème (balises, manifeste, render.js)', () => {
-  assert.equal(clair['--bg'], '#FFFFFF');
+  assert.equal(clair['--bg'], '#F5F5F4');
   assert.equal(sombreAuto['--bg'], '#000000');
   const metas = Object.fromEntries([...html.matchAll(/<meta name="theme-color" content="([^"]+)" media="\(prefers-color-scheme: (\w+)\)">/g)].map(m => [m[2], m[1]]));
-  assert.deepEqual(metas, { light: '#FFFFFF', dark: '#000000' });
+  assert.deepEqual(metas, { light: '#F5F5F4', dark: '#000000' });
   const man = JSON.parse(lire('manifest.webmanifest'));
   assert.equal(man.background_color, '#000000');
   assert.equal(man.theme_color, '#000000');
-  assert.match(lire('js/render.js'), /const THEME_COLORS = \{ light:'#FFFFFF', dark:'#000000' \};/);
+  assert.match(lire('js/render.js'), /const THEME_COLORS = \{ light:'#F5F5F4', dark:'#000000' \};/);
 });
 
 test('chaque police déclarée dans index.html existe et est mise en cache par sw.js', () => {

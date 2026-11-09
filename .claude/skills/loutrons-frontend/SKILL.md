@@ -17,7 +17,7 @@ Le `CLAUDE.md` à la racine décrit l'architecture, le modèle de données et l'
    - une police ou une palette nouvelle ;
    - une icône chargée depuis un CDN ;
    - des images générées par une IA ;
-   - un « style » complet à appliquer, comme le glassmorphisme ou le néomorphisme.
+   - un « style » complet à appliquer, comme le glassmorphisme ou le néomorphisme (le verre de Loutrons est limité à trois éléments, voir la section 5).
 3. **On réutilise avant de créer.** On ajoute un composant seulement si aucun composant existant ne convient (voir la section 6).
 4. **On ne change jamais une fonctionnalité au passage.** Une retouche visuelle ne modifie ni les calculs, ni les données, ni les textes des sources scientifiques.
 
@@ -114,16 +114,20 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 
 ## 5. Identité graphique
 
-**Ambiance** (version 2.6) : sportive et sombre. Noir pur, orange vif, blanc ; plus de marron ni de crème. Peu de cadres : des blocs gris sans bordure, des boutons en pilule.
+**Ambiance** (version 3.0, « Dark Glow ») : une salle éteinte avec un seul spot orange. Noir pur, orange vif, blanc. La lumière vient d'un endroit précis et éclaire ce qui compte maintenant : la prochaine séance, la série en cours, une réussite. Trois principes :
+- **une source de lumière par écran** : la lumière forte ne va qu'à un seul élément ;
+- **la lumière se mérite** : elle signale une action, un état en cours ou une réussite, jamais un décor ;
+- **le gris est une matière** : les blocs ont un léger dégradé et un reflet d'un pixel, pas un aplat ni une bordure.
 
 **Couleurs** : toujours par les variables de `:root`, jamais en dur. Les contrastes de texte sont vérifiés à 4,5:1 dans les deux thèmes.
 
 | Variable | Rôle | Sombre | Clair |
 |---|---|---|---|
-| `--bg` | fond de l'écran, barre d'onglets | `#000000` | `#FFFFFF` |
-| `--surface` | blocs (`.card`), bulle d'Émile | `#141414` | `#F4F4F4` |
-| `--surface-2` | champs, boutons gris, puces, lignes de liste, statistiques, jours du calendrier | `#1F1F1F` | `#E9E9E9` |
-| `--line` | séparateurs, appui sur une ligne de liste | `#2E2E2E` | `#DADADA` |
+| `--bg` | fond de l'écran | `#000000` | `#F5F5F4` |
+| `--surface` | blocs à plat (ligne d'exercice repliée) ; les cartes utilisent `--card-top` → `--card-bot` | `#141414` | `#FFFFFF` |
+| `--surface-2` | champs, boutons gris, puces, lignes de liste, statistiques, jours du calendrier | `#1F1F1F` | `#EDEDEB` |
+| `--well` | contrôle posé dans un bloc déjà en `--surface-2` (`.item`, `.target`, `.cur-set`, bulle d'Émile dans une carte) | `#000000` | `#FFFFFF` |
+| `--line` | séparateurs, appui sur une ligne de liste | `#2E2E2E` | `#DEDEDB` |
 | `--ink`, `--muted` | texte principal ; texte secondaire et étiquettes | `#FFFFFF`, `#A3A3A3` | `#0A0A0A`, `#5C5C5C` |
 | `--accent`, `--on-accent` | orange : action principale, élément actif, minuteur ; texte posé sur l'orange | `#FF7A1A`, `#000000` | `#FF7A1A`, `#000000` |
 | `--accent-ink` | orange en texte : liens, « Annuler », onglet actif, titre du superset ; aussi les contours d'état (ligne choisie, champ en saisie, aujourd'hui dans le calendrier), pour garder 3:1 sur les gris clairs | `#FF7A1A` | `#A84300` |
@@ -132,11 +136,28 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 | `--good`, `--warn`, `--bad` (+ `-soft`) | réussite, prudence, alerte | | `--good` `#186B3C` en clair |
 | `--shade` | voile sous un écran ou une fenêtre | | |
 | `--fam-salle`, `--fam-cardio`, `--fam-collectif`, `--fam-autre` | couleur d'une famille d'activité dans le calendrier (points `.mk`) | `#FF7A1A`, `#4DA3FF`, `#B48CFF`, `#D4D4D4` | `#A84300`, `#1F6FD1`, `#7B3FD6`, `#3D3D3D` |
+| `--grad-fire` | dégradé de l'orange (ambre `#FFB347` → orange `#FF7A1A` au centre → braise `#FF4D00`) : bouton principal, sélection, barres, rond du profil | identique | identique |
+| `--card-top`, `--card-bot`, `--card-sh` | matière des cartes : dégradé vertical, reflet d'un pixel (sombre) ou ombre douce (clair) | `#1A1A1A` → `#0F0F0F` | blanc, ombre douce |
+| `--edge`, `--ambient` | carte vedette : liseré dégradé et lumière ambiante en haut à droite | | |
+| `--glow-1`, `--glow-2`, `--glow-3` | les trois niveaux de lumière (voir plus bas) | halos orange | ombres colorées douces |
+| `--glass`, `--glass-line` | verre : en-tête et barre d'onglets (puis minuteur) | `rgba(24,24,24,.62)` | `rgba(255,255,255,.72)` |
+| `--halo` | lumière de la salle en haut de chaque écran (`body` et `.nav-top`) | orange 16 % | orange 10 % |
 
 - L'orange signale **ce qu'on peut faire ou ce qui est en cours**. On n'en met pas partout : un écran a une seule action principale `.btn.primary`.
 - Le gris neutre (`--court`) sert aux repères secondaires. Les liens et consignes à déplier sont en `--accent-ink`.
 - Les couleurs d'état (`good`, `warn`, `bad`) servent uniquement à des états réels : séance faite, prudence, erreur.
-- Dans un bloc déjà en `--surface-2` (`.item`, `.target`, `.stat`), les contrôles prennent le fond `--bg`, sinon ils disparaissent.
+- Dans un bloc déjà en `--surface-2` (`.item`, `.target`, `.stat`, `.cur-set`), les contrôles prennent le fond `--well`, sinon ils disparaissent.
+- **La sélection est toujours orange** : `.chip.on`, `.cday.sel` (dégradé `--grad-fire`, texte `--on-accent`, `--glow-2`), `.pick.on` (contour `--accent-ink` et `--glow-2`). Plus de blanc plein pour dire « choisi ». Exceptions : `.chip.on.hi` (douleur forte, rouge) et `.chip.sec.on` (gris, repère secondaire).
+
+**Trois niveaux de lumière** (`box-shadow`, jamais sur du texte) :
+
+| Niveau | Où | Règle |
+|---|---|---|
+| Fort, `--glow-3` | grand bouton principal (`.btn.primary.big`) ; plus tard : record, objectif atteint, fin de séance | **un seul par écran visible** |
+| Intermédiaire, `--glow-2` | ce qui est choisi ou en cours : puce, ligne, jour choisi | quelques-uns au plus |
+| Discret, `--glow-1` | barres de progression, rond du profil, avatar d'Émile, trait de l'onglet actif, petit bouton principal | décor de repère |
+
+En clair, les lumières deviennent des ombres colorées douces : elles gardent la hiérarchie sans halo.
 
 **Typographie** : Archivo (un seul fichier `fonts/archivo.woff2`, 37 Ko, graisse 800, largeur 62 à 125 %) et la police du téléphone (SF Pro sur iPhone).
 
@@ -144,28 +165,34 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 |---|---|---|
 | Titres (`h1`, `h2`, `h3`), « LOUTRONS », nom de la séance du jour (`.plan .name`) | `--f-display`, `font-stretch:125%` (très large) | h1 28, h2 20, h3 18 ; `.plan .name` 36 |
 | Chiffres (`.num`, `.clock`, `.fld input`, `input.n`, `.chip`) et noms d'exercices (`.exname`, `.hitem .n`) | `--f-display`, `font-stretch:100%` | tailles du composant ; noms d'exercices 20 (19 sous 360 px) |
-| Grands chiffres des cases (`.stat .v`) et nom de séance dans une case du calendrier (`.cday .s`) | `--f-display`, `font-stretch:62%` (étroite) | `.stat .v` 28 (24 sous 360 px) ; `.cday .s` 12 |
+| Grands chiffres des cases (`.stat .v`) | `--f-display`, `font-stretch:70%` ; unité en `small`, police du téléphone, grise | 32 (26 sous 360 px) |
+| Nom de séance dans une case du calendrier (`.cday .s`) | `--f-display`, `font-stretch:62%` (étroite) | 12 |
 | Texte, boutons, champs | `--f-body` : police du système | 17 (texte), 15 (`.small`, étiquettes en demi-gras), 13 au moins (mentions) ; 12 pour les onglets |
 
+- **Chiffre très gros, unité petite et grise** (« 1 840 <small>kcal</small> ») : c'est le trait le plus fort de l'identité.
 - Pas de capitales espacées : seul « LOUTRONS » est en capitales (un test le vérifie). Les étiquettes s'écrivent avec une majuscule au début.
 - Les chiffres qu'on compare (charges, reps, minutes, kcal) sont en `font-variant-numeric:tabular-nums` ; les chiffres d'Archivo ont tous la même largeur.
 - Les titres longs passent à la ligne proprement grâce à `text-wrap:balance`, déjà appliqué aux titres.
 - Archivo est plus large que l'ancienne police étroite : vérifier les champs de série et les cases du calendrier à 320 px (règles `@media (max-width:360px)` dans les sections Séance et Calendrier).
 
 **Formes et espacements** :
-- Rayons : `--r` (16 px) pour les blocs ; 12 px pour les champs, lignes de liste, statistiques ; 999 px (pilule) pour les boutons, puces, pastilles et barres.
-- Blocs, boutons, champs et puces sans bordure : on les distingue par leur fond. Un état (choisi, saisie en cours, exercice terminé) se montre par un contour intérieur (`box-shadow:inset 0 0 0 2px`).
+- Rayons : `--r` (20 px) pour les cartes et les messages ; 12 à 16 px pour les champs, lignes de liste, statistiques ; 999 px (pilule) pour les boutons, puces, pastilles et barres.
+- Blocs, boutons, champs et puces sans bordure : on les distingue par leur fond. Seule la carte vedette (`.card.hero`, `.plan`) a un liseré d'un pixel, en dégradé. Un état (choisi, saisie en cours, exercice terminé) se montre par un contour intérieur (`box-shadow:inset 0 0 0 2px`) et, pour une sélection, par la lumière `--glow-2`.
 - Espacements sur la grille 2, 4, 6, 8, 10, 12, 16 px. On utilise `gap` plutôt que des marges : 16 entre cartes, 12 dans une carte, 6 à 10 dans une rangée.
-- Ombres rares : seulement pour un élément qui flotte au-dessus du reste (minuteur, calques de navigation).
+- Ombres noires rares : seulement pour un élément qui flotte au-dessus du reste (minuteur, calques de navigation). Les ombres orange sont les lumières, réglées par les trois niveaux.
+- **Verre** (`--glass`, flou de 18 px) : seulement ce qui flotte au-dessus du contenu, c'est-à-dire l'en-tête, la barre d'onglets et, à l'étape de la séance, le minuteur. Jamais sur une carte ni un champ : un chiffre doit rester lisible à la salle. Sans `backdrop-filter`, le fond redevient opaque (`@supports`).
+- **Une carte vedette par écran** (`.card.hero`, `.plan` sur Aujourd'hui) : liseré `--edge` et lumière `--ambient` en haut à droite. Sur les autres écrans, on la réserve à ce que la personne doit faire maintenant.
+- Un bloc gris posé directement sur le fond de l'écran (sous-onglets `.seg`, `.stats` hors carte) prend la matière des cartes, sinon il disparaît sur le fond clair.
 
 **Marque et mascotte** :
 - « LOUTRONS » en majuscules dans l'en-tête, « Loutrons » dans les phrases.
-- Le logo est dans `icons/logo.png` : la loutre et sa barre sur fond noir, sans anneau ni halo (version 2.6). Source : `icons/source/logo-loutrons-simple.png`, tirée de l'original `icons/source/logo-loutrons.webp`. On ne le redessine pas.
+- Le logo est dans `icons/logo.png` : la loutre et sa barre sur fond noir, sans anneau ni halo dans l'en-tête (version 2.6). Une lumière ambiante douce (`--ambient`) derrière Émile est permise seulement dans les états vides et les réussites (validé en version 3.0). Source : `icons/source/logo-loutrons-simple.png`, tirée de l'original `icons/source/logo-loutrons.webp`. On ne le redessine pas.
 - **Émile** signe les conseils (`emile()` dans `js/emile.js`) :
   - il appelle la personne « loutron », « loutronne » ou par son prénom (`hey()`, `callName()`) ;
   - ses conseils sont calculés par des règles et restent courts ;
   - il a une croix pour fermer, avec une clé qui décrit la situation : `emile(body, { key })` ;
   - les objectifs de chaque exercice restent des calculs sans signature ;
+  - **seulement les deux images existantes** : `icons/logo.png` (Émile en pied) et `icons/emile.png` (son visage). On peut les animer en entier (déplacement, échelle, opacité), jamais les redessiner. Les images d'ambiance (dossier `design_glow/`, hors dépôt) ne sont pas des assets. De nouvelles poses ne peuvent venir que de la personne, dans le style exact du logo ;
   - sur Aujourd'hui, un seul conseil à la fois : `emileQueue([{ rank, html }])` garde le plus important (1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : message de la semaine) et range les autres derrière « N autres conseils ».
 
 ## 6. Composants existants (`index.html`)
@@ -174,9 +201,9 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
 
 | Besoin | Composant |
 |---|---|
-| Bloc de contenu | `section.card` (fond `--surface`, sans bordure ; `.card.flat` transparent) ; `.card.welcome` centré ; `.plan` garde un contour orange |
+| Bloc de contenu | `section.card` (matière `--card-top` → `--card-bot`, reflet `--card-sh`, sans bordure ; `.card.flat` transparent) ; `.card.welcome` centré ; carte vedette `.card.hero` (et `.plan`, la séance du jour) : liseré `--edge`, lumière `--ambient`, une par écran |
 | Mise en page | `.row` (horizontal, passe à la ligne), `.between`, `.stack` (vertical) |
-| Action | `.btn` (pilule grise) ; `.primary` (orange, une par écran) ; `.ghost` (texte orange) ; `.danger` (texte rouge) ; `.big` (pleine largeur, 52 px, en bas) ; `.sm` |
+| Action | `.btn` (pilule grise) ; `.primary` (dégradé `--grad-fire`, une par écran ; lumière forte en `.big`) ; `.ghost` (texte orange) ; `.danger` (texte rouge) ; `.big` (pleine largeur, 52 px, en bas) ; `.sm` |
 | Lien discret, « Annuler », « ‹ Retour » | `button.link` |
 | Choix dans une liste (programme, aliment, activité) | `button.pick` avec `.n` (nom) et `.m` (précision) ; `.on` sélectionné ; `.static` non cliquable ; `.planned` prévu |
 | Choix court ou nombre (jours, reps en réserve, douleur 0-10) | `.chips` > `button.chip` (`.txt` pour du texte, `.on`, `.sec`, `.hi`) ; `.days` pour 7 jours ; `.seg` pour des sous-onglets qui défilent |
@@ -220,9 +247,15 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
   - glissement entre sous-onglets : 260 ms.
 - **Retour au toucher** : `transform:scale(.96)` sur `.btn`, et `.93` sur `.chip`, en 140 ms. Les lignes de liste (`.pick`) prennent la couleur `--line` à l'appui, les lignes d'historique (`.hitem`) `--surface-2`. On réutilise ces règles pour un nouvel élément touchable.
 - **Petites animations** : entre 140 et 300 ms, sur `transform` et `opacity` uniquement. Exception existante : la hauteur de la carte du calendrier et la fermeture d'une bulle d'Émile.
-- **Une animation explique un changement.** Elle montre d'où vient un élément ou ce qui a changé, elle ne décore pas. Pas d'animation au chargement des listes ni en boucle.
+- **Une animation explique un changement.** Elle montre d'où vient un élément ou ce qui a changé, elle ne décore pas. Rien en boucle (sauf l'alternance des photos de « Voir le mouvement », que le toucher fige).
+- **Permis depuis la version 3.0** (à ajouter aux étapes suivantes, limités ainsi) :
+  - à l'ouverture d'un onglet seulement : les 4 premières cartes montent de 8 px en fondu, décalées de 30 ms, en 220 ms ; jamais à chaque saisie ni au retour d'un écran ;
+  - progression : un anneau ou une barre part de l'ancienne valeur, en 700 ms ;
+  - série validée : contour orange qui s'allume et s'éteint, coche qui se dessine (600 ms) ;
+  - réussite (record, objectif atteint, fin de séance) : 600 à 700 ms, une seule fois ; chiffres qui comptent seulement sur l'écran de fin de séance ;
+  - durées : 140 ms (toucher), 200 à 300 ms (changement d'état), 600 à 700 ms (réussite) ; courbe `cubic-bezier(.32,.72,0,1)`.
 - **Jamais bloquante** : une nouvelle navigation termine l'animation en cours (`finish()`), et l'interface répond pendant l'animation.
-- **`prefers-reduced-motion`** : les transitions CSS sont coupées et la navigation devient un simple fondu. Une nouvelle animation en JavaScript vérifie ce réglage, avec `reduced()` dans `nav.js` ou `matchMedia`.
+- **`prefers-reduced-motion`** : les transitions CSS sont coupées, la navigation devient un simple fondu et les chiffres s'affichent directement, sans compter. Une nouvelle animation en JavaScript vérifie ce réglage, avec `reduced()` dans `nav.js` ou `matchMedia`.
 
 ## 8. Thèmes clair et sombre
 
@@ -231,7 +264,7 @@ Toute la navigation passe par `render()`, puis `navigate(paint)` dans `js/nav.js
   - dans `:root[data-theme="dark"]`.
   Une variable ajoutée ou modifiée l'est dans les trois blocs : clair, sombre automatique et sombre choisi.
 - Le choix de la personne (`settings.theme` : `auto`, `light` ou `dark`) est appliqué par `applyTheme()` dans `js/render.js`. Il est recopié dans `localStorage` (`loutrons-theme`) pour éviter un flash au lancement, et il met à jour les `meta theme-color`.
-- Les seules couleurs en dur sont celles de `THEME_COLORS` dans `render.js` (`#FFFFFF` et `#000000`, comme les `meta theme-color` et le manifeste), le fond noir `#000000` du rond d'Émile, le blanc posé sur le vert ou le rouge (`.chk` validée, `.chip.on.hi`, minuteur terminé), le noir du scanner et les ombres. On n'en ajoute pas. `tests/theme.test.js` vérifie la couleur de lancement et l'absence de l'ancienne palette.
+- Les seules couleurs en dur sont celles de `THEME_COLORS` dans `render.js` (`#F5F5F4` et `#000000`, comme les `meta theme-color` ; le manifeste garde `#000000`), les teintes du dégradé et des lumières dans les variables de `:root` (ambre `#FFB347`, braise `#FF4D00`), le reflet blanc du bouton principal, le fond noir `#000000` du rond d'Émile, le blanc posé sur le vert ou le rouge (`.chk` validée, `.chip.on.hi`, minuteur terminé), le noir du scanner et les ombres. On n'en ajoute pas. `tests/theme.test.js` vérifie la couleur de lancement et l'absence de l'ancienne palette.
 - Les SVG utilisent `currentColor` ou les variables, comme `.bodymap` et `.chart`.
 - On vérifie **chaque écran modifié dans les deux thèmes**, puis le contraste du texte (4,5:1) et des bordures utiles (3:1).
 
