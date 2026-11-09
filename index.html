@@ -170,6 +170,19 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .link{background:none;border:none;color:var(--accent-ink);font-weight:600;padding:6px 0;min-height:36px}
 
 .hero-date{font-size:15px;font-weight:600;color:var(--muted)}
+/* Aujourd'hui (3.9) : salutation, dernière séance, Émile au repos, record, macros */
+.greet{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
+.g-hi{font-family:var(--f-display);font-size:var(--t-h2);font-weight:800;font-stretch:125%;line-height:1.1;overflow-wrap:anywhere;text-wrap:balance}
+.plan .last{border-top:1px solid var(--line);padding-top:var(--s-3)}
+.plan-rest{display:flex;align-items:center;gap:var(--s-3)}
+.plan-rest img{width:44px;height:44px;border-radius:50%;flex:none}
+.rec-t{gap:2px;min-width:0}
+.rec-t span{overflow-wrap:anywhere}
+.cal .pill{margin-top:var(--s-1);align-self:flex-start}
+.mini-macros{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-3)}
+.mini-macros .m{display:flex;flex-direction:column;gap:var(--s-1);font-size:var(--t-cap);min-width:0}
+.mini-macros .m b{font-size:var(--t-small);white-space:nowrap}
+@media (max-width:360px){.mini-macros{gap:var(--s-2)}.mini-macros .m b{font-size:var(--t-cap)}}
 .alert{border-radius:var(--r);padding:12px 14px;background:var(--bad-soft);color:var(--bad);font-weight:600}
 .alert.warn{background:var(--warn-soft);color:var(--warn)}
 .alert.good{background:var(--good-soft);color:var(--good)}
@@ -205,11 +218,13 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .cal-detail .mk{margin-right:6px;vertical-align:1px}
 /* Contours d'état en orange « texte » : 3:1 au moins sur les fonds gris du thème clair */
 .cday.today{border-color:var(--accent-ink);box-shadow:inset 0 0 0 1px var(--accent-ink)}
-.cday.sel,.cal-week .cday.today{background:var(--grad-fire);color:var(--on-accent);box-shadow:var(--glow-2)}
-.cday.sel .dn,.cal-week .cday.today .dn{color:var(--on-accent)}
-/* Aujourd'hui en orange dans la semaine : liseré du fond autour des points, comme pour le jour choisi */
-.cal-week .cday.today .mk{box-shadow:0 0 0 1.5px var(--bg)}
-.cal-week .cday.today .mk.active{box-shadow:0 0 0 1.5px var(--bg),0 0 0 3px var(--c)}
+.cday.sel{background:var(--grad-fire);color:var(--on-accent);box-shadow:var(--glow-2)}
+.cday.sel .dn{color:var(--on-accent)}
+/* Aujourd'hui dans la semaine : fond orangé léger et contour, sans lumière (le seul éclat de l'écran va au bouton de la séance) */
+.cal-week .cday.today:not(.sel){background:var(--accent-soft);color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent-ink)}
+.cal-week .cday.today:not(.sel) .dn{color:var(--accent-ink)}
+.cal-week .cday.today:not(.sel) .mk{box-shadow:0 0 0 1.5px var(--accent-soft)}
+.cal-week .cday.today:not(.sel) .mk.active{box-shadow:0 0 0 1.5px var(--accent-soft),0 0 0 3px var(--c)}
 .cal-week .cday:not(.today) .mk.done{box-shadow:0 0 6px var(--c)}
 .legend i.mk{width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
 .cal-detail{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px;font-size:15px}

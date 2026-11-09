@@ -3,11 +3,12 @@
 import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
 import { activeWorkout, activities, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
-import { fatigueCheck } from '../engine.js';
+import { fatigueCheck, recordLog } from '../engine.js';
 import { useShare } from '../backup.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
 import { calendarCard } from './calendar.js';
+import { TROPHY } from './progress.js';
 import { checkCard, foodTodayCard } from './goal.js';
 import { emile, emileQueue, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
@@ -39,9 +40,18 @@ function planCard(d, plan, aw, doneToday, tpls){
   const mt = sportPlanned(d) === 'match' ? 'ce soir' : sportPlanned(addDays(d, 1)) === 'match' ? 'demain' : null;
   const caution = (mt && tplLower(t) ? '<p class="small">' + esc(nbsp('Match ' + mt + ' : garde des jambes fraîches, préfère une séance du haut du corps (« Faire une autre séance »).')) + '</p>' : '') + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
   const count = p.done + ' séance' + (p.done > 1 ? 's' : '') + ' sur ' + p.target + ' cette semaine';
+  // Dernière séance terminée : un repère de régularité (le décompte de la semaine est dans « Ta semaine »)
+  const last = workouts().filter(w => w.status === 'terminée').sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : (b.startedAt || 0) - (a.startedAt || 0))[0];
+  const lastLine = last ? '<p class="muted small last">' + esc(nbsp('Dernière : ' + wName(last) + ' · ' + fmtDate(last.date) + ' · ' + (last.duration || 0) + ' min')) + '</p>' : '';
   return '<section class="card plan"><span class="label">' + (prevu ? 'Prévue aujourd’hui' : 'Ta prochaine séance') + '</span><div class="name">' + esc(t.name) + '</div>'
-    + '<p>' + esc(nbsp((t.focus ? t.focus + ' · ' : '') + 'environ ' + tplEst(t) + ' min' + (reached ? '' : ' · ' + count))) + '</p>' + (reached ? '<p class="small">' + esc(nbsp(count + ' : tu peux te reposer.')) + '</p>' : '') + caution
-    + '<button type="button" class="btn' + (reached ? '' : ' primary') + ' big" data-act="start" data-v="' + esc(id) + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>' + noterBtn + autre + '</section>';
+    + '<p>' + esc(nbsp((t.focus ? t.focus + ' · ' : '') + 'environ ' + tplEst(t) + ' min')) + '</p>' + (reached ? '<div class="plan-rest"><img src="icons/emile.png" alt="" width="44" height="44"><p class="small">' + esc(nbsp(count + ' : objectif atteint, tu peux te reposer.')) + '</p></div>' : '') + caution
+    + '<button type="button" class="btn' + (reached ? '' : ' primary') + ' big" data-act="start" data-v="' + esc(id) + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>' + noterBtn + autre + lastLine + '</section>';
+}
+
+// Record des 7 derniers jours (force estimée, calculé sur l'historique) : carte dorée, seulement quand il y en a un
+function recordCard(d){
+  const r = S.loaded ? recordLog()[0] : null; if (!r || r.date < addDays(d, -7)) return '';
+  return '<section class="card gold"><div class="ring-row"><span class="trophy" aria-hidden="true">' + TROPHY + '</span><div class="stack rec-t"><h3>Nouveau record</h3><span class="small">' + esc(r.name) + '</span><span class="muted small num">' + esc(nbsp(fmtKg(r.kg) + ' kg estimés · +' + fmtKg(r.gain) + ' · ' + fmtDate(r.date))) + '</span></div></div></section>';
 }
 
 // Conseils d'Émile du jour, du plus important au moins important (rang 1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : semaine)
@@ -77,12 +87,12 @@ export function viewToday(){
   const wk = weekInfo(d); const goal = weekGoal(wk);
   const aw = S.loaded && activeWorkout(); const tpls = allTpl();
   const doneToday = workouts().filter(w => w.date === d && w.status === 'terminée');
-  const who = String(settings().name || '').trim();
-  let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' + esc(fmtDateLong(d)) : esc(capFirst(fmtDateLong(d)))) + '</span>';
-  h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span>' : '') + '</div></div>';
+  const who = String(settings().name || '').trim(); const hr = new Date().getHours();
+  const hi = (hr < 5 ? 'Bonne nuit' : hr < 12 ? 'Bonjour' : hr < 18 ? 'Bon après-midi' : 'Bonsoir') + (who ? ', ' + who : '');
+  let h = '<div class="greet"><span class="g-hi">' + esc(hi) + '</span><span class="hero-date">' + esc(capFirst(fmtDateLong(d))) + ' · bloc ' + wk.block + ', semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<div class="row"><span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span></div>' : '') + '</div>';
   h += planCard(d, plan, aw, doneToday, tpls);
   if (S.loaded && !tpls.length) h += noTplCard();
-  h += calendarCard();
+  h += calendarCard() + recordCard(d);
   h += foodTodayCard();
   h += emileCards(d, wk, goal);
   if (!S.loaded) return h;

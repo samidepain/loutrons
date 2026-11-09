@@ -50,7 +50,7 @@ export function calendarCard(){
   if (!S.calMonth) {
     const mon = mondayOf(today()); const n = workouts().filter(w => w.date >= mon && w.date <= addDays(mon, 6) && w.status === 'terminée').length;
     const pw = perWeekOf();
-    let h = '<section class="card cal"><div class="row between"><div class="ring-row">' + ring(n / pw, { cls:'xs', html:'<b class="num">' + n + '/' + pw + '</b>' }) + '<div class="stack" style="gap:2px"><h3>Ta semaine</h3><span class="muted small">' + n + ' séance' + (n > 1 ? 's' : '') + ' sur ' + pw + '</span></div></div><button type="button" class="link" data-act="cal-month">Voir le mois</button></div><div class="cal-week">';
+    let h = '<section class="card cal"><div class="row between"><div class="ring-row">' + ring(n / pw, { cls:'xs', html:'<b class="num">' + n + '/' + pw + '</b>' }) + '<div class="stack" style="gap:2px"><h3>Ta semaine</h3><span class="muted small">' + n + ' séance' + (n > 1 ? 's' : '') + ' sur ' + pw + '</span>' + (n >= pw ? '<span class="pill good">Objectif atteint</span>' : '') + '</div></div><button type="button" class="link" data-act="cal-month">Voir le mois</button></div><div class="cal-week">';
     for (let i = 0; i < 7; i++) h += cell(addDays(mon, i), false);
     return h + '</div></section>';
   }

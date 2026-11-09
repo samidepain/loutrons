@@ -9,7 +9,7 @@ import { viewHistory } from './history.js';
 import { emile } from '../emile.js';
 import { myPlan, nutritionOf } from './goal.js';
 
-const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
+export const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 const PRTABS = [['stats','Résumé'],['history','Historique']];
 export function viewProgressPage(){
   const h = '<h1>Progrès</h1><div class="seg" role="tablist">' + PRTABS.map(t => '<button type="button" class="chip' + (S.progressTab === t[0] ? ' on' : '') + '" data-act="prtab" data-v="' + t[0] + '" role="tab" aria-selected="' + (S.progressTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
