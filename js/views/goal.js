@@ -1,5 +1,6 @@
 // Objectif de poids et besoins du jour : formulaire (accueil et profil), avis d'Émile, carte d'Aujourd'hui.
-import { addDays, daysBetween, esc, fmtDate, fmtDateYear, fmtInt, fmtKg, num, today, withDot } from '../util.js';
+import { addDays, daysBetween, esc, fmtDate, fmtDateYear, fmtInt, fmtKg, nbsp, num, today, withDot } from '../util.js';
+import { ring } from '../ring.js';
 import { S } from '../store.js';
 import { bodyDocs, bodyweight, settings } from '../data.js';
 import { ACTIVITY, adjustFor, CHECK, GAIN, LOSS, planFor, weightTrend, withExtra } from '../nutrition.js';
@@ -148,9 +149,10 @@ export function foodTodayCard(){
   const pl = dayPlan(today());
   if (pl.status === 'missing' || !(pl.kcal > 0)) return '<section class="card food-today"><h3>Ton alimentation</h3><button type="button" class="link" data-act="goal-edit">Complète ton profil pour calculer tes besoins ›</button></section>';
   const t = totals(dayDoc(today()).items); const rest = pl.kcal - t.kcal; const prot = pl.protein[0] - t.p;
-  const msg = rest > 0 ? 'Il te reste ' + fmtInt(rest) + ' kcal' + (prot > 0 ? ' et ' + fmtInt(prot) + ' g de protéines' : '') + '.' : 'Objectif du jour atteint' + (prot > 0 ? ' ; il te manque ' + fmtInt(prot) + ' g de protéines.' : '.');
-  return '<section class="card food-today"><div class="row between"><h3>Ton alimentation</h3><span class="muted small num">' + fmtInt(t.kcal) + ' / ' + fmtInt(pl.kcal) + ' kcal</span></div><p>' + esc(msg) + '</p>'
-    + '<div class="mbar" role="img" aria-label="' + esc(fmtInt(t.kcal) + ' kcal sur ' + fmtInt(pl.kcal)) + '"><i style="width:' + Math.min(100, t.kcal / pl.kcal * 100).toFixed(1) + '%"></i></div>'
+  const sub = (rest > 0 ? 'à manger sur ' + fmtInt(pl.kcal) : 'mangées : objectif du jour atteint') + (prot > 0 ? ' · encore ' + fmtInt(prot) + ' g de protéines' : '');
+  const pct = Math.round(t.kcal / pl.kcal * 100);
+  return '<section class="card food-today"><h3>Ton alimentation</h3><div class="ring-row">' + ring(t.kcal / pl.kcal, { cls:'sm', label:fmtInt(t.kcal) + ' kcal mangées sur ' + fmtInt(pl.kcal), html:'<b class="num">' + pct + '&nbsp;%</b>' })
+    + '<div class="kcal"><p><span class="v num">' + fmtInt(rest > 0 ? rest : t.kcal) + '</span><small>kcal</small></p><p class="muted small">' + esc(nbsp(sub)) + '</p></div></div>'
     + '<button type="button" class="btn" data-act="go-food">Noter un repas</button></section>';
 }
 // Carte d'Aujourd'hui : objectif, rythme et besoins du jour

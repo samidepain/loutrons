@@ -3,6 +3,7 @@ import { addDays, capFirst, esc, fmtDateLong, fmtInt, fmtKg, lowFirst, num, toda
 import { S } from '../store.js';
 import { bodyweight, settings, sportInfo } from '../data.js';
 import { activityKcal, dayEnergy, EFFORT, glassOf, LEVELS, sportPlanned, SPORTS, TYPES, waterBase, waterGoal, waterOf, WATER } from '../energy.js';
+import { ring } from '../ring.js';
 
 const r10 = x => Math.round(x / 10) * 10;
 const liters = ml => fmtKg(Math.round(ml / 100) / 10);
@@ -18,9 +19,10 @@ export function actDetail(a){
 // Ligne compacte d'Aujourd'hui : nom, valeur résumée et geste rapide ; on la touche pour l'ouvrir sur place.
 // Une seule ligne ouverte à la fois (S.todayOpen), gardée quand l'écran se redessine.
 const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
-export function lineCard(key, name, value, quick, body){
+// mark : petit repère facultatif avant la valeur (HTML déjà échappé, ex. jauge de l'eau)
+export function lineCard(key, name, value, quick, body, mark){
   const open = S.todayOpen === key;
-  return '<section class="card line"><div class="line-row"><button type="button" class="line-h" data-act="today-open" data-v="' + key + '" aria-expanded="' + open + '"' + (open ? ' aria-controls="line-' + key + '"' : '') + '><span class="n">' + esc(name) + '</span><span class="v">' + esc(value) + '</span>' + CHEVRON + '</button>' + (quick || '') + '</div>'
+  return '<section class="card line"><div class="line-row"><button type="button" class="line-h" data-act="today-open" data-v="' + key + '" aria-expanded="' + open + '"' + (open ? ' aria-controls="line-' + key + '"' : '') + '><span class="n">' + esc(name) + '</span>' + (mark || '') + '<span class="v">' + esc(value) + '</span>' + CHEVRON + '</button>' + (quick || '') + '</div>'
     + (open ? '<div class="line-body" id="line-' + key + '">' + body + '</div>' : '') + '</section>';
 }
 
@@ -51,7 +53,7 @@ export function waterLine(){
   h += '<details class="cue"><summary>Autre quantité, taille du verre</summary><div class="row"><input class="n" id="water-ml" inputmode="numeric" placeholder="mL" aria-label="Quantité en mL" style="width:96px"><button type="button" class="btn" data-act="water-ml">Ajouter</button>';
   h += '<label class="row" style="gap:6px;margin-left:auto"><span class="small muted">Verre</span><select id="glass">' + [150, 200, 250, 330, 500].map(v => '<option value="' + v + '"' + (v === g ? ' selected' : '') + '>' + v + ' mL</option>').join('') + '</select></label></div></details>';
   h += '<p class="muted small">Repère : ' + liters(goal - sport) + ' L de boissons par jour' + (sport > 0 ? ', plus ' + liters(sport) + ' L pour ton sport' : '') + ', davantage s’il fait chaud.</p>';
-  return lineCard('eau', 'Eau', liters(ml) + ' / ' + liters(goal) + ' L', '<button type="button" class="btn" data-act="water" data-v="1">+ 1 verre</button>', h);
+  return lineCard('eau', 'Eau', liters(ml) + ' / ' + liters(goal) + ' L', '<button type="button" class="btn" data-act="water" data-v="1">+ 1 verre</button>', h, ring(ml / goal, { cls:'xxs' }));
 }
 
 // Fenêtre d'ajout ou de modification. S.act : { type, date, min, km, level, sport, name, kcal, edit }

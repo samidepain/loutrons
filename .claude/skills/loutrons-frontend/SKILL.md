@@ -218,13 +218,15 @@ En clair, les lumières deviennent des ombres colorées douces : elles gardent l
 | Saisie du cardio pendant la séance | `.setrow.cardio` > `.sn`, `.fld` (champ et unité) |
 | Case à cocher avec explication | `label.toggle` |
 | Petite information d'état | `.pill` (`.good`, `.warn`, `.bad`, `.acc`, `.court`) |
-| Ligne compacte d'Aujourd'hui (nom, valeur, geste rapide, détail ouvert sur place) | `lineCard(clé, nom, valeur, bouton, détail)` dans `js/views/activity.js` : `section.card.line` > `.line-row` > `button.line-h[data-act="today-open"]` |
+| Ligne compacte d'Aujourd'hui (nom, valeur, geste rapide, détail ouvert sur place) | `lineCard(clé, nom, valeur, bouton, détail, repère)` (repère facultatif avant la valeur, comme l'anneau `.xxs` de l'eau) dans `js/views/activity.js` : `section.card.line` > `.line-row` > `button.line-h[data-act="today-open"]` |
 | Familles d'un jour dans le calendrier | `.mks` > `i.mk.fam-<famille>.<état>` (`done` plein, `planned` anneau, `active` point entouré), d'après `dayFamilies(day)` |
 | Message dans la page | `.alert` (`.warn`, `.good`, `.info`) |
-| Conseil | `emile(html, { title, tone, key })` |
+| Conseil | `emile(html, { title, tone, key })` : bulle teintée selon le ton (orange par défaut, `good` vert, `warn` ambre, `bad` rouge, variable `--tint`) et avatar cerclé de la même couleur |
 | Confirmation brève après une action | `toast('…')` (`js/util.js`) |
 | Chiffres clés | `.stats` > `.stat` > `.v` + `.l` ; `.stats.needs` sur 2 colonnes |
 | Barre de progression | `.bar > i` (fine) ; `.mbar > i` (+ `b` pour un repère) dans `.mrow` |
+| Anneau de progression (version 3.1) | `ring(v, { label, html, cls })` dans `js/ring.js` : piste grise, arc en dégradé lumineux, contenu au centre (`.c`) ; tailles `.ring` 132 px, `.sm` 64, `.xs` 46, `.xxs` 22 ; sans `label`, il est décoratif (le texte voisin dit la valeur). À côté d'un texte : `.ring-row` |
+| Grand chiffre et son unité | `.kcal` > `.v.num` + `small` (unité grise) |
 | Tableau | `.scroll > table.tbl` |
 | Détail repliable | `details.cue > summary` |
 | Groupe (superset) | `.group > .gh` |
@@ -249,7 +251,7 @@ En clair, les lumières deviennent des ombres colorées douces : elles gardent l
 - **Petites animations** : entre 140 et 300 ms, sur `transform` et `opacity` uniquement. Exception existante : la hauteur de la carte du calendrier et la fermeture d'une bulle d'Émile.
 - **Une animation explique un changement.** Elle montre d'où vient un élément ou ce qui a changé, elle ne décore pas. Rien en boucle (sauf l'alternance des photos de « Voir le mouvement », que le toucher fige).
 - **Permis depuis la version 3.0** (à ajouter aux étapes suivantes, limités ainsi) :
-  - à l'ouverture d'un onglet seulement : les 4 premières cartes montent de 8 px en fondu, décalées de 30 ms, en 220 ms ; jamais à chaque saisie ni au retour d'un écran ;
+  - à l'ouverture d'un onglet seulement : les 4 premières cartes montent de 8 px en fondu, décalées de 30 ms, en 220 ms (`animate()` dans `nav.js`, fondu) ; jamais à chaque saisie ;
   - progression : un anneau ou une barre part de l'ancienne valeur, en 700 ms ;
   - série validée : contour orange qui s'allume et s'éteint, coche qui se dessine (600 ms) ;
   - réussite (record, objectif atteint, fin de séance) : 600 à 700 ms, une seule fois ; chiffres qui comptent seulement sur l'écran de fin de séance ;

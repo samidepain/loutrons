@@ -36,6 +36,7 @@
   --edge:linear-gradient(140deg,rgba(168,67,0,.55),rgba(255,122,26,.15) 40%,rgba(0,0,0,.04) 72%); --ambient:rgba(255,122,26,.10);
   --glow-1:0 1px 4px rgba(168,67,0,.18); --glow-2:0 0 0 1px rgba(168,67,0,.45),0 4px 14px rgba(255,122,26,.22); --glow-3:0 10px 22px -8px rgba(230,90,0,.6);
   --glass:rgba(255,255,255,.72); --glass-line:rgba(0,0,0,.07); --halo:rgba(255,122,26,.10);
+  --ring-glow:0 0 3px rgba(255,122,26,.3);
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#000000; --surface:#141414; --surface-2:#1F1F1F; --line:#2E2E2E;
@@ -51,6 +52,7 @@
   --edge:linear-gradient(140deg,rgba(255,150,60,.85),rgba(255,122,26,.18) 38%,rgba(255,255,255,.06) 72%); --ambient:rgba(255,122,26,.22);
   --glow-1:0 0 10px rgba(255,122,26,.4); --glow-2:0 0 0 1px rgba(255,140,50,.55),0 0 18px rgba(255,122,26,.4); --glow-3:0 10px 30px -6px rgba(255,105,20,.8),0 0 46px rgba(255,90,0,.35);
   --glass:rgba(24,24,24,.62); --glass-line:rgba(255,255,255,.1); --halo:rgba(255,122,26,.16);
+  --ring-glow:0 0 6px rgba(255,122,26,.75);
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -67,6 +69,7 @@
   --edge:linear-gradient(140deg,rgba(255,150,60,.85),rgba(255,122,26,.18) 38%,rgba(255,255,255,.06) 72%); --ambient:rgba(255,122,26,.22);
   --glow-1:0 0 10px rgba(255,122,26,.4); --glow-2:0 0 0 1px rgba(255,140,50,.55),0 0 18px rgba(255,122,26,.4); --glow-3:0 10px 30px -6px rgba(255,105,20,.8),0 0 46px rgba(255,90,0,.35);
   --glass:rgba(24,24,24,.62); --glass-line:rgba(255,255,255,.1); --halo:rgba(255,122,26,.16);
+  --ring-glow:0 0 6px rgba(255,122,26,.75);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -174,8 +177,12 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .cal-detail .mk{margin-right:6px;vertical-align:1px}
 /* Contours d'état en orange « texte » : 3:1 au moins sur les fonds gris du thème clair */
 .cday.today{border-color:var(--accent-ink);box-shadow:inset 0 0 0 1px var(--accent-ink)}
-.cday.sel{background:var(--grad-fire);color:var(--on-accent);box-shadow:var(--glow-2)}
-.cday.sel .dn{color:var(--on-accent)}
+.cday.sel,.cal-week .cday.today{background:var(--grad-fire);color:var(--on-accent);box-shadow:var(--glow-2)}
+.cday.sel .dn,.cal-week .cday.today .dn{color:var(--on-accent)}
+/* Aujourd'hui en orange dans la semaine : liseré du fond autour des points, comme pour le jour choisi */
+.cal-week .cday.today .mk{box-shadow:0 0 0 1.5px var(--bg)}
+.cal-week .cday.today .mk.active{box-shadow:0 0 0 1.5px var(--bg),0 0 0 3px var(--c)}
+.cal-week .cday:not(.today) .mk.done{box-shadow:0 0 6px var(--c)}
 .legend i.mk{width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
 .cal-detail{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px;font-size:15px}
 
@@ -318,6 +325,24 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .stat .v{font-family:var(--f-display);font-size:32px;font-weight:800;font-stretch:70%;line-height:1;font-variant-numeric:tabular-nums}
 @media (max-width:360px){.stat .v{font-size:26px}}
 .stat .l{font-size:13px;color:var(--muted)}
+/* Anneau de progression (js/ring.js) : piste grise, arc en dégradé orange lumineux, contenu au centre */
+.ring{position:relative;display:inline-grid;place-items:center;flex:none;width:132px;height:132px}
+.ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.ring .tr{fill:none;stroke:var(--surface-2);stroke-width:11}
+.ring .pg{fill:none;stroke-width:11;stroke-linecap:round;filter:drop-shadow(var(--ring-glow))}
+.ring .s1{stop-color:#FFB347} .ring .s2{stop-color:#FF7A1A} .ring .s3{stop-color:#FF4D00}
+.ring .c{position:relative;text-align:center;line-height:1}
+.ring.sm{width:64px;height:64px}
+.ring.sm .c{font-size:14px}
+.ring.xs{width:46px;height:46px}
+.ring.xs .tr,.ring.xs .pg{stroke-width:12}
+.ring.xs .c{font-size:13px}
+.ring.xxs{width:22px;height:22px}
+.ring.xxs .tr,.ring.xxs .pg{stroke-width:16}
+.ring-row{display:flex;align-items:center;gap:14px;min-width:0}
+/* Petits écrans : le compteur de la semaine reste en texte, pour garder « Voir le mois » sur la même ligne */
+@media (max-width:360px){.cal .ring.xs{display:none}}
+.ring-row > .stack,.ring-row > .kcal{min-width:0}
 .mrow{display:grid;grid-template-columns:88px minmax(0,1fr) 74px;gap:8px;align-items:center;font-size:14px}
 .mbar{position:relative;height:12px;background:var(--surface-2);border-radius:999px}
 .mbar i{position:absolute;left:0;top:0;bottom:0;background:var(--grad-fire);border-radius:999px}
@@ -412,9 +437,12 @@ details.cue[open]{display:flex;flex-direction:column;gap:10px}
 .emile-x{width:32px;height:32px;margin:-6px -8px -6px 0;flex:none;border:none;border-radius:50%;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:background-color .14s ease,transform .14s ease}
 .emile-x svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
 .emile-x:active{background:var(--surface-2);transform:scale(.9)}
-.emile.good .bubble{border-left:4px solid var(--good)}
-.emile.warn .bubble{border-left:4px solid var(--warn)}
-.emile.bad .bubble{border-left:4px solid var(--bad)}
+/* Teinte de la bulle selon le ton : orange (conseil), vert (réussite), ambre (prudence), rouge (alerte) */
+.emile .bubble{background:linear-gradient(135deg,var(--tint) 0%,transparent 60%),linear-gradient(180deg,var(--card-top),var(--card-bot))}
+.card .emile .bubble{background:linear-gradient(135deg,var(--tint) 0%,transparent 60%),var(--surface-2)}
+.emile{--tint:var(--accent-soft)}
+.emile.good{--tint:var(--good-soft)} .emile.warn{--tint:var(--warn-soft)} .emile.bad{--tint:var(--bad-soft)}
+.emile.good>img{border-color:var(--good)} .emile.warn>img{border-color:var(--warn)} .emile.bad>img{border-color:var(--bad)}
 .stats.needs{grid-template-columns:repeat(2,minmax(0,1fr))}
 .stat.wide{grid-column:1/-1}
 .stat .v small{font-family:var(--f-body);font-size:15px;font-weight:600;color:var(--muted)}
@@ -424,6 +452,8 @@ details.cue[open]{display:flex;flex-direction:column;gap:10px}
 .line-row{display:flex;align-items:center;gap:8px;min-height:52px}
 .line-h{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;text-align:left;min-height:44px;color:inherit}
 .line-h .n{font-weight:600;flex:none}
+.line-h .ring{margin-left:auto}
+.line-h .ring + .v{margin-left:0}
 .line-h .v{margin-left:auto;min-width:0;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .line-h svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--muted);transition:transform .14s ease}
 .line-h[aria-expanded="true"] svg{transform:rotate(90deg)}
@@ -433,6 +463,9 @@ details.cue[open]{display:flex;flex-direction:column;gap:10px}
 /* Alimentation : journée, barres des nutriments, caméra pour les codes-barres */
 .daynav b{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch:100%}
 .kcal .v{font-family:var(--f-display);font-size:40px;font-weight:800;font-stretch:100%;line-height:1}
+/* Grand chiffre, unité petite et grise */
+.kcal small{font-size:17px;font-weight:600;color:var(--muted);margin-left:4px}
+.food-today .kcal{display:flex;flex-direction:column;gap:4px}
 .mbar.big{height:14px}
 .mbar.water i{background:var(--court)}
 .pick.static{cursor:default}
