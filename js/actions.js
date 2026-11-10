@@ -387,6 +387,9 @@ const A = {
   science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
   'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
+  // Période des courbes et mesure du rythme (Progrès › Résumé) : états d'affichage, non enregistrés
+  prrange(b){ S.prRange = b.dataset.v; render(); },
+  prmetric(b){ S.prMetric = b.dataset.v; render(); },
   // Calendrier : toucher un jour ouvre son mois et affiche ce jour ; flèches ou glissement pour changer de mois
   'cal-month'(){ S.calMonth = (S.calDay || today()).slice(0, 7); render(); },
   'cal-week'(){ S.calMonth = null; S.calDay = null; render(); },

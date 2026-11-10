@@ -3,7 +3,7 @@ import { lsGet, lsSet, toast } from './util.js';
 
 // rev : compteur des écritures (put, del), pour invalider les calculs gardés en mémoire
 export const S = { docs:new Map(), rev:0, loaded:false, view:'today',
-  progEx:'la_hack', progTab:'seances', progressTab:'stats', calMonth:null, calDay:null, day:null, openHist:null, confirm:null, summary:null,
+  progEx:'la_hack', progTab:'seances', progressTab:'stats', prRange:'m6', prMetric:'sessions', calMonth:null, calDay:null, day:null, openHist:null, confirm:null, summary:null,
   restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null, setup:null, renaming:false, fiche:null, exQ:'', food:null, foodDay:null, from:null, navHint:null, act:null, adjOk:false,
   // Aujourd'hui : ligne compacte ouverte ('eau' | 'corps' | 'activites' | 'genou' | null), autres conseils d'Émile affichés
   todayOpen:null, emileMore:false, emileOpen:false,

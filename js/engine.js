@@ -1,9 +1,9 @@
 // Moteur de progression : objectifs de chaque exercice, records, séries par muscle, alerte de fatigue, bilan de bloc.
-import { addDays, clamp, daysBetween, e1rm, fmtKg, lowFirst, num, roundTo, today } from './util.js';
+import { addDays, clamp, daysBetween, e1rm, fmtKg, lowFirst, mondayOf, num, roundTo, today } from './util.js';
 import { MUSCLES } from './library.js';
 import { S } from './store.js';
 import { holdText, painEntries, painZones, PAIN_LIMIT, soreZones, ZONES } from './pain.js';
-import { bestE1, blockRange, blockStarts, bodyDocs, bodyweight, canon, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, lastSessionGap, maxKg, musclesOf, perWeekOf, rotationOf, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
+import { bestE1, blockRange, blockStarts, bodyDocs, bodyweight, canon, countSets, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, lastSessionGap, maxKg, musclesOf, perWeekOf, rotationOf, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
 
 /* ================= Moteur de progression =================
    Sources : règle « 2 pour 2 » de la NSCA et paliers de terrain (la position de l'ACSM de 2026 ne fixe pas de chiffre),
@@ -174,27 +174,45 @@ export function prSet(w, it){
 // Du plus récent au plus ancien : { date, w, name, kg, gain }.
 // Records gardés tant que les documents n'ont pas changé (même table, même compteur d'écritures) : Aujourd'hui les relit à chaque affichage
 let recCache = { docs:null, rev:-1, val:null };
-export function recordLog(){
+const recs = () => {
   if (recCache.docs !== S.docs || recCache.rev !== S.rev) recCache = { docs:S.docs, rev:S.rev, val:computeRecords() };
   return recCache.val;
+};
+export const recordLog = () => recs().records;
+// Par exercice suivi en charge (clé : identifiant canonique) : { n (séances), first, best : { date, kg } } en force estimée (Epley, arrondie au dixième).
+// Pour l'écran Progrès : « +x kg depuis ta première séance ». Les exercices sans charge notée (poids du corps seul) n'y sont pas.
+export const exerciseGains = () => recs().gains;
+// Séances (terminées) et séries validées par semaine, du lundi `from` au lundi `to` ; `current` : semaine du jour, incomplète, à ne pas comparer aux autres.
+export function weeklyRhythm(from, to){
+  const ws = workouts().filter(w => w.status === 'terminée'); const cur = mondayOf(today()); const out = [];
+  for (let m = from; m <= to; m = addDays(m, 7)) { const wk = ws.filter(w => w.date >= m && w.date <= addDays(m, 6)); out.push({ monday:m, sessions:wk.length, sets:wk.reduce((a, w) => a + countSets(w), 0), current:m === cur }); }
+  return out;
+}
+// Début d'une période d'affichage (courbes, rythme) : date AAAA-MM-JJ, ou null pour « tout l'historique »
+export const PERIODS = [['w8', '8 semaines', 56], ['m6', '6 mois', 182], ['all', 'Tout', null]];
+export function periodStart(key){
+  const p = PERIODS.find(x => x[0] === key) || PERIODS[1];
+  return p[2] == null ? null : addDays(today(), 1 - p[2]);
 }
 // Dernier record, seulement s'il date de 7 jours ou moins avant le jour donné
 export function recentRecord(day){
   const r = recordLog()[0]; return r && r.date >= addDays(day, -7) ? r : null;
 }
 function computeRecords(){
-  const bw = bodyweight() || 0; const best = {}; const out = [];
+  const bw = bodyweight() || 0; const best = {}; const out = []; const gains = {};
   workouts().filter(w => w.status === 'terminée').sort((a, b) => a.date === b.date ? (a.startedAt || 0) - (b.startedAt || 0) : a.date < b.date ? -1 : 1).forEach(w => {
     itemsOf(w).forEach(it => {
       if (it.kind !== 'load' && it.kind !== 'bw') return;
       const vs = validSets(w.ex && w.ex[it.ex] && w.ex[it.ex].sets); if (!vs.length) return;
       const top = Math.max.apply(null, vs.map(s => e1rm((it.kind === 'bw' ? bw : 0) + (num(s.kg) || 0), num(s.reps))));
       const id = canon(it.ex); const old = best[id];
-      if (old != null && top > old + 0.01) out.push({ date:w.date, w:w.id, name:it.name, kg:Math.round(top), gain:Math.round((top - old) * 10) / 10 });
+      if (old != null && top > old + 0.01) out.push({ id, date:w.date, w:w.id, name:it.name, kg:Math.round(top), gain:Math.round((top - old) * 10) / 10 });
       if (old == null || top > old) best[id] = top;
+      // Poids du corps seul sans poids noté : force estimée nulle, pas de gain à montrer
+      if (top > 0) { const p = { date:w.date, kg:Math.round(top * 10) / 10 }; const g = gains[id] || (gains[id] = { n:0, first:p, best:p }); g.n++; if (p.kg > g.best.kg) g.best = p; }
     });
   });
-  return out.reverse();
+  return { records:out.reverse(), gains };
 }
 export function muscleDone(from, to){
   const m = {}; MUSCLES.forEach(x => { m[x] = 0; });

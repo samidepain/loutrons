@@ -394,8 +394,10 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 /* Courbe principale lumineuse, dernier point entouré ; mini-courbe des cases */
 .chart .ln{filter:drop-shadow(var(--ring-glow))}
 .chart .pt-last{stroke:var(--bg);stroke-width:2;filter:drop-shadow(var(--ring-glow))}
-.spark{display:block;width:100%;height:24px;margin-top:4px;overflow:visible}
-.spark path{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+/* Valeurs lues sur les courbes et les barres ; semaine en cours en pointillés ; titre de section sur le fond */
+.chart text.val{fill:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.chart .bar-open{fill:none;stroke:var(--accent-ink);stroke-width:1.5;stroke-dasharray:3 3}
+.sec-h{margin-top:var(--s-2)}
 .tbl{width:100%;border-collapse:collapse;font-size:15px}
 .tbl th{font-size:13px;color:var(--muted);text-align:left;font-weight:600;padding:6px 4px;border-bottom:1px solid var(--line)}
 .tbl td{padding:8px 4px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -412,7 +414,7 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
 .ring .tr{fill:none;stroke:var(--surface-2);stroke-width:11}
 .ring .pg{fill:none;stroke-width:11;stroke-linecap:round;filter:drop-shadow(var(--ring-glow))}
-.ring .s1{stop-color:#FFB347} .ring .s2{stop-color:#FF7A1A} .ring .s3{stop-color:#FF4D00}
+.ring .s1,.chart .s1{stop-color:#FFB347} .ring .s2,.chart .s2{stop-color:#FF7A1A} .ring .s3,.chart .s3{stop-color:#FF4D00}
 .ring .c{position:relative;text-align:center;line-height:1}
 .ring.sm{width:64px;height:64px}
 .ring.sm .c{font-size:14px}
@@ -510,7 +512,7 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 /* Records : une ligne par record (exercice à gauche, force estimée à droite) ; trophée doré dans l'historique */
 .rec-line{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:8px}
 .rec-line > span:first-child{min-width:0;overflow-wrap:anywhere;font-weight:600}
-.rec-line .num{flex:none;text-align:right;font-weight:800}
+.rec-line .num{flex:none;display:flex;flex-direction:column;align-items:flex-end;font-weight:800}
 .hist-pr{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--grad-gold);color:var(--on-accent);vertical-align:2px;box-shadow:var(--glow-gold)}
 .hist-pr svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .end-emile .who{font-weight:600;color:var(--good)}
