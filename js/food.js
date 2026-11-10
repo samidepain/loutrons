@@ -55,6 +55,8 @@ export function totals(items){
   items.forEach(it => { const v = scale(it.per100, it.g); KEYS.forEach(k => { if (v[k] == null) missing.add(k); else t[k] += v[k]; }); });
   t.missing = [...missing]; return t;
 }
+// Repas proposé selon l'heure (règle de l'appli) : collation la nuit (avant 5 h), petit-déjeuner avant 10 h, déjeuner avant 15 h, collation avant 18 h, dîner avant 23 h
+export const guessMeal = h => h < 5 ? 'snack' : h < 10 ? 'breakfast' : h < 15 ? 'lunch' : h < 18 ? 'snack' : h < 23 ? 'dinner' : 'snack';
 export const dayDoc = day => S.docs.get('m_' + day) || { date: day, items: [] };
 export function myFoods(){ const out = []; S.docs.forEach((o, id) => { if (id.indexOf('f_') === 0) out.push(Object.assign({ id }, o)); }); return out; }
 // Jours du journal (documents m_) de from (inclus) à to (exclu), du plus récent au plus ancien ; une date mal formée (sauvegarde importée) est ignorée

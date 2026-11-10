@@ -103,8 +103,13 @@ export function dayEnergy(day){
 export const glassOf = () => num(settings().glass) || GLASS;
 export const waterOf = day => num((S.docs.get('e_' + day) || {}).ml) || 0;
 export function waterBase(sex){ return WATER[sex === 'm' || sex === 'f' ? sex : 'other']; }
-// Objectif du jour en mL, arrondi à 100 mL : boissons + 0,5 L par heure de sport (séances commencées ou faites, activités)
-export function waterGoal(day){ return Math.round((waterBase(settings().sex) + WATER.perHour * dayEnergy(day).min / 60) / 100) * 100; }
+// Repère de l'appli en mL, arrondi à 100 mL : boissons + 0,5 L par heure de sport (séances commencées ou faites, activités)
+export function waterAuto(day){ return Math.round((waterBase(settings().sex) + WATER.perHour * dayEnergy(day).min / 60) / 100) * 100; }
+// Objectif choisi par la personne (settings.waterGoal, en mL, de 0,5 à 6 L), ou null : alors le repère de l'appli
+export const WATER_RANGE = [500, 6000];
+export function waterChosen(){ const c = num(settings().waterGoal); return c != null && c >= WATER_RANGE[0] && c <= WATER_RANGE[1] ? Math.round(c / 50) * 50 : null; }
+// Objectif du jour : celui de la personne s'il existe ; les quantités déjà bues (e_) ne dépendent pas de lui
+export const waterGoal = day => waterChosen() || waterAuto(day);
 // Sport du module « sport collectif » prévu ce jour-là : 'train', 'match' ou null
 export function sportPlanned(day){
   if (!sportOn()) return null; const sp = sportInfo(); const wd = parseIso(day).getDay();

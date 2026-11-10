@@ -1,12 +1,13 @@
 // Écran Alimentation : journal du jour par repas, et ajout d'un aliment (recherche, code-barres, quantité, création).
 import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtInt, fmtKg, nbsp, num, today } from '../util.js';
 import { S } from '../store.js';
-import { dayDoc, freshFood, habitualFoods, LIMITS, loadCiqual, mealLabel, MEALS, myFoods, pastMeals, recentFoods, savedMeals, scale, searchFoods, totals } from '../food.js';
+import { dayDoc, freshFood, guessMeal, habitualFoods, LIMITS, loadCiqual, mealLabel, MEALS, myFoods, pastMeals, recentFoods, savedMeals, scale, searchFoods, totals } from '../food.js';
 import { startScanner } from '../scanner.js';
 import { emile, hey } from '../emile.js';
 import { dayPlan } from './goal.js';
 import { ownRecipe, recipeFoods } from '../recipes.js';
 import { ring } from '../ring.js';
+import { gramsOf, measuresFor } from '../measures.js';
 
 const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment', rec:'Recette type', recipe:'Ta recette' };
 const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fmtInt(x);
@@ -65,8 +66,10 @@ function bar(label, v, goal, unit, max){
   return '<div class="mrow fd"><span>' + label + '</span><span class="mbar"><i style="width:' + pct.toFixed(1) + '%' + (max && v > goal ? ';background:var(--warn)' : '') + '"></i></span><span class="v num">' + q1(v) + (goal ? ' / ' + q1(goal) : '') + ' ' + unit + '</span></div>';
 }
 // Macro du jour : petit anneau (décoratif) et valeur sur l'objectif ; max : plafond (lipides), dépassé en ambre
-function macro(label, v, goal, max){
-  return '<div class="macro">' + ring(goal ? v / goal : 0, { cls:'xs' + (max && goal && v > goal ? ' over' : '') }) + '<span class="label">' + label + '</span><span class="num">' + q1(v) + (goal ? ' / ' + q1(goal) : '') + '&nbsp;g</span></div>';
+// unknown : valeur inconnue pour au moins un aliment : « — » si rien n'est connu, sinon un minimum (« ≥ 7,3 »)
+function macro(label, v, goal, max, unknown){
+  const val = unknown && !v ? '—' : (unknown ? '≥ ' : '') + q1(v);
+  return '<div class="macro">' + ring(goal ? v / goal : 0, { cls:'xs' + (max && goal && v > goal ? ' over' : '') }) + '<span class="label">' + label + '</span><span class="num">' + val + (goal ? ' / ' + q1(goal) : '') + '&nbsp;g</span></div>';
 }
 export function viewFood(){
   if (S.food) return viewFoodAdd();
@@ -82,19 +85,24 @@ export function viewFood(){
       const rest = pl.kcal - t.kcal; const prot = pl.protein[0] - t.p;
       if (t.kcal > pl.kcal * 1.1) { kind = 'over'; tone = 'warn'; m = hey('Tu as dépassé ton objectif de ' + fmtInt(-rest) + ' kcal. Sur une journée, ce n’est pas grave : c’est la régularité sur la semaine qui compte.'); }
       else if (rest <= pl.kcal * 0.1) { kind = 'ok'; tone = 'good'; m = hey('Tu es dans ton objectif de calories' + (prot > 0 ? ' ; il te manque ' + fmtInt(prot) + ' g de protéines.' : ', avec assez de protéines.')); }
-      else m = hey('Il te reste environ ' + fmtInt(rest) + ' kcal' + (prot > 0 ? ' et ' + fmtInt(prot) + ' g de protéines' : '') + ' pour atteindre ton objectif.');
+      else m = ''; // en cours de journée, l'anneau dit déjà ce qui reste : pas de bulle qui le répète
     }
-    h += emile('<p>' + esc(m) + '</p>', { tone, key:'food:' + day + ':' + kind });
+    if (m) h += emile('<p>' + esc(m) + '</p>', { tone, key:'food:' + day + ':' + kind });
   }
   // Totaux du jour, comparés aux besoins du jour (séances et activités comprises) et aux repères :
   // anneau des calories, trois petits anneaux des macros, le reste sous « Détails ». Journal vide : anneau en pointillés, pas de « 0 ».
   const empty = !doc.items.length; const over = has && t.kcal > pl.kcal * 1.1; const rest = has ? pl.kcal - t.kcal : 0;
-  h += '<section class="card hero day-card"><div class="row between"><h3>Ta journée</h3>' + (has ? '<span class="muted small">' + (pl.extra ? 'activités comprises' : 'objectif du jour') + '</span>' : '') + '</div>';
-  const centre = empty ? '<span class="muted small">Rien de noté</span>' : has ? '<b class="num day-n">' + fmtInt(Math.abs(rest)) + '</b><span class="muted small">' + (rest >= 0 ? 'à manger' : 'en trop') + '</span>' : '<b class="num day-n">' + fmtInt(t.kcal) + '</b><span class="muted small">kcal</span>';
+  h += '<section class="card hero day-card"><div class="row between"><h3>Ta journée</h3>' + (has && pl.extra ? '<span class="muted small">activités comprises</span>' : '') + '</div>';
+  const pct = has && pl.kcal ? Math.round(t.kcal / pl.kcal * 100) : null;
+  const centre = empty ? '<span class="muted small">Rien de noté</span>' : has ? '<b class="num day-n">' + pct + '&nbsp;%</b>' : '<b class="num day-n">' + fmtInt(t.kcal) + '</b><span class="muted small">kcal</span>';
+  // À droite, le chiffre à retenir : ce qu'il reste à manger (ou l'objectif si rien n'est noté, ou ce qui dépasse)
+  const big = empty ? pl.kcal : has ? Math.abs(rest) : t.kcal;
+  const cap = empty ? 'ton objectif du jour' : !has ? 'mangées' : rest >= 0 ? 'restantes aujourd’hui' : 'au-dessus de ton objectif';
   h += '<div class="ring-row">' + ring(has ? t.kcal / pl.kcal : 0, { cls:'md' + (empty ? ' empty' : '') + (over ? ' over' : ''), label: empty ? 'Rien de noté' : fmtInt(t.kcal) + ' kcal mangées' + (has ? ' sur ' + fmtInt(pl.kcal) : ''), html:centre })
-    + (empty && !has ? '<p class="muted">Note ton premier repas de la journée.</p>' : '<div class="kcal"><p><span class="v num">' + fmtInt(empty ? pl.kcal : t.kcal) + '</span><small>kcal</small></p><p class="muted small">' + (empty ? 'ton objectif du jour' : has ? esc(nbsp('mangées sur ' + fmtInt(pl.kcal))) : 'mangées') + '</p>'
+    + (empty && !has ? '<p class="muted">Note ton premier repas de la journée.</p>' : '<div class="kcal"><p><span class="v num">' + fmtInt(big) + '</span><small>kcal</small></p><p class="muted small">' + cap + '</p>'
+    + (has && !empty ? '<p class="muted small">' + esc(nbsp(fmtInt(t.kcal) + ' mangées sur ' + fmtInt(pl.kcal))) + '</p>' : '')
     + (has && pl.extra ? '<p class="muted small">' + esc(nbsp(fmtInt(pl.base0) + ' de base + ' + fmtInt(pl.extra) + ' de séances et d’activités')) + '</p>' : '') + '</div>') + '</div>';
-  if (!empty) h += '<div class="macros">' + macro('Protéines', t.p, has ? pl.protein[0] : 0) + macro('Glucides', t.c, has ? pl.carbs : 0) + macro('Lipides', t.f, has ? pl.fat[1] : 0, true) + '</div>';
+  if (!empty) h += '<div class="macros">' + macro('Protéines', t.p, has ? pl.protein[0] : 0, false, t.missing.includes('p')) + macro('Glucides', t.c, has ? pl.carbs : 0, false, t.missing.includes('c')) + macro('Lipides', t.f, has ? pl.fat[1] : 0, true, t.missing.includes('f')) + '</div>';
   const sfMax = has ? pl.kcal * LIMITS.sfPct / 9 : null;
   if (!empty) {
     h += '<details class="cue"><summary>Détails : fibres, sucres, saturés, sel</summary>' + bar('Fibres', t.fib, LIMITS.fib, 'g');
@@ -102,6 +110,9 @@ export function viewFood(){
   }
   if (t.missing.length && !empty) h += '<p class="muted small">Valeurs inconnues pour certains aliments (' + t.missing.map(k => ({ p:'protéines', c:'glucides', s:'sucres', f:'lipides', sf:'saturés', fib:'fibres', salt:'sel' })[k]).filter(Boolean).join(', ') + ') : les totaux peuvent être un peu bas.</p>';
   h += '</section>';
+  // Action la plus fréquente : ajouter au repas du moment (fenêtre de recherche, d'où l'on scanne aussi)
+  const gm = guessMeal(new Date().getHours());
+  h += '<button type="button" class="btn primary big" data-act="fd-add" data-v="' + gm + '">+ Ajouter ' + ADD_TO[gm] + '</button>';
   MEALS.forEach(([m, label]) => {
     const its = doc.items.filter(i => i.meal === m); const kc = its.reduce((a, i) => a + (scale(i.per100, i.g).kcal || 0), 0);
     // En-tête du repas : nom, kcal, et « + » rond qui ouvre l'ajout
@@ -159,9 +170,18 @@ function viewFoodAdd(){
     const f = F.sel; const g = num(F.g);
     let h = head(F.edit ? 'Modifier' : 'Quantité', F.edit || F.fromDay ? 'fd-cancel' : 'fd-back') + '<section class="card"><div class="stack" style="gap:2px"><h2>' + esc(f.name) + '</h2><span class="muted small">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal pour 100 g</span></div>';
     if (f.fixed === 'kcal') h += '<p class="alert info">Calories corrigées : la fiche d’Open Food Facts donnait sans doute des kilojoules. Vérifie sur l’emballage.</p>';
-    h += '<label class="f"><span>Quantité (g)</span><input class="n" id="fd-g" data-fg="1" inputmode="decimal" value="' + esc(F.g == null ? '' : fmtKg(num(F.g))) + '"></label>';
-    const dish = f.src === 'rec' || f.src === 'recipe';
-    h += '<div class="chips" role="group">' + (f.serving ? '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + f.serving + '">' + esc(f.portion || '1 portion') + ' (' + fmtKg(f.serving) + ' g)</button>' : '') + (dish ? [200, 300, 400] : [50, 100, 150, 200]).map(x => '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + x + '">' + x + ' g</button>').join('') + '</div>';
+    // Mesure usuelle (cuillères, mL) pour quelques familles d'aliments : la quantité enregistrée reste en grammes, estimée et affichée
+    const fam = measuresFor(f); const u = fam && fam.units.find(x => x.id === F.unit);
+    if (fam) h += '<span class="label">Saisir la quantité en</span><div class="chips" role="group" aria-label="Saisir la quantité en">' + [{ id:'g', label:'grammes' }].concat(fam.units).map(x => { const on = (u ? u.id : 'g') === x.id; return '<button type="button" class="chip txt' + (on ? ' on' : '') + '" data-act="fd-unit" data-v="' + x.id + '" aria-pressed="' + on + '">' + esc(x.label) + '</button>'; }).join('') + '</div>';
+    if (u) {
+      h += '<label class="f"><span>Nombre de ' + esc(u.label) + ' (estimation)</span><input class="n" id="fd-n" data-fn="1" inputmode="decimal" value="' + esc(F.n == null ? '' : F.n) + '"></label>'
+        + '<div class="chips" role="group">' + u.quick.map(x => '<button type="button" class="chip txt" data-act="fd-nset" data-v="' + x + '">' + x + ' ' + esc(u.label) + '</button>').join('') + '</div>'
+        + '<p class="small" id="fd-conv" aria-live="polite">' + convText(u, g) + '</p>';
+    } else {
+      h += '<label class="f"><span>Quantité (g)</span><input class="n" id="fd-g" data-fg="1" inputmode="decimal" value="' + esc(F.g == null ? '' : fmtKg(num(F.g))) + '"></label>';
+      const dish = f.src === 'rec' || f.src === 'recipe';
+      h += '<div class="chips" role="group">' + (f.serving ? '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + f.serving + '">' + esc(f.portion || '1 portion') + ' (' + fmtKg(f.serving) + ' g)</button>' : '') + (dish ? [200, 300, 400] : [50, 100, 150, 200]).map(x => '<button type="button" class="chip txt" data-act="fd-gset" data-v="' + x + '">' + x + ' g</button>').join('') + '</div>';
+    }
     const rf = f.src === 'rec' && !f.items ? recipeByKey(f.key) : f;
     if (rf && rf.items) h += '<details class="cue"><summary>Recette type pour ' + esc(rf.portion) + '</summary><p>' + rf.items.map(i => i[1] + ' g ' + esc(i[0])).join(' · ') + '</p><p class="muted small">Valeurs calculées avec la table Ciqual : ajuste la quantité si ta recette diffère.</p></details>';
     // Ta recette (trouvée dans tes aliments ou dans les récents) : on peut la modifier
@@ -209,6 +229,10 @@ export function recPreview(){
   const R = S.food.rec; const items = R.items.filter(i => i.g > 0); if (!items.length) return '';
   const r = ownRecipe(items, num(R.servings), num(R.cooked)); const v = scale(r.per100, r.serving);
   return '<p class="small"><b>Une portion : ' + fmtKg(r.serving) + ' g, ' + (v.kcal == null ? '— kcal' : fmtInt(v.kcal) + ' kcal') + '</b>, protéines ' + q1(v.p) + ' g, glucides ' + q1(v.c) + ' g, lipides ' + q1(v.f) + ' g.</p>';
+}
+// Ce qui sera enregistré pour n mesures : toujours des grammes, avec la valeur de la mesure et sa limite
+export function convText(u, g){
+  return (g > 0 ? '<b>' + nbsp('= ' + fmtKg(g) + ' g enregistrés') + '</b> ' : '') + '<span class="muted">' + esc(nbsp(u.id === 'ml' ? '(estimation) · ' + u.hint : '(estimation, cuillère rase) · ' + u.hint)) + '</span>';
 }
 export function preview(f, g){
   if (!(g > 0)) return '<p class="muted small">Indique une quantité.</p>';

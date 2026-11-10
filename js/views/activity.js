@@ -2,11 +2,12 @@
 import { addDays, capFirst, esc, fmtDateLong, fmtInt, fmtKg, lowFirst, num, today } from '../util.js';
 import { S } from '../store.js';
 import { bodyweight, settings, sportInfo } from '../data.js';
-import { activityKcal, CHOICES, choiceOf, dayEnergy, EFFORT, glassOf, LEVELS, sportPlanned, waterBase, waterGoal, waterOf, WATER } from '../energy.js';
+import { activityKcal, CHOICES, choiceOf, dayEnergy, EFFORT, glassOf, LEVELS, sportPlanned, waterAuto, waterBase, waterChosen, waterGoal, waterOf, WATER } from '../energy.js';
 import { ring } from '../ring.js';
 
 const r10 = x => Math.round(x / 10) * 10;
-const liters = ml => fmtKg(Math.round(ml / 100) / 10);
+// Litres au dixième, au centième si l'objectif choisi n'est pas un multiple de 100 mL (2,25 L)
+export const liters = ml => { const m = Math.round(ml / 50) * 50; return (m / 1000).toFixed(m % 100 ? 2 : 1).replace('.', ','); };
 const dayLabel = d => d === today() ? 'Aujourd’hui' : d === addDays(today(), -1) ? 'Hier' : capFirst(fmtDateLong(d));
 const kcalText = k => k == null ? '—' : '≈ ' + fmtInt(r10(k)) + ' kcal';
 export function actDetail(a){
@@ -47,12 +48,17 @@ export function activitiesLine(){
 
 export function waterLine(){
   if (!S.loaded) return '';
-  const d = today(); const ml = waterOf(d); const goal = waterGoal(d); const g = glassOf(); const sport = goal - Math.round(waterBase(settings().sex) / 100) * 100;
+  const d = today(); const ml = waterOf(d); const goal = waterGoal(d); const auto = waterAuto(d); const chosen = waterChosen(); const g = glassOf();
   let h = '<div class="mbar big water" role="img" aria-label="' + esc(liters(ml) + ' L bus sur ' + liters(goal) + ' L') + '"><i style="width:' + Math.min(100, ml / goal * 100).toFixed(1) + '%"></i></div>';
   h += '<div class="row"><button type="button" class="btn" data-act="water" data-v="-1"' + (ml ? '' : ' disabled') + '>− 1 verre</button><span class="muted small">Verre de ' + g + ' mL</span></div>';
   h += '<details class="cue"><summary>Autre quantité, taille du verre</summary><div class="row"><input class="n" id="water-ml" inputmode="numeric" placeholder="mL" aria-label="Quantité en mL" style="width:96px"><button type="button" class="btn" data-act="water-ml">Ajouter</button>';
   h += '<label class="row" style="gap:6px;margin-left:auto"><span class="small muted">Verre</span><select id="glass">' + [150, 200, 250, 330, 500].map(v => '<option value="' + v + '"' + (v === g ? ' selected' : '') + '>' + v + ' mL</option>').join('') + '</select></label></div></details>';
-  h += '<p class="muted small">Repère : ' + liters(goal - sport) + ' L de boissons par jour' + (sport > 0 ? ', plus ' + liters(sport) + ' L pour ton sport' : '') + ', davantage s’il fait chaud.</p>';
+  // Objectif du jour : choisi par la personne (réglage waterGoal), sinon le repère de l'appli ; les quantités déjà bues ne changent pas
+  h += '<div class="stack water-goal"><span class="label">Objectif par jour</span><div class="row"><label class="fld"><input class="n" id="water-goal" inputmode="decimal" value="' + esc(liters(goal)) + '" aria-label="Objectif d’eau par jour, en litres"><span>L</span></label>'
+    + (chosen ? '<button type="button" class="btn ghost" data-act="water-auto">Revenir au repère (' + liters(auto) + ' L)</button>' : '') + '</div>'
+    + '<p class="muted small">' + (chosen ? 'Objectif choisi par toi.' : 'Repère de l’appli : ' + liters(auto) + ' L (boissons' + (auto > waterBase(settings().sex) ? ', sport compris' : '') + ').') + ' Il s’applique à la jauge du jour ; tes quantités déjà bues ne changent pas.</p></div>';
+  h += '<details class="cue"><summary>Quel objectif choisir ?</summary><p class="small">Repère général : l’EFSA estime qu’une femme adulte a besoin d’environ 2,0 L d’eau par jour et un homme adulte de 2,5 L, tous apports compris. Les aliments en fournissent environ 20 % : cela fait à peu près 1,6 L et 2,0 L de boissons, par temps tempéré et avec une activité modérée.</p>'
+    + '<p class="small">Les besoins varient d’une personne à l’autre : la chaleur, le sport, la grossesse ou l’allaitement les augmentent. Ce n’est pas un conseil médical : si un professionnel de santé t’a donné une consigne (cœur, reins, traitement), suis la sienne.</p><p class="muted small">Source : EFSA, 2010 (valeurs de référence pour l’eau).</p></details>';
   return lineCard('eau', 'Eau', liters(ml) + ' / ' + liters(goal) + ' L', '<button type="button" class="btn" data-act="water" data-v="1">+ 1 verre</button>', h, ring(ml / goal, { cls:'xxs' }));
 }
 

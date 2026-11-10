@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { norm } from '../js/util.js';
-import { fromCiqual, fromOff, fullDay, recentFoods, scale, searchFoods, totals, validBarcode } from '../js/food.js';
+import { fromCiqual, fromOff, fullDay, guessMeal, recentFoods, scale, searchFoods, totals, validBarcode } from '../js/food.js';
 import { donnees, reglages, docs } from './aide.js';
 
 // Réponse d'Open Food Facts (extrait de /api/v2/product/3017620422003.json)
@@ -130,4 +130,8 @@ test('recherche dans la table Ciqual : « œuf » écrit par le clavier de l’i
   assert.ok(searchFoods([[], table], 'riz basmati cuit').some(f => /^Riz basmati, cuit/.test(f.name)));
   // Le mot tel qu'il est écrit passe avant un mot voisin (« pâte sablée », « fromage à pâte pressée demi-cuite »)
   assert.match(searchFoods([[], table], 'pâtes cuites')[0].name, /^Pâtes sèches/);
+});
+
+test('repas proposé selon l’heure', () => {
+  assert.deepEqual([6, 9, 10, 12, 14, 15, 17, 18, 21, 23, 2].map(guessMeal), ['breakfast', 'breakfast', 'lunch', 'lunch', 'lunch', 'snack', 'snack', 'dinner', 'dinner', 'snack', 'snack']);
 });

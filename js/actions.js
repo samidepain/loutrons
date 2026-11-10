@@ -15,10 +15,11 @@ import { blankEx } from './views/editors.js';
 import { checkDue, nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
 import { copyEntries, dayDoc, freshFood, fromOff, habitualFoods, mealLabel, MEALS, recentFoods, validBarcode } from './food.js';
-import { foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
+import { convText, foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
 import { ownRecipe } from './recipes.js';
-import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, waterOf } from './energy.js';
-import { actDoc, actPreview } from './views/activity.js';
+import { gramsOf, measuresFor } from './measures.js';
+import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, WATER_RANGE, waterOf } from './energy.js';
+import { actDoc, actPreview, liters } from './views/activity.js';
 
 function startWorkout(tplId){
   if (!S.loaded) return;
@@ -176,9 +177,11 @@ const mealLow = m => ((MEALS.find(x => x[0] === m) || ['', ''])[1]);
 const added = n => (n > 1 ? 'Ajoutés : ' : 'Ajouté : ') + n + ' aliment' + (n > 1 ? 's' : '');
 // Nom d'un repas enregistré : obligatoire, 40 caractères au plus
 function savedName(){ const i = $('#sm-name'); const v = i ? i.value.trim() : ''; if (!v || v.length > 40) { toast('Donne un nom à ce repas.'); if (i) i.focus(); return ''; } return v; }
+const unitOf = F => { const fam = measuresFor(F.sel); return (fam && fam.units.find(x => x.id === F.unit)) || null; };
+function setN(n){ const F = S.food; F.n = n; F.g = gramsOf(unitOf(F), num(n)); }
 function pickFood(f){
   const last = recentFoods(200).find(r => r.key === f.key);
-  Object.assign(S.food, { mode:'portion', sel:f, g: last ? last.g : f.serving || 100, msg:null }); S.confirm = null;
+  Object.assign(S.food, { mode:'portion', sel:f, g: last ? last.g : f.serving || 100, unit:null, n:null, msg:null }); S.confirm = null;
   render(); window.scrollTo(0, 0);
 }
 // Code-barres lu ou tapé : produit déjà gardé sur le téléphone, sinon Open Food Facts
@@ -315,15 +318,18 @@ const A = {
     const t = quickTarget(b.dataset.m); const f = quickFoodOf(b.dataset.v, b.dataset.m, t.day, b.dataset.l); if (!f) return;
     // Ouvert depuis le journal (pas de fenêtre d'ajout) : « ‹ Retour » ramène au journal
     const fromDay = !S.food;
-    S.food = Object.assign(S.food || { q:'' }, { mode:'portion', meal:t.meal, day:t.day, sel:f, g:f.g, msg:null }, fromDay ? { fromDay:true } : {}); S.confirm = null; render(); window.scrollTo(0, 0);
+    S.food = Object.assign(S.food || { q:'' }, { mode:'portion', meal:t.meal, day:t.day, sel:f, g:f.g, unit:null, n:null, msg:null }, fromDay ? { fromDay:true } : {}); S.confirm = null; render(); window.scrollTo(0, 0);
   },
   'fd-back'(){ if (S.food.edit) { S.food = null; } else { S.food.mode = 'search'; S.food.msg = null; } render(); },
   'fd-meal'(b){ S.food.meal = b.dataset.v; render(); },
   'fd-pick'(b){ const f = shown.get(b.dataset.v); if (f) pickFood(f); },
   'fd-gset'(b){ S.food.g = +b.dataset.v; render(); },
+  // Mesure usuelle : le journal garde des grammes (F.g), calculés d'après le nombre saisi (F.n) ; revenir aux grammes garde ce poids
+  'fd-unit'(b){ const F = S.food; const fam = measuresFor(F.sel); const u = fam && fam.units.find(x => x.id === b.dataset.v); if (u) { F.unit = u.id; setN(String(u.start)); } else { F.unit = null; F.n = null; } render(); },
+  'fd-nset'(b){ setN(b.dataset.v); render(); },
   'fd-save'(){
     const F = S.food; const g = num(F.g);
-    if (g == null || g <= 0 || g > 5000) { toast('Indique la quantité en grammes, par exemple 120.'); const i = $('#fd-g'); if (i) i.focus(); return; }
+    if (g == null || g <= 0 || g > 5000) { toast(unitOf(F) ? 'Indique la quantité, par exemple 1 ou 1,5.' : 'Indique la quantité en grammes, par exemple 120.'); const i = $('#fd-g') || $('#fd-n'); if (i) i.focus(); return; }
     const f = F.sel; const entry = { id: F.edit || rid(), meal:F.meal, key:f.key, name:f.name, brand:f.brand || '', g, per100:f.per100 };
     if (f.serving) entry.serving = f.serving;
     if (f.portion) entry.portion = f.portion;
@@ -470,6 +476,7 @@ const A = {
   'act-del-yes'(b){ const id = b.dataset.v || S.act.edit; del(id); S.act = null; S.confirm = null; render(); toast('Activité supprimée.'); },
   // Eau : un verre de plus ou de moins, ou une quantité en mL
   water(b){ addWater(+b.dataset.v * glassOf()); },
+  'water-auto'(){ putSettings({ waterGoal: null }); render(); toast('Objectif remis au repère de l’appli.'); },
   'water-ml'(){ const i = $('#water-ml'); const v = num(i ? i.value : ''); if (!(v > 0 && v <= 3000)) { toast('Indique une quantité entre 1 et 3 000 mL.'); return; } addWater(v); },
   done(b){
     unlockAudio();
@@ -685,6 +692,7 @@ document.addEventListener('input', e => {
   if (t.matches('[data-xq]')) { S.exQ = t.value; const l = $('#ex-list'); if (l) l.innerHTML = exerciseList(); return; }
   if (t.matches('[data-fq]') && S.food) { S.food.q = t.value; const l = $('#fd-list'); if (l) l.innerHTML = foodList(); return; }
   if (t.matches('[data-fg]') && S.food) { S.food.g = t.value; const pv = $('#fd-prev'); if (pv) pv.innerHTML = preview(S.food.sel, num(t.value)); return; }
+  if (t.matches('[data-fn]') && S.food) { setN(t.value); const pv = $('#fd-prev'); if (pv) pv.innerHTML = preview(S.food.sel, num(S.food.g)); const cv = $('#fd-conv'); if (cv) cv.innerHTML = convText(unitOf(S.food), num(S.food.g)); return; }
   if (t.matches('[data-fc]') && S.food && S.food.draft) { S.food.draft[t.dataset.fc] = t.value; return; }
   if (t.id === 'sm-name' && S.food) { S.food.nameDraft = t.value; return; }
   if (t.matches('[data-rc]') && S.food && S.food.rec) { S.food.rec[t.dataset.rc] = t.value; const pv = $('#rec-prev'); if (pv) pv.innerHTML = recPreview(); return; }
@@ -719,6 +727,7 @@ document.addEventListener('change', e => {
   if (t.matches('input[type=checkbox][data-act]')) { const fn = A[t.dataset.act]; if (fn) fn(t); return; }
   if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; render(); return; }
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
+  if (t.id === 'water-goal') { const ml = Math.round(num(t.value) * 20) * 50; if (!(ml >= WATER_RANGE[0] && ml <= WATER_RANGE[1])) { toast('Choisis un objectif entre 0,5 et 6 L par jour.'); render(); return; } putSettings({ waterGoal: ml }); render(); toast(nbsp('Objectif : ' + liters(ml) + ' L par jour.')); return; }
   if (t.id === 'glass') { putSettings({ glass: num(t.value) }); render(); toast('Verre de ' + t.value + ' mL.'); return; }
   if (t.matches('[data-n]')) { nField(t.dataset.n, t.value); return; }
   // Accueil, écran 3 : données demandées pour le calcul, vérifiées puis prises en compte

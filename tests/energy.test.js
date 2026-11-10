@@ -1,7 +1,7 @@
 // Dépense des séances et des activités (Compendium 2024, dépense nette MET − 1), course (1 kcal/kg/km), eau, besoins du jour.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activityKcal, computeSessionKcal, dayEnergy, sessionMin, sportOf, waterGoal } from '../js/energy.js';
+import { activityKcal, computeSessionKcal, dayEnergy, sessionMin, sportOf, waterAuto, waterChosen, waterGoal, waterOf } from '../js/energy.js';
 import { planFor, withExtra } from '../js/nutrition.js';
 import { donnees, docs, jour, reglages, seance } from './aide.js';
 
@@ -54,6 +54,22 @@ test('eau : repère EFSA selon le sexe, plus 0,5 L par heure de sport', () => {
   assert.equal(waterGoal('2026-11-03'), 2500);
   donnees(docs(reglages({ plan: { 2: { label: 'Repos' } } }), pesee(80)));
   assert.equal(waterGoal('2026-11-03'), 1800);                               // sexe non indiqué : moyenne
+});
+
+test('eau : objectif choisi par la personne, repère automatique sinon, quantités bues inchangées', () => {
+  jour('2026-11-03');
+  const bike = ['a_2026-11-03_y', { date: '2026-11-03', type: 'bike', level: 'mod', min: 60 }];
+  const bu = ['e_2026-11-02', { date: '2026-11-02', ml: 1750 }];
+  donnees(docs(reglages({ sex: 'm', plan: { 2: { label: 'Repos' } } }), pesee(80), bike, bu));
+  assert.equal(waterChosen(), null);
+  assert.equal(waterGoal('2026-11-03'), 2500);                               // repère : 2,0 L + 0,5 L de vélo
+  donnees(docs(reglages({ sex: 'm', waterGoal: 3000, plan: { 2: { label: 'Repos' } } }), pesee(80), bike, bu));
+  assert.equal(waterGoal('2026-11-03'), 3000);                               // choisi : remplace le repère, sport compris
+  assert.equal(waterAuto('2026-11-03'), 2500);                               // le repère reste calculable (bouton « Revenir au repère »)
+  assert.equal(waterOf('2026-11-02'), 1750);                                 // la consommation d'un autre jour ne dépend pas de l'objectif
+  donnees(docs(reglages({ waterGoal: 2260 })));
+  assert.equal(waterChosen(), 2250);                                         // arrondi à 50 mL
+  [null, 0, 100, 9000, 'abc'].forEach(v => { donnees(docs(reglages({ sex: 'f', waterGoal: v }))); assert.equal(waterChosen(), null, String(v)); });
 });
 
 test('besoins du jour : dépense ajoutée aux calories, protéines inchangées, lipides et glucides recalculés', () => {
