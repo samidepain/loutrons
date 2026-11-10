@@ -7,7 +7,7 @@ import { blockReport, exerciseProgress, fatigueCheck, muscleDone, musclePlanned,
 import { chart, spark } from '../chart.js';
 import { viewHistory } from './history.js';
 import { emile } from '../emile.js';
-import { myPlan, nutritionOf } from './goal.js';
+import { myPlan, nutritionOf, weightReading } from './goal.js';
 
 const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 const PRTABS = [['stats','Résumé'],['history','Historique']];
@@ -69,7 +69,7 @@ function viewProgress(){
   const wPts = bd.filter(x => num(x.weight) > 0).map(x => ({ x: parseIso(x.date).getTime(), y: num(x.weight) }));
   const sPts = bd.filter(x => num(x.sleep) > 0).map(x => ({ x: parseIso(x.date).getTime(), y: num(x.sleep) }));
   const bwNow = bodyweight(); const gp = nutritionOf().on ? myPlan() : null; const gl = gp && gp.target && (gp.status === 'ok' || gp.status === 'fast') ? gp.target : null;
-  h += '<section class="card"><h3>Poids de corps</h3>' + (bwNow && height ? '<p class="muted small">Dernier : ' + fmtKg(bwNow) + ' kg · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(Math.round(bwNow / Math.pow(height / 100, 2) * 10) / 10) + '. En prise de masse musculaire, une hausse lente et régulière est le signe attendu.</p>' : '<p class="muted small">Note ton poids dans Aujourd’hui et ta taille dans ton profil.</p>') + chart([{ pts:wPts }], gl ? { label:'Poids', empty:'Pas encore de pesée.', thresh:gl, threshLabel:'objectif', threshColor:'var(--good)' } : { label:'Poids', empty:'Pas encore de pesée.' }) + '</section>';
+  h += '<section class="card"><h3>Poids de corps</h3>' + (bwNow && height ? '<p class="muted small">Dernier : ' + fmtKg(bwNow) + ' kg · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(Math.round(bwNow / Math.pow(height / 100, 2) * 10) / 10) + '. En prise de masse musculaire, une hausse lente et régulière est le signe attendu.</p>' : '<p class="muted small">Une pesée toutes les 2 semaines suffit : note ton poids dans Aujourd’hui et ta taille dans ton profil.</p>') + chart([{ pts:wPts }], gl ? { label:'Poids', empty:'Pas encore de pesée.', thresh:gl, threshLabel:'objectif', threshColor:'var(--good)' } : { label:'Poids', empty:'Pas encore de pesée.' }) + '<p class="small">' + esc(weightReading()) + '</p></section>';
   h += '<section class="card"><h3>Sommeil</h3>' + chart([{ pts:sPts, color:'var(--court)' }], { label:'Sommeil', yMin:0, thresh:7, threshLabel:'7 h', empty:'Note tes heures de sommeil dans Aujourd’hui.' }) + '</section>';
 
   // Genou

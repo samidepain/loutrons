@@ -231,6 +231,7 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .cal-week .cday:not(.today) .mk.done{box-shadow:0 0 6px var(--c)}
 .legend i.mk{width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
 .cal-detail{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.card > .cal-detail{border-top:none;padding-top:0}
 
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{min-width:44px;min-height:44px;border-radius:999px;border:none;background:var(--surface-2);font-family:var(--f-display);font-weight:800;font-stretch:100%;font-size:17px;padding:0 10px}
@@ -621,6 +622,10 @@ details.cue[open]{display:flex;flex-direction:column;gap:10px}
 #app h1{overflow-wrap:break-word}
 button.plus{flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--surface-2);color:var(--accent-ink);font-size:26px;font-weight:700;line-height:1;transition:transform .14s}
 button.plus:active{transform:scale(.93)}
+/* Supprimer une activité (écran d'un jour) : bouton rond avec une corbeille */
+button.plus.del{color:var(--bad)}
+.quick .mk{margin-right:6px;vertical-align:1px}
+button.plus svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .meal > .link{align-self:flex-start}
 .qgroup{gap:8px}
 /* Repas enregistré : ses aliments, une ligne chacun (nom à gauche, quantité et kcal à droite) */

@@ -30,6 +30,7 @@ export function screenOf(){
   if (v === 'food') return { key:'food', level:0, tab:v, sub:S.foodDay || '9999' };
   if (v === 'profile') return { key:'profile', level:1, from:S.from || 'today' };
   if (v === 'science') return { key:'science', level:2, from:S.from || 'today' };
+  if (v === 'today' && S.day) return { key:'day', level:1, from:'today' };
   return { key:'today', level:0, tab:'today' };
 }
 function kindOf(a, b){

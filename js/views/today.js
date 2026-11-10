@@ -2,8 +2,9 @@
 // puis le suivi du jour en lignes compactes (eau, poids et sommeil, activités, genou).
 import { addDays, capFirst, greeting, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
-import { activeWorkout, activities, allTpl, backupDue, kneeEntries, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
+import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, tplItems, WEIGH_DAYS, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
 import { fatigueCheck, recentRecord } from '../engine.js';
+import { FLAGS, PAIN_LIMIT, painAdvice, painZones, ZONES } from '../pain.js';
 import { useShare } from '../backup.js';
 import { kneeChips, TROPHY } from '../render.js';
 import { noTplCard } from './program.js';
@@ -62,6 +63,11 @@ function foldEmile(html, top){
   return '<section class="card line"><div class="line-row"><button type="button" class="line-h e-fold" data-act="emile-open" aria-expanded="false"><img src="icons/emile.png" alt="" width="32" height="32"><span class="n">' + t + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></section>';
 }
 
+// Exercices de la prochaine séance dont la charge est maintenue à cause de cette zone (au plus 4)
+function heldNames(z){
+  const ns = nextSession(); const t = ns && tplDef(ns); if (!t || !ZONES[z].hits) return [];
+  return tplItems(t).map(it => exDef(it.ex)).filter(e => e && (e.kind === 'load' || e.kind === 'bw') && ZONES[z].hits(e)).map(e => e.name).slice(0, 4);
+}
 // Conseils d'Émile du jour, du plus important au moins important (rang 1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : semaine)
 function emileCards(d, wk, goal){
   const q = [];
@@ -75,6 +81,8 @@ function emileCards(d, wk, goal){
     const fat = fatigueCheck();
     if (fat) q.push({ rank:2, html: emile('<p>' + esc(hey('Ta force baisse sur ' + fat.drops.length + ' exercices sur ' + fat.compared + ' cette semaine : ' + fat.drops.join(', ') + '.')) + (fat.avgSleep != null && fat.avgSleep < 7 ? ' Ton sommeil moyen ces derniers jours est de ' + fmtKg(Math.round(fat.avgSleep * 10) / 10) + ' h.' : '') + ' Avancer la semaine de décharge peut t’aider à récupérer.</p><div class="row"><button type="button" class="btn primary" data-act="fatigue-deload">Avancer la décharge</button><button type="button" class="btn" data-act="fatigue-ignore">Ignorer cette semaine</button></div>', { title:'Fatigue probable', tone:'warn', close:'fatigue-ignore' }) });
     if (kneeAlert()) q.push({ rank:2, html: emile('<p>Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts, charges maintenues sur les exercices qui sollicitent le genou. Si ça ne redescend pas, consulte un kiné ou un médecin du sport.</p>', { title:'Genou', tone:'bad', key:'knee:' + kneeEntries().filter(k => k.v > 3).map(k => k.date).sort().pop() }) });
+    painZones().filter(z => z !== 'knee').forEach(z => { const a = painAdvice(z, heldNames(z)); if (a) q.push({ rank:2, html: emile(a.lines.map(l => '<p>' + esc(nbsp(l)) + '</p>').join(''), { title:a.title, tone:a.tone, key:a.key }) }); });
+    if (weighDue(d)) q.push({ rank:4, html: emile('<p>' + esc(nbsp(hey(withDot('Ta dernière pesée date du ' + fmtDate(lastWeighIn().date)) + ' Une pesée toutes les 2 semaines suffit pour suivre ton poids. Pèse-toi ce matin, avant de manger.'))) + '</p><button type="button" class="btn" data-act="weigh-now">Noter mon poids</button>', { title:'Pesée', key:'weigh:' + mondayOf(d) }) });
     if (backupDue()) {
       const le = settings().lastExport;
       q.push({ rank:3, html: emile('<p>' + esc(hey(le ? withDot('Ta dernière sauvegarde date du ' + fmtDate(le)) : 'Tu n’as pas encore sauvegardé tes données.')) + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>'
@@ -89,6 +97,24 @@ function emileCards(d, wk, goal){
   if (!f.rest.length) return first;
   const n = f.rest.length;
   return first + (S.emileMore ? f.rest.join('') : '') + '<button type="button" class="link emile-more" data-act="emile-more" aria-expanded="' + !!S.emileMore + '">' + (S.emileMore ? 'Masquer les autres conseils' : n + (n > 1 ? ' autres conseils' : ' autre conseil')) + '</button>';
+}
+
+// Douleurs du jour : le genou comme avant, plus les zones choisies, en une ligne compacte. Une douleur au-dessus du seuil appelle,
+// pour les autres zones, les signaux d'alerte (une seule question de plus, seulement dans ce cas)
+function painLine(d){
+  const zs = painZones(); if (!zs.length) return '';
+  const day = (S.docs.get('d_' + d) || {}).z || {}; const k = S.docs.get('k_' + d);
+  const val = z => z === 'knee' ? (k ? k.stairs : null) : day[z] ? day[z].v : null;
+  const solo = zs.length === 1 && zs[0] === 'knee'; const sum = zs.filter(z => val(z) != null).map(z => solo ? val(z) + '/10' : ZONES[z].label + ' ' + val(z));
+  const tail = z => z === 'knee' ? 'sauts suspendus et charges maintenues' : ZONES[z].hits ? 'charges maintenues sur les exercices concernés' : 'je note, sans pouvoir adapter tes exercices';
+  let b = '';
+  zs.forEach(z => {
+    const v = val(z); const fl = z !== 'knee' && day[z] ? day[z].flags || [] : [];
+    b += '<div class="stack">' + (solo ? '' : '<span class="label">' + ZONES[z].label + '</span>') + '<p class="muted small">' + esc(ZONES[z].ask) + ', de 0 à 10 : au-dessus de ' + PAIN_LIMIT + ', ' + tail(z) + '.</p>' + kneeChips(v, z === 'knee' ? 'stairs' : 'pain-d', false, z === 'knee' ? null : z);
+    if (v > PAIN_LIMIT && z !== 'knee') b += '<span class="muted small">Ça s’accompagne de…</span><div class="chips" role="group" aria-label="Signaux d’alerte">' + FLAGS.map(f => '<button type="button" class="chip txt' + (fl.indexOf(f[0]) >= 0 ? ' on hi' : '') + '" data-act="pain-flag" data-z="' + z + '" data-v="' + f[0] + '" aria-pressed="' + (fl.indexOf(f[0]) >= 0) + '">' + f[1] + '</button>').join('') + '</div>';
+    b += '</div>';
+  });
+  return lineCard(solo ? 'genou' : 'douleurs', solo ? 'Genou ce matin' : 'Douleurs', sum.join(' · ') || 'À noter', '', b + (solo ? '' : '<p class="muted small">Ce n’est pas un diagnostic : si une douleur dure ou revient, consulte un médecin ou un kiné.</p>'));
 }
 
 export function viewToday(){
@@ -110,14 +136,13 @@ export function viewToday(){
   h += '<h2>Ton suivi du jour</h2>' + waterLine();
   const b = S.docs.get('b_' + d) || {};
   const corps = [b.weight != null ? fmtKg(num(b.weight)) + ' kg' : '', b.sleep != null ? fmtKg(num(b.sleep)) + ' h' : ''].filter(Boolean).join(' · ') || 'À noter';
-  let cb = '<p class="muted small">Nuit de moins de 6 h : garde 1 rep de plus en réserve.</p>';
+  const lw = lastWeighIn();
+  const wnote = lw ? withDot('Dernière pesée : ' + fmtKg(num(lw.weight)) + ' kg le ' + fmtDate(lw.date)) + ' Une pesée toutes les 2 semaines suffit' + (weighDue(d) ? ' : c’est le moment, le matin avant de manger.' : ' : ' + withDot('la prochaine vers le ' + fmtDate(addDays(lw.date, WEIGH_DAYS)))) : 'Une pesée toutes les 2 semaines suffit : note ton poids le matin, avant de manger.';
+  let cb = '<p class="muted small">' + esc(nbsp(wnote)) + '</p><p class="muted small">Nuit de moins de 6 h : garde 1 rep de plus en réserve.</p>';
   cb += '<div class="fields"><label class="f"><span>Poids (kg)</span><input class="n" id="b-weight" data-b="weight" inputmode="decimal" value="' + esc(b.weight == null ? '' : fmtKg(num(b.weight))) + '" placeholder="' + esc(bodyweight() ? fmtKg(bodyweight()) : 'ex. 75') + '"></label><label class="f"><span>Sommeil (h)</span><input class="n" id="b-sleep" data-b="sleep" inputmode="decimal" value="' + esc(b.sleep == null ? '' : fmtKg(num(b.sleep))) + '" placeholder="ex. 7,5"></label></div>';
   cb += '<div class="stack" style="gap:6px"><span class="label">Qualité du sommeil</span><div class="chips">' + [1,2,3,4,5].map(v => '<button type="button" class="chip' + (b.sleepQ === v ? ' on' : '') + '" data-act="sleepq" data-v="' + v + '" aria-pressed="' + (b.sleepQ === v) + '">' + v + '</button>').join('') + '</div><span class="muted small">1 = très mauvaise, 5 = excellente</span></div>';
   h += lineCard('corps', 'Poids et sommeil', corps, '', cb);
   h += activitiesLine();
-  if (kneeOn()) {
-    const k = S.docs.get('k_' + d);
-    h += lineCard('genou', 'Genou ce matin', k ? k.stairs + '/10' : 'À noter', '', '<p class="muted small">Douleur en montant les escaliers, de 0 à 10 : au-dessus de 3, sauts suspendus et charges maintenues.</p>' + kneeChips(k ? k.stairs : null, 'stairs', false));
-  }
+  h += painLine(d);
   return h;
 }

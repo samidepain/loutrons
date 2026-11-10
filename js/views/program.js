@@ -4,6 +4,7 @@ import { DAY_ORDER, DAY_SHORT, KINDS, MUSCLES, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
 import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, nextSession, perWeekOf, planDay, plannedDates, plannedSessions, programOf, rotationOf, searchEx, settings, sportInfo, sportOn, startDate, tplDef, tplEst, tplItems, weekInfo } from '../data.js';
 import { useShare } from '../backup.js';
+import { painZones, ZONE_IDS, ZONES } from '../pain.js';
 import { VERSION } from '../version.js';
 
 const PTABS = [['seances','Séances'],['exercices','Exercices'],['planning','Planning']];
@@ -108,7 +109,8 @@ function settingsCard(){
   const tog = (k, title, desc) => '<label class="toggle"><input type="checkbox" id="mod-' + k + '" data-act="mod" data-v="' + k + '"' + (m[k] ? ' checked' : '') + '><span><b>' + title + '</b><br><span class="muted small">' + desc + '</span></span></label>';
   let h = '<section class="card"><h3>Réglages de l’entraînement</h3><label class="f"><span>Début du programme</span><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></label><p class="muted small">Choisis le lundi de ta première semaine : il fixe tes blocs de 6 semaines.</p>';
   h += '<p class="muted small">Options, désactivées au départ : active seulement ce qui te sert.</p>';
-  h += tog('knee', 'Suivi d’une douleur au genou', 'Douleur le matin et pendant les séances jambes. Au-dessus de 3/10, pas de sauts et pas de hausse de charge sur les exercices qui sollicitent le genou.');
+  const on = painZones();
+  h += '<div class="stack"><span class="label">Suivi des douleurs</span><div class="chips" role="group" aria-label="Zones de douleur suivies">' + ZONE_IDS.map(z => '<button type="button" class="chip txt' + (on.indexOf(z) >= 0 ? ' on' : '') + '" data-act="pain-zone" data-v="' + z + '" aria-pressed="' + (on.indexOf(z) >= 0) + '">' + ZONES[z].label + '</button>').join('') + '</div><p class="muted small">Je te demande ta douleur chaque matin (de 0 à 10) et pendant les séances qui sollicitent la zone. Au-dessus de 3/10, je ne monte pas la charge des exercices concernés' + (on.indexOf('knee') >= 0 ? ', et je suspends les sauts pour le genou' : '') + '. Pour une zone que je ne sais pas relier à tes exercices (poignet, hanche, nuque, autre), je note seulement. Ce n’est pas un diagnostic : en cas de doute, consulte un médecin ou un kiné.</p></div>';
   h += tog('jumps', 'Détente et sauts', 'Exercices de pliométrie dans les séances et un test de détente pendant chaque semaine de décharge.');
   h += tog('sport', 'Sport collectif à côté', 'Tes jours d’entraînement et de match apparaissent dans ta semaine.' + (m.jumps ? ' Tu peux aussi signaler une semaine chargée : pas de sauts en salle.' : ''));
   if (m.sport) {

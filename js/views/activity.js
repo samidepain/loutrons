@@ -2,7 +2,7 @@
 import { addDays, capFirst, esc, fmtDateLong, fmtInt, fmtKg, lowFirst, num, today } from '../util.js';
 import { S } from '../store.js';
 import { bodyweight, settings, sportInfo } from '../data.js';
-import { activityKcal, dayEnergy, EFFORT, glassOf, LEVELS, sportPlanned, SPORTS, TYPES, waterBase, waterGoal, waterOf, WATER } from '../energy.js';
+import { activityKcal, CHOICES, choiceOf, dayEnergy, EFFORT, glassOf, LEVELS, sportPlanned, waterBase, waterGoal, waterOf, WATER } from '../energy.js';
 import { ring } from '../ring.js';
 
 const r10 = x => Math.round(x / 10) * 10;
@@ -66,14 +66,14 @@ export function actPreview(){
 export function viewActivity(){
   const A = S.act;
   let h = '<div class="row between"><button type="button" class="link" data-act="act-cancel">Annuler</button><span class="label">' + esc(dayLabel(A.date)) + '</span></div><h1>' + (A.edit ? 'Modifier l’activité' : 'Ajouter une activité') + '</h1>';
-  h += '<div class="chips" role="group" aria-label="Activité">' + TYPES.map(t => '<button type="button" class="chip txt' + (A.type === t[0] ? ' on' : '') + '" data-act="act-type" data-v="' + t[0] + '" aria-pressed="' + (A.type === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
+  h += '<div class="chips" role="group" aria-label="Activité">' + CHOICES.map(t => '<button type="button" class="chip txt' + (choiceOf(A) === t[0] ? ' on' : '') + '" data-act="act-type" data-v="' + t[0] + '" aria-pressed="' + (choiceOf(A) === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
   const pick = (act, v, on, title, desc) => '<button type="button" class="pick' + (on ? ' on' : '') + '" data-act="' + act + '" data-v="' + v + '" aria-pressed="' + on + '"><span class="stack" style="gap:2px"><span class="n">' + esc(title) + '</span>' + (desc ? '<span class="m">' + esc(desc) + '</span>' : '') + '</span><span aria-hidden="true">' + (on ? '✓' : '') + '</span></button>';
   if (LEVELS[A.type]) h += '<div class="stack" style="gap:6px"><span class="label">Allure</span>' + LEVELS[A.type].map(l => pick('act-level', l[0], A.level === l[0], l[1], l[2])).join('') + '</div>';
   if (A.type === 'sport') {
-    h += '<div class="stack" style="gap:6px"><span class="label">Sport</span><div class="chips" role="group">' + Object.keys(SPORTS).map(k => '<button type="button" class="chip txt' + (A.sport === k ? ' on' : '') + '" data-act="act-sport" data-v="' + k + '" aria-pressed="' + (A.sport === k) + '">' + SPORTS[k].label + '</button>').join('') + '</div>';
-    h += '<div class="chips" role="group">' + [['train', 'Entraînement ou loisir'], ['match', 'Match']].map(o => '<button type="button" class="chip txt' + (A.level === o[0] ? ' on' : '') + '" data-act="act-level" data-v="' + o[0] + '" aria-pressed="' + (A.level === o[0]) + '">' + o[1] + '</button>').join('') + '</div>';
-    h += '<p class="muted small">Ton sport n’est pas dans la liste ? Choisis « Autre ».</p></div>';
+    h += '<div class="stack" style="gap:6px"><div class="chips" role="group" aria-label="Entraînement ou match">' + [['train', 'Entraînement ou loisir'], ['match', 'Match']].map(o => '<button type="button" class="chip txt' + (A.level === o[0] ? ' on' : '') + '" data-act="act-level" data-v="' + o[0] + '" aria-pressed="' + (A.level === o[0]) + '">' + o[1] + '</button>').join('') + '</div>';
+    h += '</div>';
   }
+  if (A.type === 'other') h += '<p class="muted small">« Autre » : pour une activité qui n’est pas dans la liste.</p>';
   if (A.type === 'other') h += '<label class="f"><span>Activité</span><input data-ac="name" value="' + esc(A.name || '') + '" placeholder="ex. escalade, yoga, ski"></label>';
   h += '<div class="fields"><label class="f"><span>Durée (min)</span><input class="n" data-ac="min" inputmode="numeric" value="' + esc(A.min == null ? '' : A.min) + '" placeholder="ex. 45"></label>';
   if (A.type === 'run') h += '<label class="f"><span>Distance (km)</span><input class="n" data-ac="km" inputmode="decimal" value="' + esc(A.km == null ? '' : A.km) + '" placeholder="ex. 8"></label>';

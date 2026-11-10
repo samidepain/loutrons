@@ -16,6 +16,7 @@ import { foodAfterRender, viewFood } from './views/food.js';
 import { nutritionOf } from './views/goal.js';
 import { navigate, screenOf } from './nav.js';
 import { viewActivity } from './views/activity.js';
+import { viewDay } from './views/calendar.js';
 import { viewMovement } from './views/movement.js';
 
 // Trophée des records (carte dorée d'Aujourd'hui)
@@ -57,7 +58,7 @@ function paint(){
   $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity()
     : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : viewProgressPage())
     : v === 'food' && nutritionOf().on ? viewFood()
-    : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : viewToday();
+    : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : S.day ? viewDay() : viewToday();
   if (v === 'training' && aw) ensureTick();
   foodAfterRender();
 }
@@ -69,8 +70,9 @@ export function applyTheme(t){
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.content = forced ? THEME_COLORS[t] : (m.media.indexOf('dark') >= 0 ? THEME_COLORS.dark : THEME_COLORS.light); });
   try { if (forced) localStorage.setItem('loutrons-theme', t); else localStorage.removeItem('loutrons-theme'); } catch (e) {}
 }
-export function kneeChips(sel, act, dis){
+// Échelle de douleur de 0 à 10 ; zone : zone de douleur (data-z), absente pour le genou
+export function kneeChips(sel, act, dis, zone){
   let h = '<div class="chips" role="group">';
-  for (let i = 0; i <= 10; i++) h += '<button type="button" class="chip' + (sel === i ? ' on' + (i > 3 ? ' hi' : '') : '') + '" data-act="' + act + '" data-v="' + i + '"' + (dis ? ' disabled' : '') + ' aria-pressed="' + (sel === i) + '">' + i + '</button>';
+  for (let i = 0; i <= 10; i++) h += '<button type="button" class="chip' + (sel === i ? ' on' + (i > 3 ? ' hi' : '') : '') + '" data-act="' + act + '" data-v="' + i + '"' + (zone ? ' data-z="' + zone + '"' : '') + (dis ? ' disabled' : '') + ' aria-pressed="' + (sel === i) + '">' + i + '</button>';
   return h + '</div>';
 }

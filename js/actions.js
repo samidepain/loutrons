@@ -17,11 +17,12 @@ import { planFor } from './nutrition.js';
 import { copyEntries, dayDoc, freshFood, fromOff, habitualFoods, mealLabel, MEALS, recentFoods, validBarcode } from './food.js';
 import { foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
 import { ownRecipe } from './recipes.js';
-import { activityKcal, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, waterOf } from './energy.js';
+import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, waterOf } from './energy.js';
 import { actDoc, actPreview } from './views/activity.js';
 
 function startWorkout(tplId){
   if (!S.loaded) return;
+  S.day = null;
   if (activeWorkout()) { S.view = 'training'; render(); return; }
   const t = tplDef(tplId); if (!t) return;
   const date = today(); const wk = weekInfo(date);
@@ -205,9 +206,11 @@ async function lookupBarcode(raw){
   } catch (e) { if (S.food === F) notFound(navigator.onLine ? 'error' : 'offline'); }
 }
 document.addEventListener('barcode', e => { if (S.food && S.food.mode === 'scan') lookupBarcode(e.detail); });
+// Un choix du formulaire d'activité ('run', 'sport:basket', 'other'…) en type, sport et niveau ; un sport commence en « entraînement ou loisir »
+function choice(v){ const p = String(v).split(':'); return p[0] === 'sport' && p[1] ? { type:'sport', sport:p[1], level:'train' } : { type:p[0] === 'sport' ? 'run' : p[0] }; }
 const A = {
   // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
-  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
+  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.day = null; S.fiche = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
     render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
   // Aujourd'hui : ouvrir ou fermer une ligne compacte, afficher les autres conseils d'Émile, liens vers Séances et Alimentation
   'today-open'(b){ S.todayOpen = S.todayOpen === b.dataset.v ? null : b.dataset.v; render(); },
@@ -383,9 +386,10 @@ const A = {
   'cal-week'(){ S.calMonth = null; S.calDay = null; render(); },
   'cal-prev'(){ S.calMonth = addMonths(S.calMonth, -1); S.calDay = null; render(); },
   'cal-next'(){ S.calMonth = addMonths(S.calMonth, 1); S.calDay = null; render(); },
-  // Toucher un jour le choisit et montre son détail, dans la vue où l'on est (semaine ou mois) ; seul « Voir le mois » ouvre le mois
-  'cal-day'(b){ const d = b.dataset.v; if (S.calMonth) S.calMonth = d.slice(0, 7); S.calDay = S.calDay === d ? null : d; render(); },
-  'cal-hist'(b){ S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
+  // Toucher un jour ouvre son écran ; le mois (ou la semaine) et le jour choisi sont gardés pour le retour
+  'cal-day'(b){ const d = b.dataset.v; if (S.calMonth) S.calMonth = d.slice(0, 7); S.calDay = d; S.day = d; S.confirm = null; render(); window.scrollTo(0, 0); },
+  'day-close'(){ S.day = null; S.confirm = null; render(); },
+  'cal-hist'(b){ S.day = null; S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
   'set-sex'(b){ putSettings({ sex: settings().sex === b.dataset.v ? null : b.dataset.v }); render(); },
   theme(b){ putSettings({ theme: b.dataset.v }); applyTheme(b.dataset.v); render(); },
   'prog-rename'(){ S.renaming = true; render(); const i = $('#prog-name'); if (i) i.focus(); },
@@ -430,14 +434,13 @@ const A = {
   'adj-reset'(){ putSettings({ nutrition: Object.assign({}, nutritionOf(), { adjust: 0 }) }); render(); toast('Corrections annulées.'); },
   // Activités : ajout (éventuellement le sport prévu aujourd'hui), modification, suppression
   'act-add'(b){
-    const v = b.dataset.v; const last = settings().lastAct || 'run';
-    S.act = v ? { type:'sport', sport: sportOf(sportInfo().name), level:v, min:90, date:today() } : { type:last, date:today() };
+    const v = b.dataset.v; const date = b.dataset.d || today();
+    S.act = v ? { type:'sport', sport: sportOf(sportInfo().name), level:v, min:90, date } : Object.assign({ date }, choice(settings().lastAct || 'run'));
     S.confirm = null; render(); window.scrollTo(0, 0);
   },
   'act-cancel'(){ S.act = null; S.confirm = null; render(); },
-  'act-type'(b){ S.act.type = b.dataset.v; S.act.level = null; render(); },
+  'act-type'(b){ const c = choice(b.dataset.v); if (c.type === 'sport' && S.act.type === 'sport') c.level = S.act.level || 'train'; Object.assign(S.act, { level:null, sport:null }, c); render(); },
   'act-level'(b){ S.act.level = b.dataset.v; render(); },
-  'act-sport'(b){ S.act.sport = b.dataset.v; render(); },
   'act-edit'(b){ const o = S.docs.get(b.dataset.v); if (!o) return; S.act = Object.assign({}, o, { edit:b.dataset.v }); S.confirm = null; render(); window.scrollTo(0, 0); },
   'act-save'(){
     const A = S.act; const a = actDoc(A);
@@ -456,11 +459,12 @@ const A = {
     // L'identifiant porte la date : changer la date, c'est déplacer l'activité
     const id = A.edit && A.edit.indexOf('a_' + date + '_') === 0 ? A.edit : 'a_' + date + '_' + rid();
     if (A.edit && A.edit !== id) del(A.edit);
-    put(id, doc); if (!A.edit) putSettings({ lastAct: a.type });
+    put(id, doc); if (!A.edit) putSettings({ lastAct: choiceOf(a) });
     S.act = null; render(); toast(A.edit ? 'Activité modifiée.' : 'Activité ajoutée.');
   },
   'act-del'(){ S.confirm = 'act-del'; render(); },
-  'act-del-yes'(){ del(S.act.edit); S.act = null; S.confirm = null; render(); toast('Activité supprimée.'); },
+  'act-ask-del'(b){ S.confirm = 'act-del:' + b.dataset.v; render(); },
+  'act-del-yes'(b){ const id = b.dataset.v || S.act.edit; del(id); S.act = null; S.confirm = null; render(); toast('Activité supprimée.'); },
   // Eau : un verre de plus ou de moins, ou une quantité en mL
   water(b){ addWater(+b.dataset.v * glassOf()); },
   'water-ml'(){ const i = $('#water-ml'); const v = num(i ? i.value : ''); if (!(v > 0 && v <= 3000)) { toast('Indique une quantité entre 1 et 3 000 mL.'); return; } addWater(v); },
@@ -537,6 +541,24 @@ const A = {
   rir(b){ if (S.rirAsk === b.dataset.ex) { answerRir(b.dataset.ex, +b.dataset.v); return; } const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const v = +b.dataset.v; st.rir = st.rir === v ? null : v; put(w.id, w); render(); },
   'rir-skip'(b){ answerRir(b.dataset.ex, null); },
   knee(b){ const w = activeWorkout(); if (!w) return; const v = +b.dataset.v; w.knee = w.knee === v ? null : v; put(w.id, w); render(); },
+  // Douleurs des autres zones : note du jour (d_<date>), signaux d'alerte, note pendant la séance (w.pain), zones suivies
+  'pain-d'(b){
+    const d = today(); const id = 'd_' + d; const z = b.dataset.z; const v = +b.dataset.v; const cur = Object.assign({ date:d }, S.docs.get(id)); cur.z = Object.assign({}, cur.z);
+    if (cur.z[z] && cur.z[z].v === v) delete cur.z[z]; else cur.z[z] = Object.assign({}, cur.z[z], { v });
+    if (Object.keys(cur.z).length) put(id, cur); else del(id); render();
+  },
+  'pain-flag'(b){
+    const d = today(); const id = 'd_' + d; const z = b.dataset.z; const cur = S.docs.get(id); if (!cur || !cur.z || !cur.z[z]) return;
+    const fl = toggleIn((cur.z[z].flags || []).slice(), b.dataset.v); put(id, Object.assign({}, cur, { z: Object.assign({}, cur.z, { [z]: Object.assign({}, cur.z[z], { flags: fl }) }) })); render();
+  },
+  'pain-s'(b){ const w = activeWorkout(); if (!w) return; const z = b.dataset.z; const v = +b.dataset.v; w.pain = Object.assign({}, w.pain); if (w.pain[z] === v) delete w.pain[z]; else w.pain[z] = v; put(w.id, w); render(); },
+  'pain-zone'(b){
+    const z = b.dataset.v;
+    if (z === 'knee') { const m = Object.assign({}, mods()); m.knee = !m.knee; putSettings({ modules:m }); }
+    else { const p = Object.assign({}, settings().pain); p.zones = toggleIn((p.zones || []).slice(), z); putSettings({ pain:p }); }
+    render();
+  },
+  'weigh-now'(){ S.todayOpen = 'corps'; render(); const i = $('#b-weight'); if (i) { i.scrollIntoView({ block:'center' }); i.focus(); } },
   stairs(b){ const d = today(); const id = 'k_' + d; const v = +b.dataset.v; const cur = S.docs.get(id); if (cur && cur.stairs === v) del(id); else put(id, { date:d, stairs:v }); render(); },
   sleepq(b){ const d = today(); const id = 'b_' + d; const cur = Object.assign({ date:d }, S.docs.get(id) || {}); const v = +b.dataset.v; cur.sleepQ = cur.sleepQ === v ? null : v; put(id, cur); render(); },
   busy(b){ const s = settings(); const wk = mondayOf(today()); const busy = Object.assign({}, s.busy); if (b.checked) busy[wk] = true; else delete busy[wk]; putSettings({ busy }); render(); },
@@ -593,7 +615,7 @@ const A = {
     const lo = num(e.lo), hi = num(e.hi);
     if (isSet && (!(lo > 0) || !(hi >= lo))) { toast('Vérifie la fourchette de reps : le max doit être au moins égal au min.'); return; }
     if (isSet && !(e.muscles.p || []).length) { toast('Choisis au moins un muscle principal.'); return; }
-    const out = { name:String(e.name).trim(), kind:e.kind, cat:e.cat || 'iso', sets:num(e.sets) || 3, lo:lo || 1, hi:hi || lo || 1, rest:num(e.rest) || 90, step:num(e.step) || 2.5, unit:e.unit || '', uni:!!e.uni, knee:!!e.knee, muscles:{ p:(e.muscles.p || []).slice(), s:(e.muscles.s || []).slice() }, cue:e.cue || '' };
+    const out = { name:String(e.name).trim(), kind:e.kind, cat:e.cat || 'iso', sets:num(e.sets) || 3, lo:lo || 1, hi:hi || lo || 1, rest:num(e.rest) || 90, step:num(e.step) || 2.5, unit:e.unit || '', uni:!!e.uni, knee:!!e.knee, back:!!e.back, muscles:{ p:(e.muscles.p || []).slice(), s:(e.muscles.s || []).slice() }, cue:e.cue || '' };
     if (e.optional) out.optional = true;
     // Cardio : une seule « série », sa durée ; les allures restent celles de la bibliothèque
     if (e.kind === 'cardio') Object.assign(out, { cat:'cardio', sets:1, hi:out.lo, rest:0, unit:'min' });

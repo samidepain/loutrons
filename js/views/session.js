@@ -2,9 +2,10 @@
 import { capFirst, daysBetween, esc, fmtDate, fmtKg, fmtRest, lowFirst, nbsp, num } from '../util.js';
 import { JUMP_PROTOCOL } from '../library.js';
 import { S } from '../store.js';
-import { activeWorkout, allTpl, bodyweight, exDef, history, itemsOf, jumpsOn, kneeOn, sessionFocus, testDue, testForBlock, weekInfo, wName, workouts } from '../data.js';
+import { activeWorkout, allTpl, bodyweight, exDef, history, itemsOf, jumpsOn, sessionFocus, testDue, testForBlock, weekInfo, wName, workouts } from '../data.js';
 import { lastCardio, warmup } from '../engine.js';
 import { kneeChips } from '../render.js';
+import { painZones, ZONES } from '../pain.js';
 import { noTplCard } from './program.js';
 import { emile, hey, returnTip } from '../emile.js';
 import { hasMovement } from './movement.js';
@@ -12,6 +13,14 @@ import { effortChoice } from './today.js';
 import { ring } from '../ring.js';
 import { sessionKcal } from '../energy.js';
 
+// Douleurs pendant la séance : le genou après une séance jambes, les autres zones suivies si un exercice de la séance les sollicite
+function painCard(w){
+  const zs = painZones().filter(z => z === 'knee' ? w.lower : ZONES[z].hits && itemsOf(w).some(it => { const e = exDef(it.ex); return e && ZONES[z].hits(e); }));
+  if (!zs.length) return '';
+  const solo = zs.length === 1 && zs[0] === 'knee'; const val = z => z === 'knee' ? w.knee : (w.pain || {})[z];
+  return '<section class="card"><h3>' + (solo ? 'Genou' : 'Douleurs') + ' pendant la séance</h3><p class="muted small">Douleur maximale ressentie, de 0 à 10.</p>'
+    + zs.map(z => (solo ? '' : '<span class="label">' + ZONES[z].label + '</span>') + kneeChips(val(z) == null ? null : val(z), z === 'knee' ? 'knee' : 'pain-s', false, z === 'knee' ? null : z)).join('') + '</section>';
+}
 export function viewSession(){
   const w = S.loaded && activeWorkout();
   if (!w && S.loaded && !allTpl().length) return noTplCard();
@@ -50,7 +59,7 @@ export function viewSession(){
     } else { h += one(it, i); i++; }
   }
   h += '<button type="button" class="btn" data-act="pick-add">+ Ajouter un exercice à cette séance</button>';
-  if (w.lower && kneeOn()) h += '<section class="card"><h3>Genou pendant la séance</h3><p class="muted small">Douleur maximale ressentie, de 0 à 10.</p>' + kneeChips(w.knee == null ? null : w.knee, 'knee') + '</section>';
+  h += painCard(w);
   h += '<section class="card"><h3>Notes</h3><textarea id="notes-' + w.id + '" data-f="notes" placeholder="Sensations, réglages de machine, ce qui a gêné…">' + esc(w.notes || '') + '</textarea></section>';
   // Une seule action orange : « Valider la série » pendant la séance, « Terminer la séance » une fois tout validé
   const allDone = !focus.ask && items.every(it => { const st = w.ex[it.ex]; return !st || st.skip || finished(it, st); });

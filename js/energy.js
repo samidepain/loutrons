@@ -29,6 +29,10 @@ export const SPORTS = {
   badminton: { label:'Badminton', train:5.5, match:7.0, names:['bad'] }           // 15030, 15020
 };
 export const TYPES = [['run', 'Course à pied'], ['bike', 'Vélo'], ['swim', 'Natation'], ['walk', 'Marche'], ['sport', 'Sport'], ['other', 'Autre']];
+// Choix du formulaire d'activité : les activités directement (chaque sport est un choix, 'sport:basket'), « Autre » pour le reste.
+// Les documents gardent type:'sport' et sport:'basket' : les anciennes activités restent lisibles.
+export const CHOICES = TYPES.filter(t => t[0] !== 'sport' && t[0] !== 'other').concat(Object.keys(SPORTS).map(k => ['sport:' + k, SPORTS[k].label]), [TYPES[TYPES.length - 1]]);
+export const choiceOf = a => a.type === 'sport' ? (a.sport ? 'sport:' + a.sport : 'sport') : a.type;
 export const RUN_KCAL = 1; // course : environ 1 kcal par kg et par km, quelle que soit la vitesse (dépense nette ; Margaria et al., 1963)
 // Eau à boire par jour : apport total conseillé par l'EFSA (2010), 2,5 L pour un homme et 2,0 L pour une femme, dont environ 20 %
 // apportés par les aliments ; plus environ 0,5 L par heure de sport (repère de l'appli)

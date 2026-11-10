@@ -2,6 +2,7 @@
 import { addDays, clamp, daysBetween, e1rm, fmtKg, lowFirst, num, roundTo, today } from './util.js';
 import { MUSCLES } from './library.js';
 import { S } from './store.js';
+import { holdText, soreZones } from './pain.js';
 import { bestE1, blockRange, blockStarts, bodyDocs, bodyweight, canon, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, lastSessionGap, maxKg, musclesOf, perWeekOf, rotationOf, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
 
 /* ================= Moteur de progression =================
@@ -11,7 +12,7 @@ import { bestE1, blockRange, blockStarts, bodyDocs, bodyweight, canon, exDef, hi
 const PCT = { iso:[0.02, 0.05], upper:[0.025, 0.05], lower:[0.05, 0.10] };
 export function targetRIR(e, wk){ if (e.cat === 'iso') return 1; if (wk && wk.bw === 5 && !(e.knee && kneeOn())) return 1; return 2; }
 export function computeTarget(e, wk, excludeId){
-  const alert = kneeAlert(); const knee = !!e.knee && alert;
+  const alert = kneeAlert(); const sore = soreZones(e); const knee = sore.length > 0;
   if (e.kind === 'check') return { type:'check', label:'À faire', text:e.cue || '' };
   if (e.kind === 'cardio') return { type:'cardio', label: wk.deload ? 'Décharge' : 'Cardio', sets:1, min:e.lo, text:'Durée prévue : ' + e.lo + ' min' + (wk.deload ? ', à une allure confortable.' : '. Choisis ton allure ci-dessous.') };
   if (e.kind === 'plyo') {
@@ -88,7 +89,7 @@ export function computeTarget(e, wk, excludeId){
   }
   if (knee) {
     const reps = []; for (let i = 0; i < nSets; i++) { const r = (top[i] || last).reps; reps.push(clamp(r, lo, hi)); }
-    return { type:'hold', label:'Maintien', sets:nSets, kg, reps, rir:2, text:'Genou sensible ces derniers jours : garde la charge et une amplitude confortable, sans chercher de record.' };
+    return { type:'hold', label:'Maintien', sets:nSets, kg, reps, rir:2, text:holdText(sore) };
   }
   const add = rir == null ? 1 : rir >= 3 ? 2 : rir <= 0 ? 0 : 1;
   const reps = []; for (let i = 0; i < nSets; i++) { const r = (top[i] || last).reps; reps.push(clamp(r + add, lo, hi)); }

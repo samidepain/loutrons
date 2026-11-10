@@ -43,7 +43,7 @@ export function viewSetup(){
       + [2, 3, 4, 5, 6].map(n => '<button type="button" class="chip' + (per === n ? ' on' : '') + '" data-act="setup-per-week" data-v="' + n + '" aria-pressed="' + (per === n) + '">' + n + '</button>').join('') + '</div></section>';
   }
   if (!first) h += '<section class="card"><label class="toggle"><input type="checkbox" id="setup-restart" data-act="setup-restart"' + (U.restart ? ' checked' : '') + '><span><b>Recommencer en semaine 1</b><br><span class="muted small">Nouveau bloc de 6 semaines, en commençant par une semaine de calibration.</span></span></label></section>';
-  else h += '<p class="muted small">Suivi du genou, tests de détente, sport collectif à côté : ces options s’activent plus tard dans Entraînement › Planning.</p>';
+  else h += '<p class="muted small">Suivi des douleurs, tests de détente, sport collectif à côté : ces options s’activent plus tard dans Entraînement › Planning.</p>';
   h += first ? '<button type="button" class="btn primary big" data-act="setup-next">Continuer</button>' : '<button type="button" class="btn primary big" data-act="setup-done">Changer de programme</button>';
   return h;
 }

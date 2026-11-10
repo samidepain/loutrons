@@ -3,13 +3,14 @@ import { esc, fmtKg, fmtRest, num, REST_CHOICES } from '../util.js';
 import { CATS, KINDS, M, MUSCLES } from '../library.js';
 import { S } from '../store.js';
 import { excluded, exDef, jumpsOn, kneeOn, tplDef, tplEst } from '../data.js';
+import { painZones } from '../pain.js';
 
 // Liste des temps de repos (« 1 min 30 »…), avec la valeur actuelle si elle n'y est pas
 export function restSelect(id, attrs, value){
   const v = num(value) || 90; const opts = REST_CHOICES.indexOf(v) >= 0 ? REST_CHOICES : REST_CHOICES.concat([v]).sort((a, b) => a - b);
   return '<label class="f"><span>Repos</span><select id="' + id + '" ' + attrs + '>' + opts.map(x => '<option value="' + x + '"' + (x === v ? ' selected' : '') + '>' + fmtRest(x) + '</option>').join('') + '</select></label>';
 }
-export function blankEx(){ return { name:'', kind:'load', cat:'iso', step:2.5, sets:3, lo:8, hi:12, rest:90, unit:'reps', uni:false, knee:false, muscles:M(), cue:'' }; }
+export function blankEx(){ return { name:'', kind:'load', cat:'iso', step:2.5, sets:3, lo:8, hi:12, rest:90, unit:'reps', uni:false, knee:false, back:false, muscles:M(), cue:'' }; }
 export function viewDraft(){ return S.draft.kind === 'tpl' ? viewTplEditor() : viewExEditor(); }
 function viewTplEditor(){
   const D = S.draft; const t = D.data;
@@ -62,6 +63,7 @@ function viewExEditor(){
   if (isSet) {
     h += '<label class="toggle"><input type="checkbox" id="e-uni" data-act="e-flag" data-v="uni"' + (e.uni ? ' checked' : '') + '><span><b>Unilatéral</b><br><span class="muted small">Les reps se comptent par jambe ou par bras.</span></span></label>';
     if (kneeOn()) h += '<label class="toggle"><input type="checkbox" id="e-knee" data-act="e-flag" data-v="knee"' + (e.knee ? ' checked' : '') + '><span><b>Sollicite le genou</b><br><span class="muted small">Charge maintenue si le genou dépasse 3/10.</span></span></label>';
+    if (painZones().indexOf('lowback') >= 0) h += '<label class="toggle"><input type="checkbox" id="e-back" data-act="e-flag" data-v="back"' + (e.back ? ' checked' : '') + '><span><b>Sollicite le bas du dos</b><br><span class="muted small">Charge maintenue si le bas du dos dépasse 3/10.</span></span></label>';
   }
   if (!D.isNew) h += '<label class="toggle"><input type="checkbox" id="e-hide" data-act="ex-hide" data-v="' + esc(D.id) + '"' + (excluded().indexOf(D.id) >= 0 ? ' checked' : '') + '><span><b>Masquer cet exercice</b><br><span class="muted small">Il ne sera plus proposé quand tu ajoutes ou remplaces un exercice.</span></span></label>';
   h += '<label class="f"><span>Consignes</span><textarea id="e-cue" data-e="cue" placeholder="Placement, amplitude, réglages de machine…">' + esc(e.cue || '') + '</textarea></label>';

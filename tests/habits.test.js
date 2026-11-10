@@ -95,16 +95,16 @@ test('copie : valeurs actuelles d’un produit gardé sur le téléphone, sinon 
   assert.equal(c.per100.kcal, 100);
 });
 
-test('sauvegarde : l’export annonce la version 6 et contient les repas enregistrés', async () => {
+test('sauvegarde : l’export annonce la version 7 et contient les repas enregistrés', async () => {
   jour('2026-11-04');
   donnees(docs(reglages(), { q_a: { name: 'Matin', meal: 'breakfast', items: [], at: '2026-11-04' } }));
   const j = JSON.parse(await exportFile('json').text());
-  assert.equal(j.version, 6);
+  assert.equal(j.version, 7);
   assert.equal(j.docs.q_a.name, 'Matin');
 });
 
 test('sauvegarde : l’import accepte les repas enregistrés, pas un identifiant inconnu', () => {
-  assert.ok(importable('q_a') && importable('m_2026-11-04') && importable('settings'));
+  assert.ok(importable('q_a') && importable('m_2026-11-04') && importable('settings') && importable('d_2026-11-04'));
   assert.ok(!importable('z_a') && !importable('q_'));
 });
 

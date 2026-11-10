@@ -31,11 +31,28 @@ function intakeBetween(from, to){
   for (let d = from; d <= to; d = addDays(d, 1)) { const doc = dayDoc(d); if (!fullDay(doc)) continue; days++; kcal += totals(doc.items).kcal; target += dayPlan(d).kcal; }
   return days ? { days, avg: kcal / days, target: target / days } : { days: 0 };
 }
+// Pesées du suivi (une toutes les 2 semaines suffit) : depuis le début de l'objectif, 6 semaines au plus, avec la pesée de départ si elle date de moins de 2 semaines avant
+function weighPoints(start, to){
+  const all = bodyDocs().map(b => ({ date: b.date, weight: num(b.weight) })).filter(p => p.weight > 0);
+  const from = start > addDays(to, -42) ? start : addDays(to, -42);
+  const pts = all.filter(p => p.date >= from); const base = all.filter(p => p.date < start && p.date >= addDays(start, -14)).pop();
+  if (from === start && base) pts.unshift(base);
+  return { pts, from: pts.length ? pts[0].date : from };
+}
+// Lecture prudente de la courbe de poids (Progrès) : tendance sur les 6 dernières semaines et sa marge, sans jugement
+export function weightReading(){
+  const w = weighPoints(addDays(today(), -42), today()); const t = weightTrend(w.pts, w.from, today());
+  if (!t) return 'Une pesée toutes les 2 semaines suffit. Il en faut au moins ' + CHECK.weighins + ', sur environ un mois, pour voir une tendance : une seule mesure varie avec l’eau, le sel et les repas.' + (w.pts.length ? ' Pour l’instant : ' + w.pts.length + ' pesée' + (w.pts.length > 1 ? 's' : '') + ' sur les 6 dernières semaines.' : '');
+  const p = Math.round(t.perWeek * 100) / 100, se = Math.round(t.se * 100) / 100;
+  const dir = Math.abs(t.perWeek) <= t.se ? 'stable, compte tenu de la marge' : 'plutôt ' + (p > 0 ? 'en hausse' : 'en baisse') + ', d’environ ' + fmtKg(Math.abs(p)) + ' kg par semaine';
+  return 'Sur tes ' + t.n + ' dernières pesées, ton poids est ' + dir + ' (marge ± ' + fmtKg(se) + ' kg par semaine). C’est une tendance, pas une certitude : le poids varie d’un jour à l’autre, et la marge se resserre avec les pesées suivantes.';
+}
 export function checkDue(){
   const nc = nextCheck(); const d = today(); if (!nc || d < nc.date) return null;
   // Pesées des 2 dernières semaines, ou depuis le dernier point si on l'a laissé passer (4 semaines au plus)
   const from = daysBetween(nc.from, d) > CHECK.maxDays ? addDays(d, -CHECK.maxDays) : nc.from;
-  const trend = weightTrend(bodyDocs().map(b => ({ date: b.date, weight: num(b.weight) })), from, d);
+  const w = weighPoints(nutritionOf().start.date, d);
+  const trend = weightTrend(w.pts, w.from, d);
   const intake = intakeBetween(from, addDays(d, -1));
   return Object.assign(adjustFor(nc.pl, trend, intake), { from, pl: nc.pl, intake });
 }
@@ -48,8 +65,8 @@ export function checkCard(){
   const c = checkDue(); if (!c) return '';
   // La croix vaut « Pas cette fois », ou « Compris » quand il n'y a rien à décider
   const opt = { title:'Le point sur tes 2 semaines', id:'check-card', close: ['ontrack', 'offplan', 'limit'].indexOf(c.status) >= 0 ? 'adj-keep' : 'adj-later' };
-  if (c.status === 'weighins') return emile('<p>' + fr(hey('Pour faire le point, j’ai besoin d’au moins ' + CHECK.weighins + ' pesées sur une semaine ou plus. Pèse-toi 2 ou 3 fois par semaine, le matin, avant de manger.')) + '</p><button type="button" class="link" data-act="adj-later">Pas cette fois</button>', opt);
-  const trend = 'Ta tendance : de ' + fmtKg(Math.round(c.w0 * 10) / 10) + ' à ' + fmtKg(Math.round(c.w1 * 10) / 10) + ' kg en ' + c.days + ' jours, soit ' + perWeek(c.actual) + ' kg par semaine' + (c.planned ? ' pour ' + perWeek(c.planned) + ' prévu.' : ', alors que tu veux maintenir ton poids.');
+  if (c.status === 'weighins') return emile('<p>' + fr(hey('Pour faire le point, il me faut au moins ' + CHECK.weighins + ' pesées sur environ un mois : une toutes les 2 semaines suffit, le matin, avant de manger. C’est encore trop tôt pour conclure, je ne change rien.')) + '</p><button type="button" class="btn" data-act="adj-later">Compris</button>', opt);
+  const trend = 'Ta tendance sur ' + c.n + ' pesées : de ' + fmtKg(Math.round(c.w0 * 10) / 10) + ' à ' + fmtKg(Math.round(c.w1 * 10) / 10) + ' kg en ' + c.days + ' jours, soit ' + perWeek(c.actual) + ' kg par semaine (marge ± ' + fmtKg(Math.round(c.se * 100) / 100) + ', le poids varie d’un jour à l’autre)' + (c.planned ? ' pour ' + perWeek(c.planned) + ' prévu.' : ', alors que tu veux maintenir ton poids.');
   const kcal = fmtInt(c.pl.kcal);
   if (c.status === 'offplan') {
     const more = c.intake.avg > c.intake.target;

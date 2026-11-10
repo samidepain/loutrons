@@ -285,6 +285,10 @@ export function kneeEntries(){
 }
 export function kneeAlert(){ if (!kneeOn()) return false; const lim = addDays(today(), -10); return kneeEntries().some(k => k.date >= lim && k.v > 3); }
 export function bodyDocs(){ const out = []; S.docs.forEach((o, id) => { if (id.indexOf('b_') === 0) out.push(Object.assign({ id }, o)); }); return out.sort((a, b) => a.date < b.date ? -1 : 1); }
+// Une pesée toutes les 2 semaines suffit : le rappel apparaît 14 jours après la dernière
+export const WEIGH_DAYS = 14;
+export function lastWeighIn(){ const b = bodyDocs().filter(x => num(x.weight) > 0); return b.length ? b[b.length - 1] : null; }
+export function weighDue(day){ const l = lastWeighIn(); return !!l && daysBetween(l.date, day) >= WEIGH_DAYS; }
 export function bodyweight(){ const b = bodyDocs().filter(x => num(x.weight) > 0); return b.length ? num(b[b.length - 1].weight) : null; }
 export function validSets(arr){ return (arr || []).filter(s => s && s.done && num(s.reps) > 0); }
 export function history(exId, excludeId){

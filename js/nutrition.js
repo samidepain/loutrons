@@ -85,12 +85,13 @@ function split(out){
   return out;
 }
 // Point toutes les 2 semaines : règles de l'appli (voir La science). days : écart entre deux points ; weighins, span : pesées
-// nécessaires et jours qu'elles doivent couvrir ; tolerance : écart ignoré (kg par semaine) ; share : part de l'écart corrigée ;
+// nécessaires (une toutes les 2 semaines) et jours qu'elles doivent couvrir ; noise : variation du poids d'un jour à l'autre (kg, eau, sel,
+// repas), hypothèse de l'appli qui donne la marge d'incertitude de la tendance ; tolerance : écart ignoré au minimum (kg par semaine) ; share : part de l'écart corrigée ;
 // step : correction maximale à chaque point (kcal par jour) ; total : correction cumulée maximale (part des besoins estimés) ;
 // logDays : jours de journal suffisants pour vérifier ce qui a été mangé ; offPlan : écart toléré avec l'objectif (part)
-export const CHECK = { days:14, maxDays:28, weighins:4, span:7, tolerance:0.1, share:0.5, step:200, total:0.2, logDays:10, offPlan:0.1 };
+export const CHECK = { days:14, maxDays:28, weighins:3, span:28, noise:0.7, tolerance:0.1, share:0.5, step:200, total:0.2, logDays:10, offPlan:0.1 };
 // Tendance du poids : droite des moindres carrés sur les pesées [{ date, weight }] (triées) entre from et to.
-// Renvoie le rythme en kg par semaine et le poids de la tendance à from (w0) et à to (w1), ou null si les pesées manquent.
+// Renvoie le rythme en kg par semaine (perWeek) avec sa marge (se : erreur type, en supposant CHECK.noise de variation par pesée), et le poids de la tendance à from (w0) et à to (w1), ou null si les pesées manquent.
 export function weightTrend(points, from, to){
   const pts = points.filter(p => p.date >= from && p.date <= to && p.weight > 0);
   if (pts.length < CHECK.weighins) return null;
@@ -98,16 +99,16 @@ export function weightTrend(points, from, to){
   const mx = xs.reduce((a, x) => a + x, 0) / xs.length; const my = pts.reduce((a, p) => a + p.weight, 0) / pts.length;
   let sxy = 0, sxx = 0; xs.forEach((x, i) => { sxy += (x - mx) * (pts[i].weight - my); sxx += (x - mx) * (x - mx); });
   const slope = sxy / sxx; const end = daysBetween(from, to);
-  return { n: pts.length, days: end, perWeek: slope * 7, w0: my - slope * mx, w1: my + slope * (end - mx) };
+  return { n: pts.length, days: end, perWeek: slope * 7, se: CHECK.noise / Math.sqrt(sxx) * 7, w0: my - slope * mx, w1: my + slope * (end - mx) };
 }
 // Proposition au point des 2 semaines. pl : besoins actuels (planFor) ; trend : weightTrend ; intake : { days, avg, target } (journal)
 // status : 'weighins' (pas assez de pesées), 'offplan' (journal loin de l'objectif), 'ontrack', 'change', 'limit' (rien de possible : limit dit pourquoi)
 export function adjustFor(pl, trend, intake){
   if (!trend) return { status:'weighins' };
-  const out = { planned: pl.kgWeek || 0, actual: trend.perWeek, w0: trend.w0, w1: trend.w1, days: trend.days };
+  const out = { planned: pl.kgWeek || 0, actual: trend.perWeek, se: trend.se || 0, n: trend.n, w0: trend.w0, w1: trend.w1, days: trend.days };
   const delta = out.actual - out.planned;
   if (intake && intake.days >= CHECK.logDays && Math.abs(intake.avg - intake.target) > CHECK.offPlan * intake.target) return Object.assign(out, { status:'offplan' });
-  if (Math.abs(delta) <= CHECK.tolerance) return Object.assign(out, { status:'ontrack' });
+  if (Math.abs(delta) <= Math.max(CHECK.tolerance, out.se)) return Object.assign(out, { status:'ontrack' });
   // La moitié de l'écart (environ 7 700 kcal par kilo), arrondie à 50 kcal, au plus 200 kcal
   const want = Math.max(-CHECK.step, Math.min(CHECK.step, Math.round(-delta * KCAL_PER_KG / 7 * CHECK.share / 50) * 50));
   const cap = Math.round(pl.base * CHECK.total / 50) * 50; const adj = pl.adjust || 0;
