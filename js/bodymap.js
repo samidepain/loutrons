@@ -54,10 +54,22 @@ function figure(side, m, dx, label){
   LEFT[side].forEach(([n, d]) => { h += '<path' + cls(n) + ' d="' + d + '"/><path' + cls(n) + ' transform="' + MIRROR + '" d="' + d + '"/>'; });
   return h + '<text x="50" y="214">' + label + '</text></g>';
 }
-// Silhouette sur toute la largeur, puis les noms des muscles en deux lignes (« Voir le mouvement », fiche). muscles : { p: [...], s: [...] }
+// Face montrée d'abord : celle qui porte le plus de muscles principaux (dos pour les shrugs, face pour le développé couché)
+const FRONT_ONLY = ['Pectoraux', 'Biceps', 'Abdos', 'Quadriceps'];
+// Trapèzes : visibles des deux côtés, mais surtout de dos
+const BACK_ONLY = ['Dos', 'Trapèzes', 'Lombaires', 'Triceps', 'Fessiers', 'Ischios', 'Mollets'];
+export function firstFace(m){ const p = m.p || []; const n = l => p.filter(x => l.indexOf(x) >= 0).length; return n(BACK_ONLY) > n(FRONT_ONLY) ? 'back' : 'front'; }
+// Silhouette en 3D (version 3.18, « Voir le mouvement », fiche) : une face à la fois sur une carte qui pivote ; glisser le doigt la tourne,
+// un toucher la retourne, « De face » et « De dos » aussi (clavier, lecteurs d'écran). Puis les noms des muscles. muscles : { p: [...], s: [...] }
 export function bodyMap(m){
   const p = (m.p || []).join(', '), s = (m.s || []).join(', ');
-  const aria = 'Muscles travaillés : ' + (p || 'aucun') + (s ? ' ; secondaires : ' + s : '');
-  return '<svg class="bodymap big" viewBox="0 0 220 220" role="img" aria-label="' + esc(aria) + '">' + figure('front', m, 0, 'De face') + figure('back', m, 120, 'De dos') + '</svg>'
+  const back = firstFace(m) === 'back';
+  const fig = side => '<svg class="bodymap big bm-' + side + '" viewBox="0 0 100 220" aria-hidden="true">' + figure(side, m, 0, side === 'front' ? 'De face' : 'De dos') + '</svg>';
+  const side = (v, lab) => '<button type="button" class="chip txt' + ((v === 'back') === back ? ' on' : '') + '" data-act="bm-side" data-v="' + v + '" aria-pressed="' + ((v === 'back') === back) + '">' + lab + '</button>';
+  // La carte est décorative pour les lecteurs d'écran : la légende dit les muscles, les deux boutons choisissent le côté
+  return '<div class="bm3d' + (back ? ' back' : '') + '" data-ry="' + (back ? 180 : 0) + '" style="--ry:' + (back ? 180 : 0) + 'deg">'
+    + '<div class="bm3d-stage" aria-hidden="true"><div class="bm3d-card">' + fig('front') + fig('back') + '</div><span class="bm3d-floor"></span></div>'
+    + '<div class="chips bm3d-sides" role="group" aria-label="Côté de la silhouette">' + side('front', 'De face') + side('back', 'De dos') + '</div>'
+    + '<p class="muted small bm3d-hint">Glisse le doigt sur la silhouette pour la tourner.</p></div>'
     + '<div class="legend big"><p><i class="lg-p"></i>Principaux : ' + esc(p || '—') + '</p>' + (s ? '<p><i class="lg-s"></i>Secondaires : ' + esc(s) + '</p>' : '') + '</div>';
 }

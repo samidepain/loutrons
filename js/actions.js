@@ -524,6 +524,8 @@ const A = {
   // « Voir le mouvement » : fenêtre ouverte depuis la séance ; la pause fige l'alternance des photos sans redessiner
   'move-open'(b){ S.move = b.dataset.v; render(); },
   'move-close'(){ S.move = null; render(); },
+  // Silhouette en 3D : « De face » ou « De dos » la fait pivoter (sans redessiner l'écran)
+  'bm-side'(b){ const box = b.closest('.bm3d'); if (box && (b.dataset.v === 'back') !== box.classList.contains('back')) turnTo(box, (+box.dataset.ry || 0) + 180); },
   'move-pause'(b){ const m = b.closest('.mv'); if (!m) return; const p = m.classList.toggle('paused'); b.setAttribute('aria-pressed', String(p)); const t = b.querySelector('.sr'); if (t) t.textContent = (p ? 'Reprendre l’animation' : 'Mettre en pause l’animation') + ' : '; },
   'set-edit'(b){ S.setEdit = { ex:b.dataset.ex, i:+b.dataset.i }; render(); showCurrent(); },
   // Enregistrer une correction : mêmes règles qu'à la validation (reps visées si vide, 0 de lest au poids du corps, charge obligatoire)
@@ -742,3 +744,28 @@ document.addEventListener('change', e => {
     r.readAsText(t.files[0]);
   }
 });
+
+// Silhouette en 3D : elle suit le doigt (0,6° par pixel), puis se cale de face ou de dos ; un toucher sans glisser la retourne.
+// Un glissement surtout vertical reste un défilement de la page (touch-action: pan-y).
+function turnTo(box, ry){
+  const back = Math.round(ry / 180) % 2 !== 0;
+  box.dataset.ry = ry; box.style.setProperty('--ry', ry + 'deg'); box.classList.toggle('back', back);
+  box.querySelectorAll('[data-act="bm-side"]').forEach(b => { const on = (b.dataset.v === 'back') === back; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+}
+let turn = null;
+document.addEventListener('pointerdown', e => {
+  const st = e.isPrimary && e.target.closest && e.target.closest('.bm3d-stage'); const box = st && st.closest('.bm3d');
+  turn = box ? { box, id:e.pointerId, x0:e.clientX, y0:e.clientY, ry0:+box.dataset.ry || 0, moved:false } : null;
+});
+document.addEventListener('pointermove', e => {
+  const t = turn; if (!t || e.pointerId !== t.id) return; const dx = e.clientX - t.x0;
+  if (!t.moved) { if (Math.abs(dx) < 6) return; if (Math.abs(e.clientY - t.y0) > Math.abs(dx)) { turn = null; return; } t.moved = true; t.box.classList.add('turning'); }
+  t.ry = t.ry0 + dx * 0.6; t.box.style.setProperty('--ry', t.ry + 'deg');
+  t.box.style.setProperty('--sx', (0.45 + 0.55 * Math.abs(Math.cos(t.ry * Math.PI / 180))).toFixed(3));
+});
+const turnEnd = e => {
+  const t = turn; turn = null; if (!t || e.pointerId !== t.id) return;
+  t.box.classList.remove('turning'); t.box.style.removeProperty('--sx');
+  if (t.moved) turnTo(t.box, Math.round(t.ry / 180) * 180); else if (e.type === 'pointerup') turnTo(t.box, t.ry0 + 180);
+};
+document.addEventListener('pointerup', turnEnd); document.addEventListener('pointercancel', turnEnd);

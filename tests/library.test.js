@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync } from 'node:fs';
 import { ALIAS, BASE_EX, BASE_TPL, KINDS, CATS, MUSCLES, PROGRAMS } from '../js/library.js';
 import { allEx, searchEx } from '../js/data.js';
-import { musclesForMap } from '../js/bodymap.js';
+import { firstFace, musclesForMap } from '../js/bodymap.js';
 import { donnees, reglages, docs } from './aide.js';
 
 // Identifiants d'avant l'étape 11 : l'historique s'y rattache, ils ne doivent jamais disparaître
@@ -99,4 +99,11 @@ test('recherche : le nom qui commence par la recherche passe d’abord, puis les
 test('recherche : un exercice créé par la personne se trouve aussi', () => {
   donnees(docs(reglages(), ['x_c1', { name: 'Tirage à la machine Hammer', kind: 'load', cat: 'upper', sets: 3, lo: 8, hi: 12, rest: 90, step: 5, muscles: { p: ['Dos'], s: [] } }]));
   assert.deepEqual(noms('hammer tirage'), ['c1']);
+});
+
+test('silhouette en 3D : elle montre d’abord la face qui porte le plus de muscles principaux', () => {
+  assert.equal(firstFace(BASE_EX.ex_shrugbar.muscles), 'back'); // trapèzes : surtout visibles de dos
+  assert.equal(firstFace(BASE_EX.lb_curl.muscles), 'back');
+  assert.equal(firstFace(BASE_EX.ua_bench.muscles), 'front');
+  assert.equal(firstFace(BASE_EX.la_rdl.muscles), 'back');
 });
