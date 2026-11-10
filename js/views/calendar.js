@@ -42,7 +42,7 @@ export function viewDay(){
   // Séance de salle : en cours, faite ou prévue
   h += '<section class="card"><h2>Séance</h2><div class="cal-detail">';
   if (s.active) h += '<p>' + dot({ fam:'salle', state:'active' }) + '<b>' + esc(wName(s.active)) + '</b> : séance en cours.</p><button type="button" class="btn primary" data-act="tab" data-v="training">Reprendre la séance</button>';
-  s.done.forEach(w => { h += '<div class="stack"><p>' + dot({ fam:'salle', state:'done' }) + '<b>' + esc(wName(w)) + '</b> · ' + (w.duration || 0) + ' min · ' + nSeries(countSets(w)) + kc(sessionKcal(w, kg)) + '</p>' + workoutLines(w) + '<button type="button" class="link" data-act="cal-hist" data-v="' + esc(w.id) + '">Voir dans l’historique</button></div>'; });
+  s.done.forEach(w => { h += '<div class="stack"><p>' + dot({ fam:'salle', state:'done' }) + '<b>' + esc(wName(w)) + '</b> · ' + (w.duration ? w.duration + ' min' : 'durée non notée') + ' · ' + nSeries(countSets(w)) + kc(sessionKcal(w, kg)) + '</p>' + workoutLines(w) + '<button type="button" class="link" data-act="cal-hist" data-v="' + esc(w.id) + '">Voir dans l’historique</button></div>'; });
   if (s.planned) {
     const tp = tplDef(s.planned);
     h += '<p>' + dot({ fam:'salle', state:'planned' }) + 'Prévu : <b>' + esc(tp.name) + '</b> · environ ' + tplEst(tp) + ' min.</p>';

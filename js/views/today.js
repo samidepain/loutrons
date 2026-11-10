@@ -28,7 +28,7 @@ function planCard(d, plan, aw, doneToday, tpls){
   if (aw) return '<section class="card plan"><span class="label">Séance en cours</span><div class="name">' + esc(wName(aw)) + '</div><button type="button" class="btn primary big" data-act="tab" data-v="training">Reprendre ' + esc(wName(aw)) + '</button></section>';
   if (doneToday.length) {
     const sw = (S.summary && doneToday.find(w => w.id === S.summary.id)) || doneToday[doneToday.length - 1];
-    return '<section class="card plan"><span class="label">Séance faite</span><div class="name">' + esc(wName(sw)) + '</div><p class="muted">' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>' + effortChoice(sw) + autre + '</section>';
+    return '<section class="card plan"><span class="label">Séance faite</span><div class="name">' + esc(wName(sw)) + '</div><p class="muted">' + (sw.duration ? sw.duration + ' min' : 'durée non notée') + ' · ' + nSeries(countSets(sw)) + '</p>' + effortChoice(sw) + autre + '</section>';
   }
   // Jour de sport prévu (module sport) et pas encore noté : un geste pour le noter
   const sp = S.loaded && sportPlanned(d); const noter = sp && !activities(d).some(a => a.type === 'sport');
@@ -43,7 +43,7 @@ function planCard(d, plan, aw, doneToday, tpls){
   const count = p.done + ' séance' + (p.done > 1 ? 's' : '') + ' sur ' + p.target + ' cette semaine';
   // Dernière séance terminée : un repère de régularité (le décompte de la semaine est dans « Ta semaine »)
   const last = workouts().filter(w => w.status === 'terminée').reduce((m, w) => !m || w.date > m.date || (w.date === m.date && (w.startedAt || 0) > (m.startedAt || 0)) ? w : m, null);
-  const lastLine = last ? '<p class="muted small last">' + esc(nbsp('Dernière : ' + wName(last) + ' · ' + fmtDate(last.date) + ' · ' + (last.duration || 0) + ' min')) + '</p>' : '';
+  const lastLine = last ? '<p class="muted small last">' + esc(nbsp('Dernière : ' + wName(last) + ' · ' + fmtDate(last.date) + ' · ' + (last.duration ? last.duration + ' min' : 'durée non notée'))) + '</p>' : '';
   return '<section class="card plan"><span class="label">' + (prevu ? 'Prévue aujourd’hui' : 'Ta prochaine séance') + '</span><div class="name">' + esc(t.name) + '</div>'
     + '<p>' + esc(nbsp((t.focus ? t.focus + ' · ' : '') + 'environ ' + tplEst(t) + ' min')) + '</p>' + (reached ? '<div class="plan-rest"><img src="icons/emile.png" alt="" width="44" height="44"><p class="small">' + esc(nbsp(count + ' : objectif atteint, tu peux te reposer.')) + '</p></div>' : '') + caution
     + '<button type="button" class="btn' + (reached ? '' : ' primary') + ' big" data-act="start" data-v="' + esc(id) + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>' + noterBtn + autre + lastLine + '</section>';

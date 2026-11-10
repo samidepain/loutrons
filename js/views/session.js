@@ -32,7 +32,7 @@ export function viewSession(){
   // En-tête compact (il reste collé en haut) : nom et chrono sur une ligne, puis l'avancement ; la série en cours garde la place
   let h = '<div class="sess-head"><div class="sess-top"><h1>' + esc(wName(w)) + '</h1><span id="elapsed" class="clock">0:00</span></div>';
   h += '<div class="sess-prog"><div class="bar" aria-hidden="true"><i style="width:' + pct + '%"></i></div><span class="small num">' + done + '/' + total + '<span class="sr"> séries validées</span></span></div>';
-  h += '<span class="muted small">Semaine ' + w.week + ' · ' + (w.deload ? 'décharge' : 'bloc ' + w.blockWeek + '/6') + (w.est ? ' · environ ' + w.est + ' min' : '') + '</span></div>';
+  h += '<span class="muted small">Bloc ' + weekInfo(w.date).block + ', ' + (w.deload ? 'décharge' : 'semaine ' + w.blockWeek + '/6') + (w.est ? ' · environ ' + w.est + ' min' : '') + '</span></div>';
   const b = S.docs.get('b_' + w.date) || {};
   if (num(b.sleep) != null && num(b.sleep) < 6) h += emile('<p>Nuit courte (' + fmtKg(num(b.sleep)) + ' h) : vise les objectifs, mais garde 1 rep de plus en réserve et ne force pas de record aujourd’hui.</p>', { tone:'warn', key:'sleep:' + w.id });
   // Première séance après plus de 14 jours sans séance : le conseil du retour, en haut de la séance
@@ -85,7 +85,7 @@ export function viewEnd(){
   const { total, done } = setProgress(w); const kc = sessionKcal(w, bodyweight()); const prs = S.summary.prs || [];
   let h = '<div class="end' + (S.summary.enter ? ' enter' : '') + '"><div class="end-top">' + ring(total ? done / total : 1, { label:done + ' séries validées sur ' + total, html:'<b class="num end-n">' + done + '</b><span class="muted small">sur ' + total + ' séries</span>' })
     + '<div class="stack end-t"><span class="label">Séance terminée</span><h1>' + esc(wName(w)) + '</h1></div></div>';
-  h += '<div class="stats"><div class="stat"><span class="v">' + (w.duration || 0) + '<small>min</small></span><span class="l">durée</span></div><div class="stat"><span class="v">' + (kc == null ? '–' : Math.round(kc / 10) * 10) + '<small>kcal</small></span><span class="l">dépensées</span></div><div class="stat"><span class="v">' + prs.length + '</span><span class="l">' + (prs.length > 1 ? 'records' : 'record') + '</span></div></div>';
+  h += '<div class="stats"><div class="stat"><span class="v">' + (w.duration ? w.duration + '<small>min</small>' : '—') + '</span><span class="l">durée</span></div><div class="stat"><span class="v">' + (kc == null ? '—' : Math.round(kc / 10) * 10) + '<small>kcal</small></span><span class="l">dépensées</span></div><div class="stat"><span class="v">' + prs.length + '</span><span class="l">' + (prs.length > 1 ? 'records' : 'record') + '</span></div></div>';
   h += '<section class="card">' + effortChoice(w) + '</section>';
   if (prs.length) h += '<section class="card gold"><div class="ring-row"><span class="trophy" aria-hidden="true">' + TROPHY + '</span><h2>' + (prs.length > 1 ? prs.length + ' nouveaux records' : 'Nouveau record') + '</h2></div>' + prs.map(p => '<p class="small">' + esc(p) + '</p>').join('') + '</section>';
   // Émile en pied (logo), qui signe le message ; lumière douce derrière lui (réussite)

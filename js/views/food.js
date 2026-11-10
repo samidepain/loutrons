@@ -14,6 +14,8 @@ import { swipeRow } from '../swipe.js';
 
 const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment', rec:'Recette type', recipe:'Ta recette' };
 const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fmtInt(x);
+// Valeur inconnue : un tiret seul, sans unité
+const qg = x => x == null ? '—' : q1(x) + ' g';
 const mealName = m => (MEALS.find(x => x[0] === m) || ['', ''])[1];
 const dayLabel = d => d === today() ? 'Aujourd’hui' : d === addDays(today(), -1) ? 'Hier' : capFirst(fmtDateLong(d));
 // Raccourcis : une ligne avec le nom et le détail, et un « + » rond qui ajoute d'un geste. Aliment : toucher le nom ouvre « Quantité ».
@@ -48,7 +50,7 @@ const nameField = v => '<label class="f"><span>Nom</span><input id="sm-name" max
 function mealItems(list){
   const items = list.map(freshFood); const t = totals(items);
   return '<div class="stack sm-list">' + items.map(i => '<p class="sm-item"><span>' + esc(i.name) + '</span><span class="muted num">' + nbsp(fmtKg(i.g) + ' g · ' + kcalOf([i])) + '</span></p>').join('') + '</div>'
-    + '<p class="small"><b>' + nbsp('Total : ' + fmtInt(t.kcal) + ' kcal · ' + q1(t.p) + ' g de protéines') + '</b></p>';
+    + '<p class="small"><b>' + nbsp('Total : ' + fmtInt(t.kcal) + ' kcal · ' + qg(t.p) + ' de protéines') + '</b></p>';
 }
 const group = (title, lines) => lines.length ? '<div class="stack qgroup"><span class="label">' + title + '</span>' + lines.join('') + '</div>' : '';
 // Fenêtre d'ajout, recherche vide : refaire un repas, tes repas, tes habituels, récents (un groupe vide n'est pas affiché)
@@ -111,7 +113,7 @@ export function viewFood(){
   const sfMax = has ? pl.kcal * LIMITS.sfPct / 9 : null;
   if (!empty) {
     h += '<details class="cue"><summary>Détails : fibres, sucres, saturés, sel</summary>' + bar('Fibres', t.fib, LIMITS.fib, 'g');
-    h += '<p class="small muted">Sucres ' + q1(t.s) + ' g (repère : moins de ' + LIMITS.s + ' g hors lait) · saturés ' + q1(t.sf) + ' g' + (sfMax ? ' (au plus ' + fmtInt(sfMax) + ' g)' : '') + ' · sel ' + q1(t.salt) + ' g (moins de ' + LIMITS.salt + ' g)</p></details>';
+    h += '<p class="small muted">Sucres ' + qg(t.s) + ' (repère : moins de ' + LIMITS.s + ' g hors lait) · saturés ' + qg(t.sf) + '' + (sfMax ? ' (au plus ' + fmtInt(sfMax) + ' g)' : '') + ' · sel ' + qg(t.salt) + ' (moins de ' + LIMITS.salt + ' g)</p></details>';
   }
   if (t.missing.length && !empty) h += '<p class="muted small">Valeurs inconnues pour certains aliments (' + t.missing.map(k => ({ p:'protéines', c:'glucides', s:'sucres', f:'lipides', sf:'saturés', fib:'fibres', salt:'sel' })[k]).filter(Boolean).join(', ') + ') : les totaux peuvent être un peu bas.</p>';
   h += '</section>';
@@ -234,7 +236,7 @@ export function recList(){
 export function recPreview(){
   const R = S.food.rec; const items = R.items.filter(i => i.g > 0); if (!items.length) return '';
   const r = ownRecipe(items, num(R.servings), num(R.cooked)); const v = scale(r.per100, r.serving);
-  return '<p class="small"><b>Une portion : ' + fmtKg(r.serving) + ' g, ' + (v.kcal == null ? '— kcal' : fmtInt(v.kcal) + ' kcal') + '</b>, protéines ' + q1(v.p) + ' g, glucides ' + q1(v.c) + ' g, lipides ' + q1(v.f) + ' g.</p>';
+  return '<p class="small"><b>Une portion : ' + fmtKg(r.serving) + ' g, ' + (v.kcal == null ? '— kcal' : fmtInt(v.kcal) + ' kcal') + '</b>, protéines ' + qg(v.p) + ', glucides ' + qg(v.c) + ', lipides ' + qg(v.f) + '.</p>';
 }
 // Ce qui sera enregistré pour n mesures : toujours des grammes, avec la valeur de la mesure et sa limite
 export function convText(u, g){
@@ -244,7 +246,7 @@ export function preview(f, g){
   if (!(g > 0)) return '<p class="muted small">Indique une quantité.</p>';
   const v = scale(f.per100, g); const st = (val, l) => '<div class="stat"><span class="v num">' + val + '</span><span class="l">' + l + '</span></div>';
   return '<div class="stats">' + st(fmtInt(v.kcal), 'kcal') + st(q1(v.p) + ' <small>g</small>', 'protéines') + st(q1(v.c) + ' <small>g</small>', 'glucides') + '</div>'
-    + '<p class="small muted">Lipides ' + q1(v.f) + ' g (saturés ' + q1(v.sf) + ' g) · sucres ' + q1(v.s) + ' g · fibres ' + q1(v.fib) + ' g · sel ' + q1(v.salt) + ' g</p>';
+    + '<p class="small muted">Lipides ' + qg(v.f) + ' (saturés ' + qg(v.sf) + ') · sucres ' + qg(v.s) + ' · fibres ' + qg(v.fib) + ' · sel ' + qg(v.salt) + '</p>';
 }
 const row = f => { shown.set(f.key, f); return '<button type="button" class="pick" data-act="fd-pick" data-v="' + esc(f.key) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(f.name) + '</span><span class="m">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal/100 g' + (f.g ? ' · dernière fois ' + fmtKg(f.g) + ' g' : '') + '</span></span><span aria-hidden="true">›</span></button>'; };
 let ciq = null, recs = null; // table Ciqual, une fois chargée, et recettes types calculées avec elle

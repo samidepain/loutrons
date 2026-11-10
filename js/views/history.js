@@ -26,7 +26,7 @@ export function viewHistory(){
   const rec = new Set(recordLog().map(r => r.w)); // séances qui ont battu un record : petit trophée doré
   ws.forEach(w => {
     const open = S.openHist === w.id;
-    h += '<section class="card"><button type="button" class="hitem" data-act="hist" data-v="' + w.id + '" aria-expanded="' + open + '"><span class="stack" style="gap:2px"><span class="n">' + esc(wName(w)) + (rec.has(w.id) ? ' <span class="hist-pr" role="img" aria-label="record battu">' + TROPHY + '</span>' : '') + '</span><span class="muted small">' + esc(fmtDateLong(w.date)) + ' · ' + (w.status === 'en_cours' ? 'en cours' : (w.duration || 0) + ' min') + ' · ' + nSeries(countSets(w)) + (w.knee != null ? ' · genou ' + w.knee + '/10' : '') + '</span></span><span class="pill' + (w.deload ? ' court' : '') + '">' + (w.deload ? 'Décharge' : 'S' + w.week) + '</span></button>';
+    h += '<section class="card"><button type="button" class="hitem" data-act="hist" data-v="' + w.id + '" aria-expanded="' + open + '"><span class="stack" style="gap:2px"><span class="n">' + esc(wName(w)) + (rec.has(w.id) ? ' <span class="hist-pr" role="img" aria-label="record battu">' + TROPHY + '</span>' : '') + '</span><span class="muted small">' + esc(fmtDateLong(w.date)) + ' · ' + (w.status === 'en_cours' ? 'en cours' : (w.duration ? w.duration + ' min' : 'durée non notée')) + ' · ' + nSeries(countSets(w)) + (w.knee != null ? ' · genou ' + w.knee + '/10' : '') + '</span></span><span class="pill' + (w.deload ? ' court' : '') + '">' + (w.deload ? 'Décharge' : 'S' + w.week) + '</span></button>';
     if (open) {
       h += '<div class="hdetail">';
       h += workoutLines(w);
