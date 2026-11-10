@@ -1,7 +1,7 @@
 // Écran Profil : ce qui te concerne, ton alimentation, apparence, sauvegarde, et « La science » ; les réglages de l'entraînement sont dans Entraînement › Planning.
-import { esc, nbsp, fmtDate, fmtDateLong, fmtDateYear, fmtKg, fmtMonth, num, today, withDot } from '../util.js';
+import { esc, mondayOf, nbsp, fmtDate, fmtDateLong, fmtDateYear, fmtKg, fmtMonth, num, today, withDot } from '../util.js';
 import { S } from '../store.js';
-import { backupDue, bodyDocs, jumpsOn, kneeOn, settings, startDate, weekInfo, workouts } from '../data.js';
+import { backupDue, bodyDocs, jumpsOn, kneeOn, settings, startDate, workouts } from '../data.js';
 import { recordLog } from '../engine.js';
 import { lineCard } from './activity.js';
 import { useShare } from '../backup.js';
@@ -21,9 +21,9 @@ export function viewProfile(){
   const s = settings(); const pesees = bodyDocs().filter(b => num(b.weight) > 0); const last = pesees[pesees.length - 1];
   let h = '<div class="row"><button type="button" class="link" data-act="profile-back" data-back>‹ ' + (FROM[S.from] || FROM.today) + '</button></div>';
   // En-tête en carte vedette : initiale, prénom, ancienneté, puis séances, semaines et records ; sans séance, Émile dit quand les chiffres arrivent (jamais de « 0 »)
-  const ws = workouts().filter(w => w.status === 'terminée'); const since = s.created || (ws[0] && ws[0].date) || startDate(); const who = String(s.name || '').trim(); const wk = weekInfo(today()).n; const recs = recordLog().length;
+  const ws = workouts().filter(w => w.status === 'terminée'); const since = s.created || (ws[0] && ws[0].date) || startDate(); const who = String(s.name || '').trim(); const wk = new Set(ws.map(w => mondayOf(w.date))).size; const recs = recordLog().length;
   h += '<section class="card hero prof-card"><div class="prof-head"><span class="prof-ini" aria-hidden="true">' + esc((who[0] || '?').toUpperCase()) + '</span><div class="prof-id"><h1>' + esc(who || 'Profil') + '</h1><span class="muted">' + esc((s.sex === 'f' ? 'Loutronne' : s.sex === 'm' ? 'Loutron' : 'Sur Loutrons') + ' depuis ' + fmtMonth(since.slice(0, 7))) + '</span></div></div>';
-  h += ws.length ? '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">' + (ws.length > 1 ? 'séances' : 'séance') + '</span></div><div class="stat"><span class="v num">' + wk + '</span><span class="l">' + (wk > 1 ? 'semaines' : 'semaine') + '</span></div><div class="stat"><span class="v num">' + recs + '</span><span class="l">' + (recs > 1 ? 'records' : 'record') + '</span></div></div>'
+  h += ws.length ? '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">' + (ws.length > 1 ? 'séances' : 'séance') + '</span></div><div class="stat"><span class="v num">' + wk + '</span><span class="l">' + (wk > 1 ? 'semaines actives' : 'semaine active') + '</span></div><div class="stat"><span class="v num">' + (recs || '—') + '</span><span class="l">' + (recs > 1 ? 'records' : 'record') + '</span></div></div>'
     : emile('<p>' + esc(nbsp('Dès ta première séance, tes chiffres et tes records apparaissent ici.')) + '</p>');
   h += '</section>';
   // Raccourci vers Progrès : dernière séance et records, sans répéter les courbes
@@ -32,7 +32,7 @@ export function viewProfile(){
   const vide = 'À indiquer'; const age = s.birth ? Math.floor((Date.parse(today()) - Date.parse(s.birth)) / 31557600000) : null;
   h += '<h2>Toi</h2>';
   h += lineCard('p-name', 'Prénom ou pseudo', who || vide, '', '<label class="f"><span>Prénom ou pseudo (obligatoire)</span><input id="set-name" value="' + esc(s.name || '') + '" autocomplete="nickname"></label>');
-  h += lineCard('p-sex', 'Loutron ou loutronne', s.sex === 'm' ? 'Loutron' : s.sex === 'f' ? 'Loutronne' : vide, '', sexChips('set-sex', s.sex));
+  h += lineCard('p-sex', 'Tu es', s.sex === 'm' ? 'Loutron' : s.sex === 'f' ? 'Loutronne' : vide, '', sexChips('set-sex', s.sex));
   h += lineCard('p-birth', 'Date de naissance', s.birth ? fmtDateYear(s.birth) + ' · ' + age + ' ans' : vide, '', '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>');
   h += lineCard('p-height', 'Taille', s.height == null ? vide : fmtKg(num(s.height)) + ' cm', '', '<label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>');
   h += lineCard('p-weight', 'Poids', last ? fmtKg(num(last.weight)) + ' kg' : vide, '', '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label><p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est noté à la date du jour.</p>');
