@@ -3,7 +3,7 @@ import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayO
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
 import { activeWorkout, allTpl, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, programRotation, putSettings, rotationOf, rotationWith, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, upNext, weekInfo } from './data.js';
-import { findPRs, initItem } from './engine.js';
+import { findPRs, initItem, prSet } from './engine.js';
 import { downloadFile, exportFile, importable, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
 import { applyTheme, render } from './render.js';
@@ -413,7 +413,10 @@ const A = {
   },
   ptab(b){ S.progTab = b.dataset.v; S.confirm = null; render(); },
   start(b){ startWorkout(b.dataset.v); },
-  finish(){ finishWorkout(); },
+  // Terminer avec des séries non validées : on demande d'abord (la séance ne se reprend pas)
+  finish(){ S.confirm = 'finish'; render(); },
+  'finish-yes'(){ S.confirm = null; finishWorkout(); },
+  'finish-no'(){ S.confirm = null; render(); },
   abandon(){ S.confirm = 'abandon'; render(); },
   'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; resetSession(); stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
   'close-summary'(){ S.summary = null; render(); },
@@ -498,9 +501,11 @@ const A = {
       forgetOpen(w);
       const after = left < 0 ? upNext(w, { open:S.sessOpen }) : null;
       const nxt = supersetNext(w, key);
-      if (nxt) toast('Enchaîne : ' + nxt.name);
-      else if (it.kind !== 'plyo') startRest(it.rest || 90, after ? 'Prochain : ' + after.name : it.name + (left >= 0 ? ' · série ' + (left + 1) + ' ensuite' : ' · terminé'));
-      else startRest(60, after ? 'Prochain : ' + after.name : 'Récupère avant la série suivante');
+      // Série qui bat la meilleure force estimée des séances d'avant : annoncée tout de suite (même règle que l'écran de fin)
+      const pr = prSet(w, it); const rec = pr && pr.i === i;
+      if (nxt) toast((rec ? 'Nouveau record ! ' : '') + 'Enchaîne : ' + nxt.name);
+      else { if (rec) toast('Nouveau record sur ' + it.name + ' !'); if (it.kind !== 'plyo') startRest(it.rest || 90, after ? 'Prochain : ' + after.name : (left >= 0 ? 'Série ' + (left + 1) + '/' + st.sets.length + ' ensuite · ' : 'Terminé · ') + it.name);
+      else startRest(60, after ? 'Prochain : ' + after.name : 'Récupère avant la série suivante'); }
     } else { s.done = false; if (S.rirAsk === key) S.rirAsk = null; }
     S.setEdit = null; put(w.id, w); render(); showCurrent(); S.justDone = null;
   },
@@ -536,7 +541,7 @@ const A = {
   unskip(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.skip = false; if (!st.sets.length) { const it = itemsOf(w).find(x => x.ex === b.dataset.ex); for (let i = 0; i < (it ? it.sets : 3); i++) st.sets.push({ kg:null, reps:null, done:false }); } put(w.id, w); render(); showCurrent(); },
   addset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const last = st.sets[st.sets.length - 1]; st.sets.push({ kg: last ? last.kg : null, reps:null, done:false }); put(w.id, w); render(); },
   // Retirer la dernière série : si l'exercice est alors terminé, la question des reps en réserve arrive comme après une validation
-  rmset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st.sets.length > 1) st.sets.pop(); const it = itemsOf(w).find(x => x.ex === b.dataset.ex); if (it) askRir(it, st); S.setEdit = null; forgetOpen(w); put(w.id, w); render(); showCurrent(); },
+  rmset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st.sets.length > 1 && !st.sets[st.sets.length - 1].done) st.sets.pop(); const it = itemsOf(w).find(x => x.ex === b.dataset.ex); if (it) askRir(it, st); S.setEdit = null; forgetOpen(w); put(w.id, w); render(); showCurrent(); },
   clevel(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st) { st.level = b.dataset.v; put(w.id, w); render(); } },
   rir(b){ if (S.rirAsk === b.dataset.ex) { answerRir(b.dataset.ex, +b.dataset.v); return; } const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const v = +b.dataset.v; st.rir = st.rir === v ? null : v; put(w.id, w); render(); },
   'rir-skip'(b){ answerRir(b.dataset.ex, null); },

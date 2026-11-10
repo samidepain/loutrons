@@ -3,7 +3,7 @@ import { test, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { activityFamily, dayFamilies } from '../js/data.js';
 import { emileQueue } from '../js/emile.js';
-import { exerciseProgress, recentRecord, recordLog } from '../js/engine.js';
+import { exerciseProgress, findPRs, prSet, recentRecord, recordLog } from '../js/engine.js';
 import { S } from '../js/store.js';
 import { donnees, jour, reglages, seance, docs } from './aide.js';
 import { greeting, shortName } from '../js/util.js';
@@ -129,6 +129,23 @@ test('records : aucun sans séance terminée, ni avec une seule séance par exer
   jour('2026-11-04');
   donnees(docs(reglages(), seance('2026-11-02', { ua_bench: { kg: 50, reps: [8] } })));
   assert.deepEqual(recordLog(), []);
+});
+
+test('série record pendant la séance : la meilleure série validée, seulement si elle bat les séances d’avant', () => {
+  jour('2026-11-10');
+  const it = { ex: 'ua_bench', kind: 'load', name: 'Développé couché' };
+  const enCours = sets => ({ date: '2026-11-10', status: 'en_cours', items: [it], ex: { ua_bench: { sets } } });
+  const avant = seance('2026-11-03', { ua_bench: { kg: 60, reps: [8, 8, 7] } });
+  const fait = (kg, reps) => ({ kg: String(kg), reps: String(reps), done: true });
+  donnees(docs(reglages(), avant));
+  // 60 × 8 égale le record : rien ; 62,5 × 8 le bat : 2e série ; une série non validée ne compte pas
+  assert.equal(prSet(enCours([fait(60, 8)]), it), null);
+  const w = enCours([fait(60, 8), fait(62.5, 8), { kg: '80', reps: '8', done: false }]);
+  assert.equal(prSet(w, it).i, 1);
+  assert.equal(findPRs(w).length, 1);
+  // Première séance de l'exercice : pas de record
+  donnees(docs(reglages()));
+  assert.equal(prSet(w, it), null);
 });
 
 test('salutation : nuit avant 5 h, matin avant midi, après-midi avant 18 h, soir ensuite', () => {

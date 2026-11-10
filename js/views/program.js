@@ -27,17 +27,19 @@ function programCard(){
 export function noTplCard(){
   return '<section class="card"><h2>Crée ta première séance</h2><p class="muted">Donne-lui un nom, puis ajoute tes exercices : s’il en manque un, crée-le depuis la liste.</p><button type="button" class="btn primary big" data-act="go-new-tpl">Créer une séance</button></section>';
 }
-// Séances : la prochaine de la rotation en carte vedette avec « Commencer » en orange, les autres en gris ; « Créer » en bas
+// Séances : la prochaine de la rotation d'abord, en carte vedette avec un grand « Commencer » ; les autres en gris ;
+// « Créer » puis « Ton programme » (réglages rares) en bas
 function viewTemplates(){
-  const next = nextSession(); let h = programCard();
+  const next = nextSession(); let h = '';
   const tpls = allTpl(); const first = tpls.filter(t => t.id === next);
   first.concat(tpls.filter(t => t.id !== next)).forEach(t => {
     const its = tplItems(t); const up = t.id === next;
     h += '<section class="card tpl' + (up ? ' hero' : '') + '"><div class="row between"><div class="stack" style="gap:2px">' + (up ? '<span class="label">Ta prochaine séance</span>' : '') + '<h2 class="tpl-name">' + esc(t.name) + '</h2><span class="muted small">' + esc(t.focus || '') + (t.focus ? ' · ' : '') + its.length + ' exercices · environ ' + tplEst(t) + ' min' + (t.edited ? ' · modifiée' : '') + (!t.builtin ? ' · perso' : '') + '</span></div></div>';
     h += '<p class="small muted">' + esc(its.map(it => { const e = exDef(it.ex); return e ? e.name : '?'; }).join(' · ')) + '</p>';
-    h += '<div class="row"><button type="button" class="btn' + (up ? ' primary' : '') + '" data-act="start" data-v="' + esc(t.id) + '">Commencer</button><button type="button" class="btn" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier</button></div></section>';
+    h += up ? '<button type="button" class="btn primary big" data-act="start" data-v="' + esc(t.id) + '">Commencer</button><button type="button" class="link tpl-edit" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier la séance</button></section>'
+      : '<div class="row"><button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '">Commencer</button><button type="button" class="btn" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier</button></div></section>';
   });
-  return h + '<button type="button" class="btn big" data-act="new-tpl">+ Créer une séance</button>';
+  return h + '<button type="button" class="btn big" data-act="new-tpl">+ Créer une séance</button>' + programCard();
 }
 function viewExercises(){
   const n = allEx().filter(e => e.kind !== 'plyo' || jumpsOn()).length;

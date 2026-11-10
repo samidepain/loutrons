@@ -154,18 +154,20 @@ export function setScore(kind){
   return s => e1rm(kind === 'bw' ? bw + s.kg : s.kg, s.reps);
 }
 export function findPRs(w){
-  const out = []; const bw = bodyweight();
-  itemsOf(w).forEach(it => {
-    if (it.kind !== 'load' && it.kind !== 'bw') return;
-    const cur = validSets(w.ex[it.ex] && w.ex[it.ex].sets).map(s => ({ kg:num(s.kg) || 0, reps:num(s.reps) }));
-    if (!cur.length) return;
-    const prev = history(it.ex, w.id); if (!prev.length) return;
-    const tot = kg => it.kind === 'bw' ? (bw || 0) + kg : kg;
-    const best = Math.max.apply(null, cur.map(s => e1rm(tot(s.kg), s.reps)));
-    const old = Math.max.apply(null, prev.map(h => Math.max.apply(null, h.sets.map(s => e1rm(tot(s.kg), s.reps)))));
-    if (best > old + 0.01) out.push(it.name + ' : force estimée ' + fmtKg(Math.round(best)) + ' kg (+' + fmtKg(Math.round((best - old) * 10) / 10) + ')');
-  });
+  const out = [];
+  itemsOf(w).forEach(it => { const p = prSet(w, it); if (p) out.push(it.name + ' : force estimée ' + fmtKg(Math.round(p.best)) + ' kg (+' + fmtKg(Math.round((p.best - p.old) * 10) / 10) + ')'); });
   return out;
+}
+// Série record d'un exercice dans une séance (aussi en cours) : sa meilleure série validée, si sa force estimée (Epley)
+// dépasse la meilleure des séances d'avant. { i (rang dans les séries), best, old }, ou null. Première séance : pas de record.
+export function prSet(w, it){
+  if (it.kind !== 'load' && it.kind !== 'bw') return null;
+  const sets = (w.ex[it.ex] && w.ex[it.ex].sets) || []; const cur = validSets(sets); if (!cur.length) return null;
+  const prev = history(it.ex, w.id); if (!prev.length) return null;
+  const bw = bodyweight(); const tot = kg => it.kind === 'bw' ? (bw || 0) + kg : kg; const sc = s => e1rm(tot(num(s.kg) || 0), num(s.reps));
+  const top = cur.reduce((a, s) => sc(s) > sc(a) ? s : a); const best = sc(top);
+  const old = Math.max.apply(null, prev.map(h => Math.max.apply(null, h.sets.map(s => e1rm(tot(s.kg), s.reps)))));
+  return best > old + 0.01 ? { i:sets.indexOf(top), best, old } : null;
 }
 // Records sur tout l'historique, sans rien stocker (Progrès › « Tes records », trophée de l'historique) : séance par séance,
 // un exercice dont la force estimée (Epley) dépasse sa meilleure des séances d'avant. Sa première séance n'est pas un record (comme findPRs).

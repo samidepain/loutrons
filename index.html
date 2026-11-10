@@ -135,7 +135,7 @@ body.brandless .me{pointer-events:auto}
 body.in-sheet .top{display:none}
 body.brandless:not(.in-sheet) #app > :first-child:not(.sess-head){padding-right:48px}
 body.brandless .sess-head{top:env(safe-area-inset-top,0px)}
-body.brandless .sess-head > .row:first-child{padding-right:48px}
+body.brandless .sess-head > .sess-top{padding-right:48px}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
 .top-in{max-width:640px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:800;font-stretch:125%;font-size:20px;letter-spacing:.02em;text-transform:uppercase}
@@ -276,7 +276,12 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch:100%;font-variant-numeric:tabular-nums}
 
 /* Séance */
-.sess-head{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:10;background:var(--bg);padding-block:8px;display:flex;flex-direction:column;gap:8px}
+.sess-head{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:10;background:var(--bg);padding-block:8px;display:flex;flex-direction:column;gap:6px}
+/* En-tête compact : nom et chrono sur une ligne, barre d'avancement et compteur, puis la semaine */
+.sess-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.sess-top h1{overflow-wrap:anywhere;line-height:1.1}
+.sess-prog{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.sess-prog .num{font-weight:700;font-variant-numeric:tabular-nums}
 .bar{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--grad-fire);border-radius:999px;box-shadow:var(--glow-1)}
 .clock{font-family:var(--f-display);font-size:28px;font-weight:800;font-stretch:100%;font-variant-numeric:tabular-nums}
@@ -358,6 +363,12 @@ input.n{font-family:var(--f-display);font-size:20px;font-weight:800;font-stretch
 @keyframes setflash{25%{opacity:1}}
 .set-line.flash .sl-ok{display:inline-block;animation:okpop .3s cubic-bezier(.32,.72,0,1)}
 @keyframes okpop{from{transform:scale(.4);opacity:0}}
+/* Série record : petit trophée doré à la place de la coche ; à la validation, le contour s'allume en or */
+.set-line .sl-pr{display:inline-flex;align-items:center;gap:6px;color:var(--gold-ink);font-weight:700;font-size:15px}
+.trophy.xs{width:24px;height:24px}
+.trophy.xs svg{width:14px;height:14px}
+.set-line.pr.flash::after{box-shadow:inset 0 0 0 1.5px var(--gold-ink),var(--glow-gold);animation-duration:.7s}
+.set-line.pr.flash .trophy{animation:okpop .5s cubic-bezier(.32,.72,0,1)}
 .set-line.next{color:var(--muted)}
 .set-line.next .sl-v{font-weight:400}
 @media (max-width:360px){
@@ -456,6 +467,7 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .card.welcome{align-items:center;text-align:center}
 .tpl .tpl-name{font-size:24px;overflow-wrap:anywhere}
 .tpl.hero .tpl-name{font-size:30px}
+.tpl .tpl-edit{align-self:center}
 /* Record : carte dorée (liseré or, lumière ambiante), trophée rond en dégradé or */
 .card.gold{border:1px solid transparent;background:radial-gradient(90% 120% at 0% 0%,var(--ambient-gold),transparent 60%) padding-box,linear-gradient(180deg,var(--card-top),var(--card-bot)) padding-box,var(--edge-gold) border-box}
 .card.gold h2{color:var(--gold-ink)}
@@ -530,9 +542,12 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .restbar.end .rl{color:var(--good)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.restbar-in{background:var(--surface)}}
 .restbar .rt{font-family:var(--f-display);font-size:30px;font-weight:800;font-stretch:100%;font-variant-numeric:tabular-nums;min-width:72px;margin-right:auto}
-.restbar .rl{order:3;flex-basis:100%;font-size:15px;font-weight:600;min-width:0}
+/* Une seule ligne : l'essentiel (série suivante, exercice suivant) en premier, la fin coupée au besoin */
+.restbar .rl{order:3;flex-basis:100%;font-size:15px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .restbar button{background:var(--surface-2);color:var(--ink);border:none;border-radius:999px;padding:6px 14px;font-weight:700;min-height:44px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs-h) + 84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:15px;max-width:calc(100% - 32px);text-align:center}
+/* Petits écrans : anneau, temps, « +15 s » et « Passer » tiennent sur une ligne */
+@media (max-width:360px){.restbar-in{gap:2px 8px}.restbar .rt{font-size:26px;min-width:0}.restbar button{padding:6px 10px;font-size:16px}}
 #restbar:not([hidden]) ~ .toast{bottom:calc(var(--tabs-h) + 140px + env(safe-area-inset-bottom,0px))}
 .empty{color:var(--muted);font-size:15px;padding:8px 0}
 /* Fiche d'exercice : photos du mouvement (départ, arrivée) et silhouette des muscles travaillés */
@@ -665,7 +680,7 @@ button.plus svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-widt
   <button type="button" data-act="rest-stop">Passer</button>
 </div></div>
 
-<div id="toast" class="toast" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
 
 <nav class="tabs" aria-label="Navigation"><div class="tabs-in" id="tabs"></div></nav>
 
