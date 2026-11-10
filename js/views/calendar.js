@@ -40,7 +40,7 @@ export function viewDay(){
   let h = '<div class="row"><button type="button" class="link" data-act="day-close" data-back>‹ Aujourd’hui</button></div><h1>' + esc(capFirst(fmtDateLong(day))) + '</h1>';
   const sp = dayFamilies(day).some(f => f.fam === 'collectif' && f.state === 'planned');
   // Séance de salle : en cours, faite ou prévue
-  h += '<section class="card"><h3>Séance</h3><div class="cal-detail">';
+  h += '<section class="card"><h2>Séance</h2><div class="cal-detail">';
   if (s.active) h += '<p>' + dot({ fam:'salle', state:'active' }) + '<b>' + esc(wName(s.active)) + '</b> : séance en cours.</p><button type="button" class="btn primary" data-act="tab" data-v="training">Reprendre la séance</button>';
   s.done.forEach(w => { h += '<div class="stack"><p>' + dot({ fam:'salle', state:'done' }) + '<b>' + esc(wName(w)) + '</b> · ' + (w.duration || 0) + ' min · ' + nSeries(countSets(w)) + kc(sessionKcal(w, kg)) + '</p>' + workoutLines(w) + '<button type="button" class="link" data-act="cal-hist" data-v="' + esc(w.id) + '">Voir dans l’historique</button></div>'; });
   if (s.planned) {
@@ -54,7 +54,7 @@ export function viewDay(){
   if (!s.active && !s.done.length && !s.planned && !sp) h += '<p class="muted">' + (day < t ? 'Aucune séance notée ce jour-là.' : s.label !== 'Repos' ? esc(s.label) + ' : pas de séance de salle prévue.' : 'Repos : pas de séance prévue.') + '</p>';
   h += '</div></section>';
   // Activités : ajouter (jours passés et aujourd'hui), modifier, supprimer avec confirmation
-  h += '<section class="card"><h3>Activités</h3>' + (s.acts.length ? s.acts.map(a => actRow(a, kg)).join('') : '<p class="muted">Aucune activité notée.</p>');
+  h += '<section class="card"><h2>Activités</h2>' + (s.acts.length ? s.acts.map(a => actRow(a, kg)).join('') : '<p class="muted">Aucune activité notée.</p>');
   h += day <= t ? '<button type="button" class="btn" data-act="act-add" data-d="' + day + '">+ Ajouter une activité</button>' : '<p class="muted small">Tu pourras noter tes activités le jour même.</p>';
   return h + '</section>';
 }

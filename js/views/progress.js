@@ -2,6 +2,7 @@
 import { addDays, esc, fmtDate, fmtKg, mondayOf, num, parseIso, today, withDot } from '../util.js';
 import { JUMP_PROTOCOL, MUSCLES } from '../library.js';
 import { S } from '../store.js';
+import { painEntries, painZones, ZONES } from '../pain.js';
 import { allEx, blockRange, bodyDocs, bodyweight, canon, history, jumpsOn, kneeEntries, kneeOn, nextSession, perWeekOf, settings, testForBlock, tplDef, weekInfo, workouts } from '../data.js';
 import { blockReport, exerciseProgress, fatigueCheck, muscleDone, musclePlanned, recordLog, setScore } from '../engine.js';
 import { chart, spark } from '../chart.js';
@@ -69,13 +70,20 @@ function viewProgress(){
   const wPts = bd.filter(x => num(x.weight) > 0).map(x => ({ x: parseIso(x.date).getTime(), y: num(x.weight) }));
   const sPts = bd.filter(x => num(x.sleep) > 0).map(x => ({ x: parseIso(x.date).getTime(), y: num(x.sleep) }));
   const bwNow = bodyweight(); const gp = nutritionOf().on ? myPlan() : null; const gl = gp && gp.target && (gp.status === 'ok' || gp.status === 'fast') ? gp.target : null;
-  h += '<section class="card"><h3>Poids de corps</h3>' + (bwNow && height ? '<p class="muted small">Dernier : ' + fmtKg(bwNow) + ' kg · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(Math.round(bwNow / Math.pow(height / 100, 2) * 10) / 10) + '. En prise de masse musculaire, une hausse lente et régulière est le signe attendu.</p>' : '<p class="muted small">Une pesée toutes les 2 semaines suffit : note ton poids dans Aujourd’hui et ta taille dans ton profil.</p>') + chart([{ pts:wPts }], gl ? { label:'Poids', empty:'Pas encore de pesée.', thresh:gl, threshLabel:'objectif', threshColor:'var(--good)' } : { label:'Poids', empty:'Pas encore de pesée.' }) + '<p class="small">' + esc(weightReading()) + '</p></section>';
+  h += '<section class="card"><h3>Poids de corps</h3>' + (bwNow && height ? '<p class="muted small">Dernier : ' + fmtKg(bwNow) + ' kg · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(Math.round(bwNow / Math.pow(height / 100, 2) * 10) / 10) + '. En prise de masse musculaire, une hausse lente et régulière est le signe attendu.</p>' : '<p class="muted small">Note ton poids dans Aujourd’hui et ta taille dans ton profil.</p>') + chart([{ pts:wPts }], gl ? { label:'Poids', empty:'Pas encore de pesée.', thresh:gl, threshLabel:'objectif', threshColor:'var(--good)' } : { label:'Poids', empty:'Pas encore de pesée.' }) + '<p class="small">' + esc(weightReading()) + '</p></section>';
   h += '<section class="card"><h3>Sommeil</h3>' + chart([{ pts:sPts, color:'var(--court)' }], { label:'Sommeil', yMin:0, thresh:7, threshLabel:'7 h', empty:'Note tes heures de sommeil dans Aujourd’hui.' }) + '</section>';
 
   // Genou
   const ke = kneeEntries();
   if (kneeOn()) h += '<section class="card"><h3>Genou</h3><p class="muted small">Escaliers le matin (courbe) et douleur max pendant les séances jambes (points). La ligne pointillée marque 3/10.</p>' +
     chart([{ pts: ke.filter(k => k.src === 'stairs').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })) }, { pts: ke.filter(k => k.src === 'session').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })), color:'var(--court)', line:false }], { yMin:0, yMax:10, thresh:3, threshLabel:'3/10', area:false, label:'Douleur au genou', empty:'Note la douleur aux escaliers dans Aujourd’hui.' }) + '</section>';
+
+  // Autres zones de douleur suivies : note du matin (courbe) et douleur max pendant les séances (points)
+  painZones().filter(z => z !== 'knee').forEach(z => {
+    const pe = painEntries(z);
+    h += '<section class="card"><h3>' + esc(ZONES[z].label) + '</h3><p class="muted small">Note du jour (courbe) et douleur max pendant les séances (points). La ligne pointillée marque 3/10.</p>' +
+      chart([{ pts: pe.filter(k => k.src === 'day').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })) }, { pts: pe.filter(k => k.src === 'session').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })), color:'var(--court)', line:false }], { yMin:0, yMax:10, thresh:3, threshLabel:'3/10', area:false, label:'Douleur : ' + ZONES[z].label.toLowerCase(), empty:'Note ta douleur dans Aujourd’hui.' }) + '</section>';
+  });
 
   // Détente
   if (!jumpsOn()) return h;
@@ -102,8 +110,9 @@ export function viewBilan(block){
   h += '<section class="card"><h3>Séries par muscle (moyenne par semaine)</h3><div class="legend"><span><i style="background:var(--accent)"></i>Moyenne faite</span><span><i style="background:var(--court)"></i>Prévu par semaine</span></div>';
   MUSCLES.forEach(m => { h += '<div class="mrow"><span>' + esc(m) + '</span><span class="mbar"><i style="width:' + (R.avg[m] / maxV * 100).toFixed(1) + '%"></i><b style="left:' + (R.mp[m] / maxV * 100).toFixed(1) + '%"></b></span><span class="v num">' + fmtKg(Math.round(R.avg[m] * 10) / 10) + ' / ' + fmtKg(R.mp[m]) + '</span></div>'; });
   h += '</section>';
-  h += '<section class="card"><h3>' + (kneeOn() ? 'Genou, poids et sommeil' : 'Poids et sommeil') + '</h3><div class="stack small">';
+  h += '<section class="card"><h3>' + (R.pains.length ? 'Douleurs, poids et sommeil' : kneeOn() ? 'Genou, poids et sommeil' : 'Poids et sommeil') + '</h3><div class="stack small">';
   if (kneeOn()) h += '<p><b>Genou :</b> ' + (R.kneeMax == null ? 'aucune mesure.' : R.kneeN + ' mesures, max ' + R.kneeMax + '/10, ' + R.kneeHigh + ' jour(s) au-dessus de 3/10.') + '</p>';
+  R.pains.forEach(p => { h += '<p><b>' + esc(p.label) + ' :</b> ' + (p.max == null ? 'aucune mesure.' : p.n + ' mesure' + (p.n > 1 ? 's' : '') + ', max ' + p.max + '/10, ' + p.high + ' jour(s) au-dessus de 3/10.') + '</p>'; });
   h += '<p><b>Poids :</b> ' + (R.wc ? fmtKg(R.wc.from) + ' → ' + fmtKg(R.wc.to) + ' kg (' + (R.wc.kg >= 0 ? '+' : '') + fmtKg(Math.round(R.wc.kg * 10) / 10) + ' kg, ' + fmtKg(Math.round(R.wc.pctWeek * 100) / 100) + ' % par semaine).' : 'il faut au moins 2 pesées dans le bloc.') + '</p>';
   h += '<p><b>Sommeil :</b> ' + (R.sleepAvg == null ? 'aucune donnée.' : 'moyenne ' + fmtKg(Math.round(R.sleepAvg * 10) / 10) + ' h, ' + R.shortN + ' nuit(s) sous 6 h.') + '</p>';
   if (jumpsOn()) h += '<p><b>Détente :</b> ' + (R.test ? fmtKg(R.test.cm) + ' cm' + (R.prevTest ? ' (bloc précédent : ' + fmtKg(R.prevTest.cm) + ' cm)' : '') : 'pas de test dans ce bloc.') + '</p>';

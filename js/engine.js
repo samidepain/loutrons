@@ -2,7 +2,7 @@
 import { addDays, clamp, daysBetween, e1rm, fmtKg, lowFirst, num, roundTo, today } from './util.js';
 import { MUSCLES } from './library.js';
 import { S } from './store.js';
-import { holdText, soreZones } from './pain.js';
+import { holdText, painEntries, painZones, PAIN_LIMIT, soreZones, ZONES } from './pain.js';
 import { bestE1, blockRange, blockStarts, bodyDocs, bodyweight, canon, exDef, history, itemsOf, jumpsOn, kindOf, kneeAlert, kneeEntries, kneeOn, lastSessionGap, maxKg, musclesOf, perWeekOf, rotationOf, settings, sportInfo, testForBlock, topSets, tplDef, tplItems, validSets, weekInfo, workouts } from './data.js';
 
 /* ================= Moteur de progression =================
@@ -265,6 +265,8 @@ export function blockReport(block){
   const md = muscleDone(r.from, to); const mp = musclePlanned(); const avg = {}; MUSCLES.forEach(m => { avg[m] = md[m] / weeks; });
   const knee = kneeEntries().filter(k => k.date >= r.from && k.date <= to);
   const kneeMax = knee.length ? Math.max.apply(null, knee.map(k => k.v)) : null; const kneeHigh = knee.filter(k => k.v > 3).length;
+  // Autres zones de douleur suivies (le genou garde ses lignes) : mesures du bloc, max, jours au-dessus du seuil
+  const pains = painZones().filter(z => z !== 'knee').map(z => { const e = painEntries(z).filter(k => k.date >= r.from && k.date <= to); return { z, label:ZONES[z].label, hits:!!ZONES[z].hits, n:e.length, max: e.length ? Math.max.apply(null, e.map(k => k.v)) : null, high: e.filter(k => k.v > PAIN_LIMIT).length }; });
   const bd = bodyDocs().filter(b => b.date >= r.from && b.date <= to); const wts = bd.filter(b => num(b.weight) > 0);
   let wc = null;
   if (wts.length >= 2) { const a = num(wts[0].weight), b = num(wts[wts.length - 1].weight); const span = Math.max(1, daysBetween(wts[0].date, wts[wts.length - 1].date) / 7); wc = { from:a, to:b, kg:b - a, pctWeek: ((b / a - 1) * 100) / span }; }
@@ -286,6 +288,10 @@ export function blockReport(block){
     if (kneeHigh > 0) tips.push(['bad', 'Genou : ' + kneeHigh + ' jour' + (kneeHigh > 1 ? 's' : '') + ' au-dessus de 3/10 (max ' + kneeMax + '/10). Garde une amplitude confortable sur les exercices sensibles ; si ça se répète, fais évaluer ton genou par un kiné.']);
     else if (knee.length >= 5) tips.push(['good', 'Genou stable sous 3/10 tout le bloc : tu peux continuer à élargir l’amplitude au leg extension et garder les sauts.']);
   }
+  pains.forEach(p => {
+    if (p.high > 0) tips.push(['bad', p.label + ' : ' + p.high + ' jour' + (p.high > 1 ? 's' : '') + ' au-dessus de 3/10 (max ' + p.max + '/10). ' + (p.hits ? 'Les charges des exercices concernés ont été maintenues.' : 'Je ne sais pas relier cette zone à tes exercices : rien n’a été adapté.') + ' Si ça se répète, fais-la évaluer par un médecin ou un kiné.']);
+    else if (p.n >= 3) tips.push(['good', p.label + ' : sous 3/10 tout le bloc.']);
+  });
   if (wc) {
     // Rythme comparé à l'objectif choisi (suivi de l'alimentation) ; sans objectif, à la prise de masse musculaire, comme avant
     const p = wc.pctWeek; const pc = fmtKg(Math.round(Math.abs(p) * 100) / 100); const kgTxt = (wc.kg >= 0 ? '+' : '') + fmtKg(Math.round(wc.kg * 10) / 10) + ' kg';
@@ -301,5 +307,5 @@ export function blockReport(block){
   }
   if (sleepAvg != null && sleepAvg < 7) tips.push(['info', 'Sommeil moyen ' + fmtKg(Math.round(sleepAvg * 10) / 10) + ' h' + (shortN ? ', dont ' + shortN + ' nuit' + (shortN > 1 ? 's' : '') + ' sous 6 h' : '') + '. Les recommandations pour les adultes visent au moins 7 h.']);
   if (jumpsOn() && test && prevTest) { const dlt = test.cm - prevTest.cm; tips.push([dlt >= 0 ? 'good' : 'warn', 'Détente : ' + fmtKg(test.cm) + ' cm contre ' + fmtKg(prevTest.cm) + ' cm au bloc précédent (' + (dlt >= 0 ? '+' : '') + fmtKg(Math.round(dlt * 10) / 10) + ' cm).']); }
-  return { block, r, to, finished, weeks, done, planned, forces, avg, mp, kneeMax, kneeHigh, kneeN:knee.length, wc, sleepAvg, shortN, test, prevTest, tips };
+  return { block, r, to, finished, weeks, done, planned, forces, avg, mp, kneeMax, kneeHigh, kneeN:knee.length, pains, wc, sleepAvg, shortN, test, prevTest, tips };
 }

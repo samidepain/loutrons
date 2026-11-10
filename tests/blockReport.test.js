@@ -87,3 +87,14 @@ test('poids : comparé à l’objectif choisi quand l’alimentation est suivie'
   donnees(bloc({ nutrition: { on: false, goal: 'lose' } }));
   assert.match(poids()[1], /^Poids en hausse de 0,25 %/);
 });
+
+test('bilan : les autres zones de douleur suivies donnent leurs mesures et un conseil prudent ; sans suivi, rien', () => {
+  jour('2026-10-20');
+  const mesures = { 'd_2026-09-30': { date: '2026-09-30', z: { shoulder: { v: 5, flags: [] }, wrist: { v: 2, flags: [] } } }, 'd_2026-10-02': { date: '2026-10-02', z: { shoulder: { v: 2, flags: [] } } }, 'd_2026-08-20': { date: '2026-08-20', z: { shoulder: { v: 9, flags: [] } } } };
+  donnees(bloc({ pain: { zones: ['shoulder', 'wrist'] } }, mesures));
+  const R = blockReport(1);
+  assert.deepEqual(R.pains.map(p => [p.z, p.n, p.max, p.high]), [['shoulder', 2, 5, 1], ['wrist', 1, 2, 0]]);  // la mesure d'août est hors du bloc
+  assert.ok(R.tips.some(t => t[0] === 'bad' && /Épaule : 1 jour au-dessus de 3\/10 \(max 5\/10\)/.test(t[1]) && /maintenues/.test(t[1])));
+  donnees(bloc({}, mesures));
+  assert.deepEqual(blockReport(1).pains, []);
+});
