@@ -6,7 +6,7 @@ import { emileQueue } from '../js/emile.js';
 import { exerciseProgress, recentRecord, recordLog } from '../js/engine.js';
 import { S } from '../js/store.js';
 import { donnees, jour, reglages, seance, docs } from './aide.js';
-import { greeting } from '../js/util.js';
+import { greeting, shortName } from '../js/util.js';
 
 afterEach(() => mock.timers.reset());
 
@@ -148,4 +148,9 @@ test('recordLog : gardé tant que les documents ne changent pas, recalculé apr�
   donnees(docs(reglages(), seance('2026-11-02', { ua_bench: { kg: 60, reps: [8, 8, 8], rir: 2 } }), seance('2026-11-13', { ua_bench: { kg: 70, reps: [8, 8, 8], rir: 2 } })));
   const a = recordLog(); assert.equal(recordLog(), a);
   S.rev++; assert.notEqual(recordLog(), a);
+});
+
+test('nom court d’une séance dans la bande de semaine : initiales, ou mot long coupé', () => {
+  assert.equal(shortName('Upper A'), 'UA'); assert.equal(shortName('Full body A'), 'FBA'); assert.equal(shortName('Course'), 'Course');
+  assert.equal(shortName('Football'), 'Footb.'); assert.equal(shortName(''), '');
 });

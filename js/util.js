@@ -29,6 +29,8 @@ export function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { re
 export function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
 // Salutation selon l'heure (0 à 23)
 export const greeting = h => h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+// Nom court pour une case étroite : initiales des mots (« Upper A » → « UA »), ou un mot long coupé à 5 lettres
+export const shortName = s => { const w = String(s || '').trim().split(/\s+/).filter(Boolean); return w.length > 1 ? w.map(x => x.charAt(0).toUpperCase()).join('').slice(0, 3) : (w[0] || '').length > 6 ? w[0].slice(0, 5) + '.' : (w[0] || ''); };
 export const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 // Temps de repos lisible : « 45 s », « 1 min 30 », « 2 min »
 export const fmtRest = sec => { const s = Math.round(Number(sec) || 0); if (s < 60) return s + ' s'; const m = Math.floor(s / 60), r = s % 60; return m + ' min' + (r ? ' ' + String(r).padStart(2, '0') : ''); };

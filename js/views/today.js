@@ -22,7 +22,7 @@ export function effortChoice(sw){
 
 // Séance du jour : en cours, faite, prévue, ou jour de repos ou de sport
 function planCard(d, plan, aw, doneToday, tpls){
-  const autre = tpls.length ? '<button type="button" class="link" data-act="go-seances">Faire une autre séance ›</button>' : '';
+  const autre = tpls.length ? '<button type="button" class="link" data-act="go-seances">Voir toutes mes séances ›</button>' : '';
   if (aw) return '<section class="card plan"><span class="label">Séance en cours</span><div class="name">' + esc(wName(aw)) + '</div><button type="button" class="btn primary big" data-act="tab" data-v="training">Reprendre ' + esc(wName(aw)) + '</button></section>';
   if (doneToday.length) {
     const sw = (S.summary && doneToday.find(w => w.id === S.summary.id)) || doneToday[doneToday.length - 1];
@@ -37,7 +37,7 @@ function planCard(d, plan, aw, doneToday, tpls){
   const prevu = plannedDates().indexOf(d) >= 0; const p = weekProgress(d); const reached = !prevu && p.done >= p.target;
   // Match ce soir ou demain (module sport) et séance du bas du corps : garder des jambes fraîches ; note du jour du programme exemple
   const mt = sportPlanned(d) === 'match' ? 'ce soir' : sportPlanned(addDays(d, 1)) === 'match' ? 'demain' : null;
-  const caution = (mt && tplLower(t) ? '<p class="small">' + esc(nbsp('Match ' + mt + ' : garde des jambes fraîches, préfère une séance du haut du corps (« Faire une autre séance »).')) + '</p>' : '') + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
+  const caution = (mt && tplLower(t) ? '<p class="small">' + esc(nbsp('Match ' + mt + ' : garde des jambes fraîches, préfère une séance du haut du corps (« Voir toutes mes séances »).')) + '</p>' : '') + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
   const count = p.done + ' séance' + (p.done > 1 ? 's' : '') + ' sur ' + p.target + ' cette semaine';
   // Dernière séance terminée : un repère de régularité (le décompte de la semaine est dans « Ta semaine »)
   const last = workouts().filter(w => w.status === 'terminée').reduce((m, w) => !m || w.date > m.date || (w.date === m.date && (w.startedAt || 0) > (m.startedAt || 0)) ? w : m, null);
@@ -51,6 +51,15 @@ function planCard(d, plan, aw, doneToday, tpls){
 function recordCard(d){
   const r = S.loaded ? recentRecord(d) : null; if (!r) return '';
   return '<section class="card gold"><div class="ring-row"><span class="trophy" aria-hidden="true">' + TROPHY + '</span><div class="stack rec-t"><h3>Nouveau record</h3><span class="small">' + esc(r.name) + '</span><span class="muted small num">' + esc(nbsp(fmtKg(r.kg) + ' kg estimés · +' + fmtKg(r.gain) + ' · ' + fmtDate(r.date))) + '</span></div></div></section>';
+}
+
+// Conseil replié par défaut (avatar, titre, chevron) pour laisser la place aux suivis du jour ; les alertes (rang 2 : retour après une pause,
+// fatigue, genou) restent ouvertes car elles touchent la séance. Le titre est repris du <h3> de la bulle (déjà échappé).
+function foldEmile(html, top){
+  if (!html || top === 2) return html;
+  if (S.emileOpen) return html + '<button type="button" class="link emile-more" data-act="emile-open" aria-expanded="true">Réduire le conseil</button>';
+  const t = (html.match(/<h3>(.*?)<\/h3>/) || [])[1] || 'Conseil d’Émile';
+  return '<section class="card line"><div class="line-row"><button type="button" class="line-h e-fold" data-act="emile-open" aria-expanded="false"><img src="icons/emile.png" alt="" width="32" height="32"><span class="n">' + t + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></section>';
 }
 
 // Conseils d'Émile du jour, du plus important au moins important (rang 1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : semaine)
@@ -75,10 +84,11 @@ function emileCards(d, wk, goal){
     else if (jumpsOn() && wk.bw === 5) q.push({ rank:4, html: emile('<p>Test de détente la semaine prochaine, pendant la décharge.</p>', { key:'jumps:' + wk.block + ':5' }) });
   }
   q.push({ rank:5, html: emile('<p>' + esc(goal.d) + '</p>', { title: goal.t, key:'week:' + mondayOf(d) + ':' + goal.t }) });
-  const f = emileQueue(q);
-  if (!f.rest.length) return f.first;
+  const f = emileQueue(q); const top = Math.min(...q.filter(x => x.html).map(x => x.rank));
+  const first = foldEmile(f.first, top);
+  if (!f.rest.length) return first;
   const n = f.rest.length;
-  return f.first + (S.emileMore ? f.rest.join('') : '') + '<button type="button" class="link emile-more" data-act="emile-more" aria-expanded="' + !!S.emileMore + '">' + (S.emileMore ? 'Masquer les autres conseils' : n + (n > 1 ? ' autres conseils' : ' autre conseil')) + '</button>';
+  return first + (S.emileMore ? f.rest.join('') : '') + '<button type="button" class="link emile-more" data-act="emile-more" aria-expanded="' + !!S.emileMore + '">' + (S.emileMore ? 'Masquer les autres conseils' : n + (n > 1 ? ' autres conseils' : ' autre conseil')) + '</button>';
 }
 
 export function viewToday(){

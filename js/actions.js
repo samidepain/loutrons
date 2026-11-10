@@ -212,6 +212,7 @@ const A = {
   // Aujourd'hui : ouvrir ou fermer une ligne compacte, afficher les autres conseils d'Émile, liens vers Séances et Alimentation
   'today-open'(b){ S.todayOpen = S.todayOpen === b.dataset.v ? null : b.dataset.v; render(); },
   'emile-more'(){ S.emileMore = !S.emileMore; render(); },
+  'emile-open'(){ S.emileOpen = !S.emileOpen; render(); },
   'go-seances'(){ S.progTab = 'seances'; A.tab({ dataset:{ v:'training' } }); },
   'go-food'(){ A.tab({ dataset:{ v:'food' } }); },
   // Profil : vers les réglages de l'entraînement (Entraînement › Planning)
@@ -378,11 +379,12 @@ const A = {
   'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
   // Calendrier : toucher un jour ouvre son mois et affiche ce jour ; flèches ou glissement pour changer de mois
-  'cal-month'(){ S.calMonth = today().slice(0, 7); S.calDay = null; render(); },
+  'cal-month'(){ S.calMonth = (S.calDay || today()).slice(0, 7); render(); },
   'cal-week'(){ S.calMonth = null; S.calDay = null; render(); },
   'cal-prev'(){ S.calMonth = addMonths(S.calMonth, -1); S.calDay = null; render(); },
   'cal-next'(){ S.calMonth = addMonths(S.calMonth, 1); S.calDay = null; render(); },
-  'cal-day'(b){ const d = b.dataset.v; S.calMonth = d.slice(0, 7); S.calDay = S.calDay === d ? null : d; render(); },
+  // Toucher un jour le choisit et montre son détail, dans la vue où l'on est (semaine ou mois) ; seul « Voir le mois » ouvre le mois
+  'cal-day'(b){ const d = b.dataset.v; if (S.calMonth) S.calMonth = d.slice(0, 7); S.calDay = S.calDay === d ? null : d; render(); },
   'cal-hist'(b){ S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
   'set-sex'(b){ putSettings({ sex: settings().sex === b.dataset.v ? null : b.dataset.v }); render(); },
   theme(b){ putSettings({ theme: b.dataset.v }); applyTheme(b.dataset.v); render(); },

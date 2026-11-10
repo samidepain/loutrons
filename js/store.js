@@ -6,7 +6,7 @@ export const S = { docs:new Map(), rev:0, loaded:false, view:'today',
   progEx:'la_hack', progTab:'seances', progressTab:'stats', calMonth:null, calDay:null, openHist:null, confirm:null, summary:null,
   restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null, setup:null, renaming:false, fiche:null, exQ:'', food:null, foodDay:null, from:null, navHint:null, act:null, adjOk:false,
   // Aujourd'hui : ligne compacte ouverte ('eau' | 'corps' | 'activites' | 'genou' | null), autres conseils d'Émile affichés
-  todayOpen:null, emileMore:false,
+  todayOpen:null, emileMore:false, emileOpen:false,
   // fiche d'un exercice ouverte depuis 'exercices' ou 'progress'
   ficheFrom:null,
   // Séance : exercice ouvert à la main, exercice qui attend ses reps en réserve, série faite en correction ({ ex, i }), exercice de « Voir le mouvement »

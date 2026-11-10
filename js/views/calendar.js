@@ -1,5 +1,5 @@
 // Calendrier en haut d'Aujourd'hui : la semaine ; toucher un jour ouvre le mois avec le détail de ce jour.
-import { addDays, capFirst, esc, fmtDateLong, fmtMonth, lowFirst, mondayOf, monthDays, nSeries, parseIso, today } from '../util.js';
+import { addDays, capFirst, esc, shortName, fmtDateLong, fmtMonth, lowFirst, mondayOf, monthDays, nSeries, parseIso, today } from '../util.js';
 import { DAY_SHORT } from '../library.js';
 import { S } from '../store.js';
 import { activityFamily, bodyweight, countSets, dayFamilies, daySummary, perWeekOf, plannedDates, sportInfo, tplDef, tplEst, wName, workouts } from '../data.js';
@@ -20,10 +20,10 @@ function cell(day, mois){
   const acts = s.acts.map(a => lowFirst(activityName(a)));
   const dit = [s.active ? 'séance en cours' : s.done.length ? 'séance faite' : s.planned ? 'séance prévue' : '', s.active || s.done.length || s.planned ? nom : '', acts.length ? (acts.length > 1 ? 'activités : ' : 'activité : ') + acts.join(', ') : '', fams.some(f => f.fam === 'collectif' && f.state === 'planned') ? lowFirst(sportPrevu(day)) + ' prévu' : ''].filter(Boolean);
   const aria = fmtDateLong(day) + (dit.length ? ' : ' + dit.join(', ') : '');
-  let h = '<button type="button" class="cday' + (day === today() ? ' today' : '') + (S.calDay === day ? ' sel' : '') + '" data-act="cal-day" data-v="' + day + '" aria-label="' + esc(aria) + '">';
+  let h = '<button type="button" class="cday' + (day === today() ? ' today' : '') + (S.calDay === day ? ' sel' : '') + '" data-act="cal-day" data-v="' + day + '" aria-pressed="' + (S.calDay === day) + '" aria-label="' + esc(aria) + '">';
   if (!mois) h += '<span class="dn">' + DAY_SHORT[parseIso(day).getDay()] + '</span>';
   h += '<span class="dd">' + Number(day.slice(8)) + '</span><span class="mks" aria-hidden="true">' + fams.map(dot).join('') + '</span>';
-  if (!mois) h += '<span class="s">' + esc(nom) + '</span>';
+  if (!mois) h += '<span class="s">' + esc(shortName(nom)) + '</span>';
   return h + '</button>';
 }
 function dayDetail(day){
@@ -52,7 +52,7 @@ export function calendarCard(){
     const pw = perWeekOf();
     let h = '<section class="card cal"><div class="row between"><div class="ring-row">' + ring(n / pw, { cls:'xs', html:'<b class="num">' + n + '/' + pw + '</b>' }) + '<div class="stack" style="gap:2px"><h3>Ta semaine</h3><span class="muted small">' + n + ' séance' + (n > 1 ? 's' : '') + ' sur ' + pw + '</span>' + '</div></div><button type="button" class="link" data-act="cal-month">Voir le mois</button></div><div class="cal-week">';
     for (let i = 0; i < 7; i++) h += cell(addDays(mon, i), false);
-    return h + '</div></section>';
+    return h + '</div>' + (S.calDay ? dayDetail(S.calDay) : '') + '</section>';
   }
   const ym = S.calMonth;
   let h = '<section class="card cal"><div class="row between"><button type="button" class="btn sm" data-act="cal-prev" aria-label="Mois précédent">‹</button><h3 class="cal-title" aria-live="polite">' + esc(capFirst(fmtMonth(ym))) + '</h3><button type="button" class="btn sm" data-act="cal-next" aria-label="Mois suivant">›</button></div>';
