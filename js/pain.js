@@ -1,6 +1,9 @@
 // Douleurs suivies (genou et autres zones) : zones, exercices concernés, alertes. Calculs seuls, sans affichage.
 // Le genou garde ses documents d'origine (k_<date> et w.knee). Les autres zones : d_<date> ({ date, z:{ zone:{ v, flags } } }) et w.pain.
-// Le seuil de 3/10 et les 10 jours sont des règles de prudence de l'appli (comme pour le genou), pas un résultat d'étude ; rien ici n'est un diagnostic.
+// Sources (détail dans « La science ») : modèle de suivi de la douleur (Thomeé 1997 ; Silbernagel et al. 2007 : jusqu'à 5/10 pendant l'effort,
+// retour au niveau de départ le lendemain matin) ; Smith et al. 2017 (s'entraîner avec une douleur n'est pas un obstacle). Le seuil de 3/10 sur
+// 10 jours est PLUS PRUDENT que ce modèle et ne bloque pas l'entraînement : il fige seulement la hausse des charges. 7/10 est un choix de l'appli.
+// Rien ici n'est un diagnostic.
 import { addDays, today } from './util.js';
 import { S } from './store.js';
 import { kneeEntries, kneeOn, settings } from './data.js';
@@ -20,8 +23,13 @@ export const ZONES = {
   other:    { label:'Autre zone', ask:'Douleur qui revient ou gêne ton entraînement', hits: null }
 };
 export const ZONE_IDS = Object.keys(ZONES);
-// Signaux qui sortent du cadre de l'appli : avec l'un d'eux, pas d'adaptation à ta place, un professionnel d'abord
-export const FLAGS = [['numb', 'Engourdissements ou fourmillements'], ['rest', 'Douleur la nuit ou au repos'], ['shock', 'Après un choc ou un faux mouvement']];
+// Signaux d'alerte courants des guides cliniques (NICE ; cadre IFOMPT 2020 pour le dos et la nuque), à la valeur diagnostique faible : ils servent
+// à faire consulter, pas à diagnostiquer. Seuls ceux qui ont un sens pour la zone sont demandés (flags). 'saddle' : urgence (syndrome de la queue de cheval).
+export const FLAG_LABEL = { numb:'Engourdissements ou fourmillements', rest:'Douleur la nuit ou au repos', shock:'Après un choc ou un faux mouvement',
+  weak:'Perte soudaine de force', swell:'Articulation chaude ou gonflée, ou fièvre', saddle:'Engourdissement de l’entrejambe, ou troubles urinaires ou intestinaux' };
+const BASE = ['numb', 'rest', 'shock'];
+const FLAGS_OF = { shoulder: BASE.concat(['weak', 'swell']), elbow: BASE.concat(['weak', 'swell']), wrist: BASE.concat(['weak', 'swell']), hip: BASE.concat(['swell']), lowback: BASE.concat(['saddle']), neck: BASE.concat(['weak']), other: BASE.concat(['swell']) };
+Object.keys(FLAGS_OF).forEach(z => { ZONES[z].flags = FLAGS_OF[z]; });
 
 // Zones suivies : le genou par l'option d'origine, les autres par settings.pain.zones
 export function painZones(){
@@ -61,7 +69,9 @@ export function painAdvice(z, held){
   lines.push(Z.hits ? 'Je ne monte pas la charge des exercices qui sollicitent ' + Z.what + '. Choisis une amplitude confortable, ou remplace un mouvement qui déclenche la douleur.'
     : 'Je ne sais pas quels exercices sollicitent cette zone, donc je ne change rien à tes charges. Évite ce qui déclenche la douleur.');
   if (held && held.length) lines.push('Dans ta prochaine séance, charge maintenue sur : ' + held.join(', ') + '.');
-  if (painStrong(z)) lines.push('Douleur forte ou signal d’alerte : mieux vaut ne pas charger cette zone pour l’instant et consulter un médecin ou un kiné.');
+  const fl = []; r.forEach(k => k.flags.forEach(f => { if (fl.indexOf(f) < 0 && FLAG_LABEL[f]) fl.push(f); }));
+  if (fl.indexOf('saddle') >= 0) lines.splice(1, lines.length, 'Engourdissement de l’entrejambe ou troubles urinaires ou intestinaux avec une douleur au dos : c’est une urgence médicale, consulte sans attendre.');
+  else if (painStrong(z)) lines.push('Tu as noté ' + (fl.length ? 'un signal d’alerte (' + fl.map(f => FLAG_LABEL[f].charAt(0).toLowerCase() + FLAG_LABEL[f].slice(1)).join(', ') + ')' : 'une douleur forte') + ' : consulte un médecin ou un kiné avant de recharger cette zone.');
   else lines.push('Si elle dure ou revient, consulte un médecin ou un kiné. Ce n’est pas un diagnostic.');
   return { title:Z.label, lines, tone: painStrong(z) ? 'bad' : 'warn', key:'pain:' + z + ':' + r[r.length - 1].date };
 }

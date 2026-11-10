@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { computeTarget } from '../js/engine.js';
 import { exDef, lastWeighIn, weekInfo, weighDue } from '../js/data.js';
 import { CHOICES, choiceOf, activityName } from '../js/energy.js';
-import { painAdvice, painAlert, painEntries, painStrong, painZones, soreZones, ZONES } from '../js/pain.js';
+import { FLAG_LABEL, painAdvice, painAlert, painEntries, painStrong, painZones, soreZones, ZONES } from '../js/pain.js';
 import { weightReading } from '../js/views/goal.js';
 import { today } from '../js/util.js';
 import { donnees, jour, reglages, seance, docs } from './aide.js';
@@ -76,9 +76,23 @@ test('douleur forte ou signal d’alerte : l’appli conseille de consulter au l
   donnees(docs(reglages(pain(['shoulder'])), d('2026-09-21', { shoulder: { v: 7, flags: [] } })));
   const a = painAdvice('shoulder');
   assert.equal(a.tone, 'bad');
-  assert.match(a.lines.join(' '), /consulter un médecin ou un kiné/);
+  assert.match(a.lines.join(' '), /consulte un médecin ou un kiné avant de recharger/);
   donnees(docs(reglages(pain(['shoulder']))));
   assert.equal(painAdvice('shoulder'), null);
+});
+
+test('signaux d’alerte : seulement ceux qui ont un sens pour la zone ; l’entrejambe et la vessie, c’est une urgence', () => {
+  assert.ok(Object.keys(ZONES).filter(z => z !== 'knee').every(z => ZONES[z].flags.every(f => FLAG_LABEL[f])));
+  assert.ok(ZONES.lowback.flags.includes('saddle') && !ZONES.shoulder.flags.includes('saddle'));
+  assert.ok(ZONES.shoulder.flags.includes('weak') && !ZONES.lowback.flags.includes('weak'));
+  jour('2026-09-23');
+  donnees(docs(reglages(pain(['lowback'])), d('2026-09-21', { lowback: { v: 4, flags: ['saddle'] } })));
+  const a = painAdvice('lowback');
+  assert.equal(a.tone, 'bad');
+  assert.equal(a.lines.length, 2);                                   // la raison, puis l'urgence : pas de conseil d'adaptation
+  assert.match(a.lines[1], /urgence médicale, consulte sans attendre/);
+  donnees(docs(reglages(pain(['shoulder'])), d('2026-09-21', { shoulder: { v: 4, flags: ['weak', 'rest'] } })));
+  assert.match(painAdvice('shoulder').lines.join(' '), /signal d’alerte \(perte soudaine de force, douleur la nuit ou au repos\)/);
 });
 
 test('rappel de pesée : 14 jours après la dernière, jamais avant ; les anciennes pesées restent', () => {

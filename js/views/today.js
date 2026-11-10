@@ -4,7 +4,7 @@ import { addDays, capFirst, greeting, esc, fmtDate, fmtDateLong, fmtKg, lowFirst
 import { S } from '../store.js';
 import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, tplItems, WEIGH_DAYS, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
 import { fatigueCheck, recentRecord } from '../engine.js';
-import { FLAGS, PAIN_LIMIT, painAdvice, painZones, ZONES } from '../pain.js';
+import { FLAG_LABEL, PAIN_LIMIT, painAdvice, painZones, ZONES } from '../pain.js';
 import { useShare } from '../backup.js';
 import { kneeChips, TROPHY } from '../render.js';
 import { noTplCard } from './program.js';
@@ -82,7 +82,7 @@ function emileCards(d, wk, goal){
     if (fat) q.push({ rank:2, html: emile('<p>' + esc(hey('Ta force baisse sur ' + fat.drops.length + ' exercices sur ' + fat.compared + ' cette semaine : ' + fat.drops.join(', ') + '.')) + (fat.avgSleep != null && fat.avgSleep < 7 ? ' Ton sommeil moyen ces derniers jours est de ' + fmtKg(Math.round(fat.avgSleep * 10) / 10) + ' h.' : '') + ' Avancer la semaine de décharge peut t’aider à récupérer.</p><div class="row"><button type="button" class="btn primary" data-act="fatigue-deload">Avancer la décharge</button><button type="button" class="btn" data-act="fatigue-ignore">Ignorer cette semaine</button></div>', { title:'Fatigue probable', tone:'warn', close:'fatigue-ignore' }) });
     if (kneeAlert()) q.push({ rank:2, html: emile('<p>Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts, charges maintenues sur les exercices qui sollicitent le genou. Si ça ne redescend pas, consulte un kiné ou un médecin du sport.</p>', { title:'Genou', tone:'bad', key:'knee:' + kneeEntries().filter(k => k.v > 3).map(k => k.date).sort().pop() }) });
     painZones().filter(z => z !== 'knee').forEach(z => { const a = painAdvice(z, heldNames(z)); if (a) q.push({ rank:2, html: emile(a.lines.map(l => '<p>' + esc(nbsp(l)) + '</p>').join(''), { title:a.title, tone:a.tone, key:a.key }) }); });
-    if (weighDue(d)) q.push({ rank:4, html: emile('<p>' + esc(nbsp(hey(withDot('Ta dernière pesée date du ' + fmtDate(lastWeighIn().date)) + ' Une pesée toutes les 2 semaines suffit pour suivre ton poids. Pèse-toi ce matin, avant de manger.'))) + '</p><button type="button" class="btn" data-act="weigh-now">Noter mon poids</button>', { title:'Pesée', key:'weigh:' + mondayOf(d) }) });
+    if (weighDue(d)) q.push({ rank:4, html: emile('<p>' + esc(nbsp(hey(withDot('Ta dernière pesée date du ' + fmtDate(lastWeighIn().date)) + ' Une pesée toutes les 2 semaines suffit pour suivre ton poids. Pèse-toi ce matin, avant de manger, et si possible le même jour de la semaine que d’habitude.'))) + '</p><button type="button" class="btn" data-act="weigh-now">Noter mon poids</button>', { title:'Pesée', key:'weigh:' + mondayOf(d) }) });
     if (backupDue()) {
       const le = settings().lastExport;
       q.push({ rank:3, html: emile('<p>' + esc(hey(le ? withDot('Ta dernière sauvegarde date du ' + fmtDate(le)) : 'Tu n’as pas encore sauvegardé tes données.')) + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>'
@@ -111,7 +111,8 @@ function painLine(d){
   zs.forEach(z => {
     const v = val(z); const fl = z !== 'knee' && day[z] ? day[z].flags || [] : [];
     b += '<div class="stack">' + (solo ? '' : '<span class="label">' + ZONES[z].label + '</span>') + '<p class="muted small">' + esc(ZONES[z].ask) + ', de 0 à 10 : au-dessus de ' + PAIN_LIMIT + ', ' + tail(z) + '.</p>' + kneeChips(v, z === 'knee' ? 'stairs' : 'pain-d', false, z === 'knee' ? null : z);
-    if (v > PAIN_LIMIT && z !== 'knee') b += '<span class="muted small">Ça s’accompagne de…</span><div class="chips" role="group" aria-label="Signaux d’alerte">' + FLAGS.map(f => '<button type="button" class="chip txt' + (fl.indexOf(f[0]) >= 0 ? ' on hi' : '') + '" data-act="pain-flag" data-z="' + z + '" data-v="' + f[0] + '" aria-pressed="' + (fl.indexOf(f[0]) >= 0) + '">' + f[1] + '</button>').join('') + '</div>';
+    if ((v > PAIN_LIMIT || fl.length) && z !== 'knee') b += '<span class="muted small">Ça s’accompagne de…</span><div class="chips" role="group" aria-label="Signaux d’alerte">' + ZONES[z].flags.map(f => '<button type="button" class="chip txt' + (fl.indexOf(f) >= 0 ? ' on hi' : '') + '" data-act="pain-flag" data-z="' + z + '" data-v="' + f + '" aria-pressed="' + (fl.indexOf(f) >= 0) + '">' + FLAG_LABEL[f] + '</button>').join('') + '</div>';
+    if (z === 'lowback') b += '<span class="muted small">Engourdissement de l’entrejambe ou troubles urinaires ou intestinaux : urgence médicale, consulte sans attendre.</span>';
     b += '</div>';
   });
   return lineCard(solo ? 'genou' : 'douleurs', solo ? 'Genou ce matin' : 'Douleurs', sum.join(' · ') || 'À noter', '', b + (solo ? '' : '<p class="muted small">Ce n’est pas un diagnostic : si une douleur dure ou revient, consulte un médecin ou un kiné.</p>'));
