@@ -130,6 +130,8 @@ body.brandless .brand{visibility:hidden}
 /* L'en-tête transparent flotte sur le haut de l'écran : il laisse passer les touchers (bouton « ‹ … »), sauf le rond du profil */
 body.brandless .top{pointer-events:none}
 body.brandless .me{pointer-events:auto}
+/* Ceinture et bretelles (iPhone) : le bouton « ‹ … » passe au-dessus de l'en-tête, même si celui-ci garde ses touchers */
+#app [data-back]{position:relative;z-index:21}
 body.in-sheet .top{display:none}
 body.brandless:not(.in-sheet) #app > :first-child:not(.sess-head){padding-right:48px}
 body.brandless .sess-head{top:env(safe-area-inset-top,0px)}
