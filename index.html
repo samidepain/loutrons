@@ -487,10 +487,13 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .end-t h1{overflow-wrap:anywhere}
 .end-emile{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .empty-state{align-items:center;text-align:center;padding-block:24px}
-/* Profil : initiale en grand dans le dégradé lumineux, prénom, ancienneté */
+/* Profil : carte vedette avec l'initiale en grand dans le dégradé orange (sans lumière : la carte éclaire déjà), prénom, ancienneté */
 .prof-head{display:flex;align-items:center;gap:16px;min-width:0}
+.prof-id{display:flex;flex-direction:column;gap:2px;min-width:0}
+.prof-ver{text-align:center}
+.card > .pill{align-self:flex-start}
 .prof-head h1{overflow-wrap:anywhere}
-.prof-ini{width:72px;height:72px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--grad-fire);color:var(--on-accent);font-family:var(--f-display);font-weight:800;font-size:34px;box-shadow:var(--glow-1)}
+.prof-ini{width:72px;height:72px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--grad-fire);color:var(--on-accent);font-family:var(--f-display);font-weight:800;font-size:34px}
 /* Apparence : trois vignettes ; les couleurs de l'aperçu sont celles des thèmes, quel que soit le thème affiché */
 .theme-picks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .theme-pick{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px 10px;border:none;border-radius:16px;background:var(--surface-2);font-size:15px;font-weight:600;min-width:0}
