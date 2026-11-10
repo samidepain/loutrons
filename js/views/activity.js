@@ -4,6 +4,7 @@ import { S } from '../store.js';
 import { bodyweight, settings, sportInfo } from '../data.js';
 import { activityKcal, CHOICES, choiceOf, dayEnergy, EFFORT, glassOf, LEVELS, sportPlanned, waterAuto, waterBase, waterChosen, waterGoal, waterOf, WATER } from '../energy.js';
 import { ring } from '../ring.js';
+import { ic, LINE_ICON } from '../icons.js';
 
 const r10 = x => Math.round(x / 10) * 10;
 // Litres au dixième, au centième si l'objectif choisi n'est pas un multiple de 100 mL (2,25 L)
@@ -23,7 +24,7 @@ const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6
 // mark : petit repère facultatif avant la valeur (HTML déjà échappé, ex. jauge de l'eau)
 export function lineCard(key, name, value, quick, body, mark){
   const open = S.todayOpen === key;
-  return '<section class="card line"><div class="line-row"><button type="button" class="line-h" data-act="today-open" data-v="' + key + '" aria-expanded="' + open + '"' + (open ? ' aria-controls="line-' + key + '"' : '') + '><span class="n">' + esc(name) + '</span>' + (mark || '') + '<span class="v">' + esc(value) + '</span>' + CHEVRON + '</button>' + (quick || '') + '</div>'
+  return '<section class="card line"><div class="line-row"><button type="button" class="line-h" data-act="today-open" data-v="' + key + '" aria-expanded="' + open + '"' + (open ? ' aria-controls="line-' + key + '"' : '') + '>' + (LINE_ICON[key] ? ic(LINE_ICON[key]) : '') + '<span class="n">' + esc(name) + '</span>' + (mark || '') + '<span class="v">' + esc(value) + '</span>' + CHEVRON + '</button>' + (quick || '') + '</div>'
     + (open ? '<div class="line-body" id="line-' + key + '">' + body + '</div>' : '') + '</section>';
 }
 

@@ -21,6 +21,15 @@ import { gramsOf, measuresFor } from './measures.js';
 import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, WATER_RANGE, waterOf } from './energy.js';
 import { actDoc, actPreview, liters } from './views/activity.js';
 
+// Supprime une séance perso (jamais une séance de base) et la retire de la rotation et du planning ; faux si elle n'existe pas ou est de base
+function deleteTpl(id){
+  const t = tplDef(id); if (!t || t.builtin) return false;
+  del('p_' + id); const st = settings();
+  if (Array.isArray(st.rotation) || Array.isArray(st.rotOff)) putSettings({ rotation: (st.rotation || []).filter(x => x !== id), rotOff: (st.rotOff || []).filter(x => x !== id) });
+  const p = Object.assign({}, planOf()); let ch = false; Object.keys(p).forEach(k => { if (p[k] && p[k].s === id) { p[k] = { label:'Repos' }; ch = true; } }); if (ch) putSettings({ plan:p });
+  return true;
+}
+
 function startWorkout(tplId){
   if (!S.loaded) return;
   S.day = null;
@@ -614,7 +623,11 @@ const A = {
   },
   'reset-tpl'(){ del('p_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-tpl'(){ S.confirm = 'del-tpl'; render(); },
-  'del-tpl-yes'(){ const id = S.draft.id; del('p_' + id); const st = settings(); if (Array.isArray(st.rotation) || Array.isArray(st.rotOff)) putSettings({ rotation: (st.rotation || []).filter(x => x !== id), rotOff: (st.rotOff || []).filter(x => x !== id) }); const p = Object.assign({}, planOf()); let ch = false; Object.keys(p).forEach(k => { if (p[k] && p[k].s === id) { p[k] = { label:'Repos' }; ch = true; } }); if (ch) putSettings({ plan:p }); S.draft = null; S.confirm = null; render(); toast('Séance supprimée.'); },
+  'del-tpl-yes'(){ const id = S.draft.id; deleteTpl(id); S.draft = null; S.confirm = null; render(); toast('Séance supprimée.'); },
+  'tpl-swipe-del'(b){ if (deleteTpl(b.dataset.v)) { render(); toast('Séance supprimée.'); } },
+  'ex-swipe-del'(b){ const e = exDef(b.dataset.v); if (!e || !e.custom) return; del('x_' + b.dataset.v); render(); toast('Exercice supprimé.'); },
+  'fd-swipe-del'(b){ const d = dayDoc(b.dataset.d); put('m_' + b.dataset.d, Object.assign({}, d, { items: d.items.filter(i => i.id !== b.dataset.v) })); render(); toast('Retiré du journal.'); },
+  'intro-ok'(b){ putSettings({ intro: Object.assign({}, settings().intro, { [b.dataset.v]: true }) }); render(); },
   'draft-cancel'(){ const after = S.draft && S.draft.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null; if (after) S.picker = after.picker; render(); },
   // Exercices
   'new-ex'(){ S.draft = { kind:'ex', isNew:true, id:null, data:blankEx() }; render(); window.scrollTo(0, 0); },

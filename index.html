@@ -29,7 +29,7 @@
   --good:#186B3C; --good-soft:#DFF1E6; --warn:#7A5E00; --warn-soft:#F7EDC8; --bad:#B3261E; --bad-soft:#F8E1E2;
   --f-display:'Archivo','Arial Black',system-ui,sans-serif;
   --f-body:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,sans-serif;
-  --r:20px; --tabs-h:62px; --shade:rgba(0,0,0,.18);
+  --r:20px; --tabs-h:66px; --shade:rgba(0,0,0,.18);
   /* Dark Glow : dégradé de l'orange (l'orange officiel au centre), matière des cartes, trois niveaux de lumière, verre, halo d'écran */
   --grad-fire:linear-gradient(135deg,#FFB347 0%,#FF7A1A 50%,#FF4D00 100%);
   --card-top:#FFFFFF; --card-bot:#FFFFFF; --card-sh:0 1px 2px rgba(0,0,0,.05),0 8px 24px -6px rgba(0,0,0,.08);
@@ -528,6 +528,35 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 @keyframes pop{0%{transform:scale(.9);opacity:0}60%{transform:scale(1.02);opacity:1}100%{transform:none}}
 .hero-logo{display:block;width:128px;height:128px}
 
+/* Balayage pour supprimer (version 3.23) : la ligne glisse vers la gauche et découvre « Supprimer » */
+.sw{position:relative;width:100%}
+.sw-in{position:relative;z-index:1;touch-action:pan-y;transition:transform .28s var(--ease)}
+.sw.moving .sw-in{transition:none}
+.sw.open .sw-in{transform:translateX(-92px)}
+.sw-del{position:absolute;top:0;bottom:0;right:0;width:92px;border:none;border-radius:var(--r-sm);background:var(--bad);color:var(--bg);font-weight:700;font-size:15px;visibility:hidden;transition:visibility 0s .28s}
+.sw.card-r .sw-del{border-radius:var(--r)}
+.sw.open .sw-del,.sw.moving .sw-del{visibility:visible;transition-delay:0s}
+.sw-del:active{filter:brightness(.9)}
+/* Pastille ronde d'un pictogramme : rubriques du suivi du jour, repas, écrans d'explication */
+.ic{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--accent-ink)}
+.ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.card .ic{background:var(--accent-soft)}
+.line-h .ic{margin-right:-2px}
+@media (max-width:380px){.line-h .ic{width:30px;height:30px}.line-h .ic svg{width:18px;height:18px}}
+/* À 320 px la place manque pour la valeur : l'icône s'efface, le nom suffit */
+@media (max-width:340px){.line-h .ic{display:none}}
+/* Écran d'explication d'une rubrique vide (premier lancement) */
+.intro{align-items:center;text-align:center;gap:12px}
+.intro-ic .ic{width:56px;height:56px;margin-inline:auto}
+.intro-ic .ic svg{width:28px;height:28px}
+.intro-list{list-style:none;margin:4px 0;padding:0;display:flex;flex-direction:column;gap:14px;width:100%;text-align:left}
+.intro-list li{display:flex;align-items:flex-start;gap:12px}
+.intro-list li .stack{gap:2px;min-width:0}
+.intro-list b{font-weight:700}
+/* Boutons d'une séance : deux colonnes égales, centrées */
+.tpl-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tpl-btns .btn{display:flex;align-items:center;justify-content:center;text-align:center;min-width:0;padding-inline:12px}
+
 /* Barres fixes */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);border-top:1px solid var(--glass-line);padding-bottom:env(safe-area-inset-bottom,0px)}
 .tabs-wrap{max-width:640px;margin:0 auto;position:relative;touch-action:none}
@@ -535,13 +564,21 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 /* Lentille de verre derrière l'onglet actif (version 3.17) : glisse d'un onglet à l'autre et suit le doigt sur la barre */
 .tab-lens{position:absolute;top:0;bottom:0;left:0;width:calc(100% / var(--n,3));transform:translateX(calc(var(--i,0) * 100%));transition:transform .42s var(--ease),opacity var(--dur-state) ease;pointer-events:none}
 .tab-lens.off{opacity:0}
-.tab-lens::before{content:"";position:absolute;inset:5px 6px;border-radius:var(--r-pill);background:var(--lens);box-shadow:inset 0 1px 0 var(--lens-hi),inset 0 0 0 1px var(--lens-line);transition:transform var(--dur-state) var(--ease)}
+.tab-lens::before{content:"";position:absolute;inset:3px 3px;border-radius:var(--r-pill);background:var(--lens);box-shadow:inset 0 1px 0 var(--lens-hi),inset 0 0 0 1px var(--lens-line);transition:transform var(--dur-state) var(--ease)}
 .tabs.drag .tab-lens{transition:none}
 .tabs.drag .tab-lens::before{transform:scale(1.08,1.12)}
 .tab{background:none;border:none;min-height:var(--tabs-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600;color:var(--muted);position:relative}
-.tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.tab.on{color:var(--accent-ink)}
-.tabs.drag .tab.on:not(.near){color:var(--muted)} .tabs.drag .tab.near{color:var(--accent-ink)}
+.tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--dur-state) var(--ease)}
+/* Sélection : quand la lentille arrive sur un onglet, il s'allume (couleur, icône plus grande, texte en gras) ; il s'éteint dès qu'elle repart.
+   L'allumage attend un peu la lentille ; l'extinction est immédiate. Même effet pendant le glissement du doigt (.near). */
+.tab{transition:color .16s ease}
+.tab span{transition:transform var(--dur-state) var(--ease)}
+.tab.on,.tabs.drag .tab.near{color:var(--accent-ink);transition-delay:.1s}
+.tab.on svg,.tabs.drag .tab.near svg{transform:translateY(-1px) scale(1.14);transition-delay:.1s}
+.tab.on span,.tabs.drag .tab.near span{transform:scale(1.04);transition-delay:.1s}
+.tabs.drag .tab.on:not(.near){color:var(--muted);transition-delay:0s}
+.tabs.drag .tab.on:not(.near) svg,.tabs.drag .tab.on:not(.near) span{transform:none;transition-delay:0s}
+@media (prefers-reduced-motion:reduce){.tab,.tab svg,.tab span{transition:none}}
 /* Sans flou (navigateur ancien) : verre opaque, pour garder le texte lisible */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.top,.tabs{background:var(--bg)}}
 .tab .dot{position:absolute;top:10px;right:calc(50% - 18px);width:8px;height:8px;border-radius:50%;background:var(--accent)}

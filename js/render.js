@@ -18,16 +18,10 @@ import { navigate, screenOf } from './nav.js';
 import { viewActivity } from './views/activity.js';
 import { viewDay } from './views/calendar.js';
 import { viewMovement } from './views/movement.js';
+import { ICONS } from './icons.js';
 
 // Trophée des records (carte dorée d'Aujourd'hui)
 export const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
-const ICONS = {
-  today:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
-  training:'<svg viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',
-  progress:'<svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>',
-  food:'<svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 1-3.5 4-3.5 8h3.5"/></svg>',
-  person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'
-};
 // L'onglet Alimentation n'apparaît que si la personne suit son alimentation
 const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['food','Alimentation'],['progress','Progrès']];
 const tabsShown = () => TABS.filter(t => t[0] !== 'food' || (S.loaded && nutritionOf().on));
@@ -40,7 +34,18 @@ export function renderTabs(){
   // Lentille de l'onglet actif : élément gardé d'un affichage à l'autre, pour qu'elle glisse (aucune sur le profil)
   const shown = tabsShown(); const at = shown.findIndex(t => t[0] === S.view); const lens = $('#tab-lens');
   if (lens) { lens.style.setProperty('--n', shown.length); if (at >= 0) lens.style.setProperty('--i', at); lens.classList.toggle('off', at < 0); }
-  $('#tabs').innerHTML = shown.map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
+  // Les boutons sont gardés d'un affichage à l'autre quand les onglets ne changent pas : la classe « on » passe de l'un à l'autre
+  // et le CSS l'anime (couleur, taille de l'icône), en même temps que la lentille glisse
+  const box = $('#tabs'); const keys = shown.map(t => t[0]).join(); const dotOf = t => (t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw);
+  if (box.dataset.keys !== keys) {
+    box.dataset.keys = keys;
+    box.innerHTML = shown.map(t => '<button type="button" class="tab" data-act="tab" data-v="' + t[0] + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span></button>').join('');
+  }
+  shown.forEach((t, i) => {
+    const b = box.children[i]; const on = S.view === t[0]; const dot = b.querySelector('.dot');
+    b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false');
+    if (dotOf(t) && !dot) b.insertAdjacentHTML('beforeend', '<i class="dot" aria-hidden="true"></i>'); else if (!dotOf(t) && dot) dot.remove();
+  });
   // Rond du profil : l'initiale du prénom ou pseudo, sinon un pictogramme, avec une petite roue dentée (il mène aussi aux réglages)
   const me = $('#me'); const name = String(settings().name || '').trim();
   me.hidden = !S.loaded || !!(S.setup && S.setup.mode === 'welcome');

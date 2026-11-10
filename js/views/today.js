@@ -13,6 +13,7 @@ import { checkCard, foodTodayCard } from './goal.js';
 import { emile, emileQueue, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
+import { introCard } from './intro.js';
 
 // Choix de l'effort d'une séance terminée (il règle sa dépense) ; aussi sur l'écran de fin de séance
 export function effortChoice(sw){
@@ -126,6 +127,8 @@ export function viewToday(){
   const who = String(settings().name || '').trim(); 
   const hi = greeting(new Date().getHours()) + (who ? ', ' + who : '');
   let h = '<div class="greet"><span class="g-hi">' + esc(hi) + '</span><span class="hero-date">' + esc(capFirst(fmtDateLong(d))) + ' · bloc ' + wk.block + ', semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<div class="row"><span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span></div>' : '') + '</div>';
+  // Premier lancement, rien de fait : Aujourd'hui s'explique d'abord
+  const intro = introCard('today'); if (intro) return h + intro;
   h += planCard(d, plan, aw, doneToday, tpls);
   if (S.loaded && !tpls.length) h += noTplCard();
   h += calendarCard();

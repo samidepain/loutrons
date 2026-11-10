@@ -8,6 +8,9 @@ import { dayPlan } from './goal.js';
 import { ownRecipe, recipeFoods } from '../recipes.js';
 import { ring } from '../ring.js';
 import { gramsOf, measuresFor } from '../measures.js';
+import { ic, MEAL_ICON } from '../icons.js';
+import { introCard } from './intro.js';
+import { swipeRow } from '../swipe.js';
 
 const SRC = { ciq:'Table Ciqual', off:'Open Food Facts', own:'Ton aliment', rec:'Recette type', recipe:'Ta recette' };
 const q1 = x => x == null ? '—' : x < 10 ? fmtKg(Math.round(x * 10) / 10) : fmtInt(x);
@@ -76,6 +79,8 @@ export function viewFood(){
   const day = S.foodDay || today(); const doc = dayDoc(day); const t = totals(doc.items); const pl = dayPlan(day); const has = pl.status !== 'missing';
   let h = '<h1>Alimentation</h1><div class="row between daynav"><button type="button" class="btn sm" data-act="fday" data-v="-1" aria-label="Jour précédent">‹</button><b>' + esc(dayLabel(day)) + '</b><button type="button" class="btn sm" data-act="fday" data-v="1" aria-label="Jour suivant"' + (day >= today() ? ' disabled' : '') + '>›</button></div>';
   if (!S.loaded) return h + '<p class="loading">Chargement…</p>';
+  // Premier lancement, journal encore vide : la rubrique s'explique d'abord
+  const intro = introCard('food'); if (intro) return '<h1>Alimentation</h1>' + intro;
   // Avis d'Émile, seulement pour aujourd'hui
   if (day === today()) {
     let m = '', tone = '', kind = 'rest';
@@ -116,8 +121,9 @@ export function viewFood(){
   MEALS.forEach(([m, label]) => {
     const its = doc.items.filter(i => i.meal === m); const kc = its.reduce((a, i) => a + (scale(i.per100, i.g).kcal || 0), 0);
     // En-tête du repas : nom, kcal, et « + » rond qui ouvre l'ajout
-    h += '<section class="card meal" data-meal="' + m + '"><div class="meal-h"><div class="stack meal-t"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + fmtInt(kc) + ' kcal</span>' : '') + '</div>' + plusBtn('fd-add', ' data-v="' + m + '"', 'Ajouter ' + ADD_TO[m]) + '</div>';
-    h += its.map(i => '<button type="button" class="pick" data-act="fd-edit" data-v="' + esc(i.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(i.name) + '</span><span class="m">' + (i.brand ? esc(i.brand) + ' · ' : '') + fmtKg(i.g) + ' g</span></span><span class="num">' + fmtInt(scale(i.per100, i.g).kcal || 0) + ' kcal</span></button>').join('');
+    h += '<section class="card meal" data-meal="' + m + '"><div class="meal-h">' + ic(MEAL_ICON[m]) + '<div class="stack meal-t"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + fmtInt(kc) + ' kcal</span>' : '') + '</div>' + plusBtn('fd-add', ' data-v="' + m + '"', 'Ajouter ' + ADD_TO[m]) + '</div>';
+    // Balayer un aliment vers la gauche découvre « Supprimer » ; le toucher ouvre sa quantité, comme avant
+    h += its.map(i => swipeRow('<button type="button" class="pick" data-act="fd-edit" data-v="' + esc(i.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(i.name) + '</span><span class="m">' + (i.brand ? esc(i.brand) + ' · ' : '') + fmtKg(i.g) + ' g</span></span><span class="num">' + fmtInt(scale(i.per100, i.g).kcal || 0) + ' kcal</span></button>', 'fd-swipe-del', esc(i.id), 'Retirer ' + esc(i.name) + ' du journal', ' data-d="' + day + '"')).join('');
     // Repas vide : « Comme hier » (repas passé des 7 derniers jours) et le premier habituel ; repas noté : « Enregistrer ce repas » dès 2 aliments
     if (!its.length) {
       const p = pastMeals(m, day, 7, 1)[0]; const hab = habitualFoods(m, day, 1)[0];

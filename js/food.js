@@ -58,6 +58,8 @@ export function totals(items){
 // Repas proposé selon l'heure (règle de l'appli) : collation la nuit (avant 5 h), petit-déjeuner avant 10 h, déjeuner avant 15 h, collation avant 18 h, dîner avant 23 h
 export const guessMeal = h => h < 5 ? 'snack' : h < 10 ? 'breakfast' : h < 15 ? 'lunch' : h < 18 ? 'snack' : h < 23 ? 'dinner' : 'snack';
 export const dayDoc = day => S.docs.get('m_' + day) || { date: day, items: [] };
+// Au moins un aliment noté dans le journal (sert à l'écran d'explication du premier lancement)
+export const hasMeals = () => { for (const [k, v] of S.docs) if (k.startsWith('m_') && v && v.items && v.items.length) return true; return false; };
 export function myFoods(){ const out = []; S.docs.forEach((o, id) => { if (id.indexOf('f_') === 0) out.push(Object.assign({ id }, o)); }); return out; }
 // Jours du journal (documents m_) de from (inclus) à to (exclu), du plus récent au plus ancien ; une date mal formée (sauvegarde importée) est ignorée
 const isoDate = d => typeof d === 'string' && d.length === 10 && /^\d{4}-\d{2}-\d{2}/.test(d);

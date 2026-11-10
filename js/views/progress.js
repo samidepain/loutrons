@@ -9,6 +9,7 @@ import { bars, chart } from '../chart.js';
 import { viewHistory } from './history.js';
 import { emile } from '../emile.js';
 import { myPlan, nutritionOf, weightReading } from './goal.js';
+import { introCard } from './intro.js';
 
 const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 const PRTABS = [['stats','Résumé'],['history','Historique']];
@@ -29,6 +30,8 @@ function viewProgress(){
   const from = periodStart(S.prRange); const inRange = date => !from || date >= from;
   const bd = bodyDocs(); const hasBody = bd.some(x => num(x.weight) > 0 || num(x.sleep) > 0);
   let h = '';
+  // Premier lancement, aucune séance : la rubrique s'explique d'abord
+  const intro = introCard('progress'); if (intro) return intro;
   if (!ws.length) {
     // Rien à comparer : Émile (logo, lumière douce) dit ce qu'il faut, plutôt que des cases à zéro
     const nx = nextSession(); const tp = nx && tplDef(nx);
