@@ -37,7 +37,10 @@ const GEAR = '<svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><circle c
 function sessionDueToday(){ return !!S.loaded && needToday(today()); }
 export function renderTabs(){
   const aw = S.loaded && activeWorkout(); const due = sessionDueToday();
-  $('#tabs').innerHTML = tabsShown().map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
+  // Lentille de l'onglet actif : élément gardé d'un affichage à l'autre, pour qu'elle glisse (aucune sur le profil)
+  const shown = tabsShown(); const at = shown.findIndex(t => t[0] === S.view); const lens = $('#tab-lens');
+  if (lens) { lens.style.setProperty('--n', shown.length); if (at >= 0) lens.style.setProperty('--i', at); lens.classList.toggle('off', at < 0); }
+  $('#tabs').innerHTML = shown.map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
   // Rond du profil : l'initiale du prénom ou pseudo, sinon un pictogramme, avec une petite roue dentée (il mène aussi aux réglages)
   const me = $('#me'); const name = String(settings().name || '').trim();
   me.hidden = !S.loaded || !!(S.setup && S.setup.mode === 'welcome');

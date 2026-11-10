@@ -260,7 +260,8 @@ Un nouveau composant les utilise ; les anciens règles passent dessus au fil des
 | Recherche avec scanner | `.fd-search` > `input[type=search]` (52 px, 17 px) + `.btn.primary.scan-btn` (carré orange lumineux, icône en SVG, `aria-label`) |
 | Tableau | `.scroll > table.tbl` |
 | Détail repliable | `details.cue > summary` |
-| Groupe (superset) | `.group > .gh` |
+| Groupe (superset) | `.group > .gh` ; dans l'éditeur de séance (version 3.17) : groupes « Superset N » numérotés par séance, `button.link.ss-link` (`it-link`) en bas de chaque exercice pour le lier au suivant ou l'en séparer, repères renumérotés par `normSS()` |
+| Barre d'onglets (version 3.17) | `.tabs` > `.tabs-wrap` > `#tab-lens` (lentille de verre `--lens`, `--lens-hi`, `--lens-line` ; position `--i` sur `--n` posée par `renderTabs()`, élément gardé pour qu'elle glisse) + `#tabs` ; glisser le doigt : `initTabSwipe()` (`nav.js`), classe `.drag`, onglet visé `.near` |
 | Objectif calculé | `.target` |
 | Liste vide | `p.empty` |
 | Chargement | `p.loading` (petit cercle orange qui tourne, figé si « Réduire les animations ») |

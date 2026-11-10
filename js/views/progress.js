@@ -48,7 +48,8 @@ function viewProgress(){
   const maxV = Math.max(20, ...MUSCLES.map(x => Math.max(doneW[x], plan[x], lastW[x])));
   h += '<section class="card"><h3>Séries par muscle cette semaine</h3>';
   h += '<div class="legend"><span><i style="background:var(--accent)"></i>Fait cette semaine</span><span><i style="background:var(--court)"></i>Prévu par ton planning</span></div>';
-  MUSCLES.forEach(x => {
+  // Un muscle ni travaillé ni prévu n'a pas de ligne (13 groupes depuis la version 3.17)
+  MUSCLES.filter(x => doneW[x] || plan[x] || lastW[x]).forEach(x => {
     h += '<div class="mrow"><span>' + esc(x) + '</span><span class="mbar"><i style="width:' + (doneW[x] / maxV * 100).toFixed(1) + '%"></i><b style="left:' + (plan[x] / maxV * 100).toFixed(1) + '%"></b></span><span class="v num">' + fmtKg(doneW[x]) + ' / ' + fmtKg(plan[x]) + '</span></div>';
   });
   h += '<p class="muted small">Semaine dernière : ' + MUSCLES.filter(x => lastW[x] > 0).map(x => x + ' ' + fmtKg(lastW[x])).join(' · ') + (MUSCLES.some(x => lastW[x] > 0) ? '' : 'aucune série enregistrée') + '.</p>';
@@ -108,7 +109,7 @@ export function viewBilan(block){
   h += '</section>';
   const maxV = Math.max(20, ...MUSCLES.map(m => Math.max(R.avg[m], R.mp[m])));
   h += '<section class="card"><h3>Séries par muscle (moyenne par semaine)</h3><div class="legend"><span><i style="background:var(--accent)"></i>Moyenne faite</span><span><i style="background:var(--court)"></i>Prévu par semaine</span></div>';
-  MUSCLES.forEach(m => { h += '<div class="mrow"><span>' + esc(m) + '</span><span class="mbar"><i style="width:' + (R.avg[m] / maxV * 100).toFixed(1) + '%"></i><b style="left:' + (R.mp[m] / maxV * 100).toFixed(1) + '%"></b></span><span class="v num">' + fmtKg(Math.round(R.avg[m] * 10) / 10) + ' / ' + fmtKg(R.mp[m]) + '</span></div>'; });
+  MUSCLES.filter(m => R.avg[m] || R.mp[m]).forEach(m => { h += '<div class="mrow"><span>' + esc(m) + '</span><span class="mbar"><i style="width:' + (R.avg[m] / maxV * 100).toFixed(1) + '%"></i><b style="left:' + (R.mp[m] / maxV * 100).toFixed(1) + '%"></b></span><span class="v num">' + fmtKg(Math.round(R.avg[m] * 10) / 10) + ' / ' + fmtKg(R.mp[m]) + '</span></div>'; });
   h += '</section>';
   h += '<section class="card"><h3>' + (R.pains.length ? 'Douleurs, poids et sommeil' : kneeOn() ? 'Genou, poids et sommeil' : 'Poids et sommeil') + '</h3><div class="stack small">';
   if (kneeOn()) h += '<p><b>Genou :</b> ' + (R.kneeMax == null ? 'aucune mesure.' : R.kneeN + ' mesures, max ' + R.kneeMax + '/10, ' + R.kneeHigh + ' jour(s) au-dessus de 3/10.') + '</p>';

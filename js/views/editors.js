@@ -19,8 +19,15 @@ function viewTplEditor(){
   // « Si le temps manque, couper » : seulement pour les séances qui l'avaient déjà (séances de départ), pas à la création
   if (!D.isNew && t.cut) h += '<label class="f"><span>Si le temps manque, couper</span><input id="d-cut" data-d="cut" value="' + esc(t.cut || '') + '"></label>';
   h += '<span class="label">Exercices (' + t.items.length + ') · environ ' + tplEst(t) + ' min</span>';
+  // Supersets : exercices voisins liés, encadrés et numérotés dans l'ordre de cette séance (« Superset 1 », « Superset 2 »…)
+  const defOf = it => exDef(it.ex) || { name:'Exercice supprimé', kind:'load' };
+  const linkable = it => { const k = defOf(it).kind; return k !== 'cardio' && k !== 'check'; };
+  let nSS = 0;
   t.items.forEach((it, i) => {
-    const e = exDef(it.ex) || { name:'Exercice supprimé', kind:'load' };
+    const e = defOf(it);
+    const prev = t.items[i - 1]; const next = t.items[i + 1];
+    const starts = it.ss && !(prev && prev.ss === it.ss); const linked = !!(it.ss && next && next.ss === it.ss);
+    if (starts) h += '<div class="group"><span class="gh">Superset ' + (++nSS) + ' : alterne sans repos</span>';
     const isSet = e.kind === 'load' || e.kind === 'bw';
     h += '<div class="item"><div class="row between"><span class="t">' + (i + 1) + '. ' + esc(e.name) + '</span><span class="row" style="gap:4px"><button type="button" class="btn sm" data-act="it-up" data-i="' + i + '" aria-label="Monter"' + (i ? '' : ' disabled') + '>↑</button><button type="button" class="btn sm" data-act="it-down" data-i="' + i + '" aria-label="Descendre"' + (i < t.items.length - 1 ? '' : ' disabled') + '>↓</button><button type="button" class="btn sm danger" data-act="it-rm" data-i="' + i + '" aria-label="Retirer">✕</button></span></div>';
     if (e.kind === 'cardio') h += '<div class="fields"><label class="f"><span>Durée (min)</span><input id="it-' + i + '-lo" data-it="' + i + '" data-k="lo" inputmode="numeric" value="' + esc(it.lo || e.lo || '') + '"></label></div>';
@@ -28,12 +35,14 @@ function viewTplEditor(){
       h += '<div class="fields"><label class="f"><span>Séries</span><input id="it-' + i + '-sets" data-it="' + i + '" data-k="sets" inputmode="numeric" value="' + esc(it.sets || e.sets || '') + '"></label>';
       h += '<label class="f"><span>' + (isSet ? 'Reps min' : 'Volume') + '</span><input id="it-' + i + '-lo" data-it="' + i + '" data-k="lo" inputmode="numeric" value="' + esc(it.lo || e.lo || '') + '"></label>';
       if (isSet) h += '<label class="f"><span>Reps max</span><input id="it-' + i + '-hi" data-it="' + i + '" data-k="hi" inputmode="numeric" value="' + esc(it.hi || e.hi || '') + '"></label></div><div class="fields">' + restSelect('it-' + i + '-rest', 'data-it="' + i + '" data-k="rest"', it.rest || e.rest);
-      h += '<label class="f"><span>Superset</span><select id="it-' + i + '-ss" data-it="' + i + '" data-k="ss"><option value="">Non</option>' + 'ABCDEFGH'.split('').map(l => '<option' + (it.ss === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label></div>';
+      h += '</div>';
     }
+    if (next && linkable(it) && linkable(next)) h += '<button type="button" class="link ss-link" data-act="it-link" data-i="' + i + '" aria-pressed="' + linked + '">' + (linked ? 'Séparer du suivant' : '+ Superset avec le suivant') + '</button>';
     h += '</div>';
+    if (it.ss && !linked) h += '</div>';
   });
   h += '<button type="button" class="btn" data-act="pick-draft">+ Ajouter un exercice</button>';
-  h += '<p class="muted small">Superset : donne la même lettre à deux exercices qui se suivent.</p>';
+  h += '<p class="muted small">Superset : deux exercices (ou plus) enchaînés sans repos, puis le repos du dernier.</p>';
   h += '<button type="button" class="btn primary big" data-act="save-tpl">Enregistrer la séance</button>';
   if (!D.isNew) {
     const t0 = tplDef(D.id);

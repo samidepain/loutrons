@@ -88,6 +88,25 @@ export function allTpl(){
   return ids.map(tplDef).filter(t => t && !t.deleted);
 }
 // Exercices réellement faits : sans les sauts si le module détente est désactivé
+// Supersets d'une séance : suites d'exercices voisins au même repère. Renumérotés A, B, C… dans l'ordre de la séance
+// (propres à chaque séance) ; un exercice seul perd son repère. Modifie et renvoie la liste.
+export function normSS(items){
+  let i = 0, n = 0;
+  while (i < items.length) {
+    const id = items[i].ss; let j = i;
+    if (id) while (j + 1 < items.length && items[j + 1].ss === id) j++;
+    if (!id || j === i) items[i].ss = null; else { const l = String.fromCharCode(65 + n++); for (let k = i; k <= j; k++) items[k].ss = l; }
+    i = j + 1;
+  }
+  return items;
+}
+// Lier un exercice au suivant (superset), ou les séparer s'ils sont déjà liés
+export function toggleLink(items, i){
+  const x = items[i], y = items[i + 1]; if (!x || !y) return items;
+  if (x.ss && x.ss === y.ss) { const id = x.ss; for (let k = i + 1; k < items.length && items[k].ss === id; k++) items[k].ss = '~' + i; }
+  else { const id = x.ss || '~' + i; const old = y.ss; x.ss = id; for (let k = i + 1; k < items.length && (k === i + 1 || (old && items[k].ss === old)); k++) items[k].ss = id; }
+  return normSS(items);
+}
 export function tplItems(t){ return (t.items || []).filter(it => jumpsOn() || !isPlyo(it)); }
 export function tplLower(t){ return tplItems(t).some(it => { const e = exDef(it.ex); return e && (e.knee || e.cat === 'lower' || e.kind === 'plyo'); }); }
 // Temps estimé d'une séance, en minutes. Par exercice : séries (45 s d'effort, ou 2 × 45 s en unilatéral) et repos,
@@ -150,7 +169,8 @@ export function perWeekOf(){
   const s = settings(); const clampWeek = n => Math.max(2, Math.min(6, Math.round(n)));
   if (num(s.perWeek) != null) return clampWeek(num(s.perWeek));
   const n = planDays(); if (n) return clampWeek(n);
-  const g = programOf(); return g && g.base === 'exemple' ? 4 : 3;
+  // Sans objectif choisi : autant de séances que de jours conseillés du programme (4 pour l'exemple, 3 pour le full body)
+  const g = programOf(); return g && PROGRAMS[g.base] ? clampWeek(PROGRAMS[g.base].days.length) : 3;
 }
 // Séance suivante : celle qui suit, dans la rotation, la dernière séance terminée de la rotation ; sinon la première
 export function nextSession(){

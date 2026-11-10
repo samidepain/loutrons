@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fmtRest } from '../js/util.js';
 import { BASE_EX, BASE_TPL } from '../js/library.js';
-import { tplEst } from '../js/data.js';
+import { normSS, toggleLink, tplEst } from '../js/data.js';
 import { computeTarget, initItem, lastCardio } from '../js/engine.js';
 import { donnees, docs, reglages } from './aide.js';
 
@@ -44,4 +44,19 @@ test('vélo d’appartement : paliers du Compendium 2024 de 50 à 229 W ; premi�
   assert.equal(w.ex.ex_bike.level, 'mod');
   initItem(w, { ex: 'ex_elliptical' }, { deload: false });
   assert.equal(w.ex.ex_elliptical.level, 'mod');
+});
+
+test('supersets : repères renumérotés A, B… dans l’ordre de chaque séance, un exercice seul perd le sien', () => {
+  const l = ss => ss.map(x => ({ ex: 'e', ss: x }));
+  assert.deepEqual(normSS(l(['D', 'D', null, 'G', 'G', 'X'])).map(x => x.ss), ['A', 'A', null, 'B', 'B', null]);
+  assert.deepEqual(normSS(l(['A', null, 'A'])).map(x => x.ss), [null, null, null]);
+});
+
+test('supersets : lier au suivant crée ou agrandit le groupe, séparer coupe le groupe en deux', () => {
+  const l = ss => ss.map(x => ({ ex: 'e', ss: x }));
+  assert.deepEqual(toggleLink(l([null, null, null]), 0).map(x => x.ss), ['A', 'A', null]);
+  assert.deepEqual(toggleLink(l(['A', 'A', null]), 1).map(x => x.ss), ['A', 'A', 'A']);
+  assert.deepEqual(toggleLink(l([null, 'A', 'A']), 0).map(x => x.ss), ['A', 'A', 'A']);
+  assert.deepEqual(toggleLink(l(['A', 'A', 'A', 'A']), 1).map(x => x.ss), ['A', 'A', 'B', 'B']);
+  assert.deepEqual(toggleLink(l(['A', 'A', 'A']), 0).map(x => x.ss), [null, 'A', 'A']);
 });

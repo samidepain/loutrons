@@ -1,6 +1,7 @@
 // Bibliothèque d’exercices, séances modèles et programmes de départ.
 
-export const MUSCLES = ['Pectoraux','Dos','Épaules','Biceps','Triceps','Quadriceps','Ischios','Fessiers','Mollets','Abdos'];
+// « Dos » : grand dorsal et milieu du dos ; trapèzes, lombaires et avant-bras à part (version 3.17) pour colorer le bon muscle
+export const MUSCLES = ['Pectoraux','Dos','Trapèzes','Lombaires','Épaules','Biceps','Triceps','Avant-bras','Quadriceps','Ischios','Fessiers','Mollets','Abdos'];
 export const KINDS = { load:'Charge', bw:'Poids du corps + lest', plyo:'Pliométrie', check:'À cocher', cardio:'Cardio' };
 export const CATS = { lower:'Polyarticulaire bas du corps', upper:'Polyarticulaire haut du corps', iso:'Isolation (petit muscle)' };
 export const M = (p, s) => ({ p: p || [], s: s || [] });
@@ -8,7 +9,7 @@ export const BASE_EX = {
   ua_bench:{name:'Développé couché haltères ou machine', kind:'load', cat:'upper', step:2, sets:3, lo:6, hi:8, rest:150, muscles:M(['Pectoraux'],['Triceps','Épaules']), cue:'Omoplates serrées, descente contrôlée. Avec des haltères, note le poids d’un haltère.', aka:['développé couché','dc','bench','chest press'], photo:'Dumbbell_Bench_Press'},
   ua_pull:{name:'Tractions pronation', kind:'bw', cat:'upper', step:1.25, sets:4, lo:5, hi:7, rest:150, muscles:M(['Dos'],['Biceps']), cue:'Arrête-toi 1-2 reps avant l’échec. Le poids noté est le lest (0 = poids du corps).', aka:['pull up','traction'], photo:'Pullups'},
   ua_lat:{name:'Élévations latérales', kind:'load', cat:'iso', step:1, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules']), cue:'Monte jusqu’à l’horizontale, sans élan. Note le poids d’un haltère.', aka:['lateral raise','élévations'], photo:'Side_Lateral_Raise'},
-  ua_rear:{name:'Reverse fly (arrière d’épaule)', kind:'load', cat:'iso', step:1, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules']), cue:'Bras presque tendus, tire vers l’arrière sans hausser les épaules.', aka:['oiseau','rear delt'], photo:'Reverse_Flyes'},
+  ua_rear:{name:'Reverse fly (arrière d’épaule)', kind:'load', cat:'iso', step:1, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules'],['Trapèzes']), cue:'Bras presque tendus, tire vers l’arrière sans hausser les épaules.', aka:['oiseau','rear delt'], photo:'Reverse_Flyes'},
   ua_skull:{name:'Barre au front', kind:'load', cat:'iso', step:2, sets:3, lo:8, hi:12, rest:90, muscles:M(['Triceps']), cue:'Si les coudes gênent, remplace par l’extension à la poulie au-dessus de la tête.', aka:['skull crusher','extension couché'], photo:'EZ-Bar_Skullcrusher'},
   ua_curl:{name:'Curl incliné', kind:'load', cat:'iso', step:1, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps']), cue:'Bras derrière le buste, pas de balancier.', aka:['incline curl'], photo:'Incline_Dumbbell_Curl'},
   ua_abs:{name:'Abdos à la poulie', kind:'load', cat:'iso', step:2.5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Abdos']), cue:'Enroule le buste, bassin fixe.', aka:['cable crunch','crunch poulie'], photo:'Cable_Crunch'},
@@ -22,9 +23,9 @@ export const BASE_EX = {
   la_calf:{name:'Mollets debout lourds', kind:'load', cat:'iso', step:5, sets:3, lo:6, hi:10, rest:90, muscles:M(['Mollets']), cue:'Pause d’1 s en bas, montée complète.', aka:['calf raise','mollets'], photo:'Standing_Calf_Raises'},
   ub_incl:{name:'Développé incliné haltères', kind:'load', cat:'upper', step:2, sets:3, lo:8, hi:10, rest:120, muscles:M(['Pectoraux'],['Épaules','Triceps']), cue:'Banc à environ 30°, note le poids d’un haltère.', aka:['incline dumbbell press','développé incliné'], photo:'Incline_Dumbbell_Press'},
   ub_chin:{name:'Tractions prise neutre ou supination', kind:'bw', cat:'upper', step:1.25, sets:3, lo:6, hi:10, rest:120, muscles:M(['Dos'],['Biceps']), cue:'Arrête-toi 1-2 reps avant l’échec. Passe à 2 séries si les coudes ou la récupération se dégradent.', aka:['chin up','tractions supination'], photo:'Chin-Up'},
-  ub_row:{name:'Rowing buste appuyé', kind:'load', cat:'upper', step:2.5, sets:3, lo:6, hi:10, rest:120, muscles:M(['Dos'],['Biceps']), cue:'Poitrine sur un banc incliné ou une machine, coudes vers les hanches.', aka:['chest supported row','rowing incliné'], photo:'Dumbbell_Incline_Row'},
+  ub_row:{name:'Rowing buste appuyé', kind:'load', cat:'upper', step:2.5, sets:3, lo:6, hi:10, rest:120, muscles:M(['Dos'],['Biceps','Trapèzes']), cue:'Poitrine sur un banc incliné ou une machine, coudes vers les hanches.', aka:['chest supported row','rowing incliné'], photo:'Dumbbell_Incline_Row'},
   ub_fly:{name:'Pec fly', kind:'load', cat:'iso', step:2.5, sets:2, lo:12, hi:15, rest:90, muscles:M(['Pectoraux']), cue:'Coudes légèrement fléchis, étirement contrôlé.', aka:['pec deck','butterfly'], photo:'Butterfly'},
-  ub_ham:{name:'Curl marteau', kind:'load', cat:'iso', step:1, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps']), cue:'Prise neutre, coudes collés au corps.', aka:['hammer curl'], photo:'Hammer_Curls'},
+  ub_ham:{name:'Curl marteau', kind:'load', cat:'iso', step:1, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps'],['Avant-bras']), cue:'Prise neutre, coudes collés au corps.', aka:['hammer curl'], photo:'Hammer_Curls'},
   ub_rope:{name:'Extensions triceps à la corde', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:12, rest:90, muscles:M(['Triceps']), cue:'Écarte la corde en bas du mouvement.', aka:['triceps corde','pushdown'], photo:'Triceps_Pushdown_-_Rope_Attachment'},
   ub_abs:{name:'Abdos', kind:'check', cue:'10 min, seulement si tu restes sous 1h30.', muscles:M(['Abdos']), aka:['abdos']},
   lb_rope:{name:'Corde à sauter', kind:'plyo', sets:3, lo:20, unit:'s', optional:true, cue:'Optionnelle : à faire si tu te sens frais.', cueSport:'Optionnelle : seulement les semaines avec une seule séance de {sport}.', aka:['corde','jump rope'], photo:'Rope_Jumping'},
@@ -32,7 +33,7 @@ export const BASE_EX = {
   lb_thrust:{name:'Hip thrust', kind:'load', cat:'lower', step:5, sets:3, lo:6, hi:10, rest:150, muscles:M(['Fessiers'],['Ischios']), cue:'Pause d’1 s en haut, menton rentré.', aka:['hip thrust'], photo:'Barbell_Hip_Thrust'},
   lb_curl:{name:'Leg curl', kind:'load', cat:'iso', step:2.5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Ischios']), cue:'Descente lente, hanches plaquées.', aka:['leg curl allongé','lying leg curl'], photo:'Lying_Leg_Curls'},
   lb_abd:{name:'Hip abduction', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:90, muscles:M(['Fessiers']), cue:'Pause d’1 s jambes écartées.', aka:['abduction','abducteurs'], photo:'Thigh_Abductor'},
-  lb_back:{name:'Back extensions', kind:'bw', cat:'iso', step:2.5, sets:2, lo:12, hi:15, rest:90, muscles:M(['Fessiers','Ischios']), cue:'Charnière de hanche, pense fessiers et ischios. Le poids noté est le lest (0 = poids du corps).', aka:['hyperextension','lombaires'], photo:'Hyperextensions_Back_Extensions'},
+  lb_back:{name:'Back extensions', kind:'bw', cat:'iso', step:2.5, sets:2, lo:12, hi:15, rest:90, muscles:M(['Fessiers','Ischios'],['Lombaires']), cue:'Charnière de hanche, pense fessiers et ischios. Le poids noté est le lest (0 = poids du corps).', aka:['hyperextension','lombaires'], photo:'Hyperextensions_Back_Extensions'},
   lb_calf:{name:'Mollets à la presse', kind:'load', cat:'iso', step:5, sets:3, lo:12, hi:15, rest:90, muscles:M(['Mollets']), cue:'Amplitude complète, pause en bas.', aka:['mollets presse'], photo:'Calf_Press_On_The_Leg_Press_Machine'},
   // Alternatives utiles pour remplacer un exercice
   lib_press1:{name:'Presse à une jambe', kind:'load', cat:'lower', step:5, sets:3, lo:8, hi:12, rest:90, uni:true, knee:true, muscles:M(['Quadriceps','Fessiers']), cue:'Reps par jambe, amplitude sans douleur.', aka:['single leg press']},
@@ -42,8 +43,8 @@ export const BASE_EX = {
   lib_nordic:{name:'Nordic curl (excentrique)', kind:'bw', cat:'iso', step:2.5, sets:2, lo:3, hi:6, rest:120, muscles:M(['Ischios']), cue:'Descente la plus lente possible, remonte avec les mains. Commence par très peu de volume.', aka:['nordic','nordique'], photo:'Natural_Glute_Ham_Raise'},
   lib_seatcalf:{name:'Mollets assis', kind:'load', cat:'iso', step:5, sets:3, lo:10, hi:15, rest:90, muscles:M(['Mollets']), cue:'Genoux à 90°, pause en bas.', aka:['seated calf'], photo:'Seated_Calf_Raise'},
   lib_pulldown:{name:'Tirage vertical à la poulie', kind:'load', cat:'upper', step:2.5, sets:3, lo:8, hi:12, rest:120, muscles:M(['Dos'],['Biceps']), cue:'Tire les coudes vers les côtes, buste stable.', aka:['lat pulldown','tirage poitrine'], photo:'Wide-Grip_Lat_Pulldown'},
-  lib_rowbar:{name:'Rowing barre', kind:'load', cat:'upper', back:true, step:2.5, sets:3, lo:6, hi:10, rest:120, muscles:M(['Dos'],['Biceps']), cue:'Dos neutre ; préfère le rowing buste appuyé si le bas du dos fatigue.', aka:['barbell row','rowing barre'], photo:'Bent_Over_Barbell_Row'},
-  lib_cablerow:{name:'Rowing poulie basse (tirage horizontal)', kind:'load', cat:'upper', step:2.5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Dos'],['Biceps']), cue:'Poitrine sortie, tire vers le nombril.', aka:['seated row','tirage horizontal','rowing assis'], photo:'Seated_Cable_Rows'},
+  lib_rowbar:{name:'Rowing barre', kind:'load', cat:'upper', back:true, step:2.5, sets:3, lo:6, hi:10, rest:120, muscles:M(['Dos'],['Biceps','Trapèzes','Lombaires']), cue:'Dos neutre ; préfère le rowing buste appuyé si le bas du dos fatigue.', aka:['barbell row','rowing barre'], photo:'Bent_Over_Barbell_Row'},
+  lib_cablerow:{name:'Rowing poulie basse (tirage horizontal)', kind:'load', cat:'upper', step:2.5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Dos'],['Biceps','Trapèzes']), cue:'Poitrine sortie, tire vers le nombril.', aka:['seated row','tirage horizontal','rowing assis'], photo:'Seated_Cable_Rows'},
   lib_ohp:{name:'Développé militaire haltères', kind:'load', cat:'upper', step:2, sets:3, lo:6, hi:10, rest:120, muscles:M(['Épaules'],['Triceps']), cue:'Assis ou debout, gainage serré.', aka:['shoulder press','développé épaules'], photo:'Dumbbell_Shoulder_Press'},
   lib_ohext:{name:'Extension triceps poulie au-dessus de la tête', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:12, rest:90, muscles:M(['Triceps']), cue:'Coudes fixes, étirement complet derrière la tête.', aka:['overhead triceps'], photo:'Cable_Rope_Overhead_Triceps_Extension'},
   lib_pallof:{name:'Pallof press', kind:'load', cat:'iso', step:2.5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Abdos']), cue:'Reps par côté, résiste à la rotation.', aka:['anti rotation'], photo:'Pallof_Press'},
@@ -52,13 +53,13 @@ export const BASE_EX = {
   // Pour en ajouter : un identifiant qui ne change plus jamais (l'historique s'y rattache), puis les mêmes champs que ci-dessus.
   lib_squat:{name:'Squat à la barre', kind:'load', cat:'lower', back:true, step:2.5, sets:3, lo:6, hi:8, rest:180, knee:true, muscles:M(['Quadriceps'],['Fessiers']), cue:'Barre sur le haut du dos, descends en contrôle aussi bas que tu restes gainé.', aka:['squat','back squat'], photo:'Barbell_Squat'},
   lib_bench:{name:'Développé couché à la barre', kind:'load', cat:'upper', step:2.5, sets:3, lo:6, hi:8, rest:150, muscles:M(['Pectoraux'],['Triceps','Épaules']), cue:'Omoplates serrées, pieds au sol, barre au bas des pectoraux.', aka:['dc','développé couché','bench press'], photo:'Barbell_Bench_Press_-_Medium_Grip'},
-  lib_deadlift:{name:'Soulevé de terre', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:6, rest:180, muscles:M(['Ischios','Fessiers'],['Dos']), cue:'Barre contre les tibias, dos neutre, pousse le sol avec les jambes.', aka:['deadlift','sdt'], photo:'Barbell_Deadlift'},
+  lib_deadlift:{name:'Soulevé de terre', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:6, rest:180, muscles:M(['Ischios','Fessiers'],['Lombaires','Trapèzes']), cue:'Barre contre les tibias, dos neutre, pousse le sol avec les jambes.', aka:['deadlift','sdt'], photo:'Barbell_Deadlift'},
   lib_bulgarian:{name:'Fentes bulgares', kind:'load', cat:'lower', step:2, sets:3, lo:8, hi:12, rest:90, uni:true, knee:true, muscles:M(['Quadriceps','Fessiers']), cue:'Pied arrière sur un banc, reps par jambe, poids d’un haltère.', aka:['bulgarian split squat','fentes']},
   lib_legext:{name:'Leg extension', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:15, rest:90, knee:true, muscles:M(['Quadriceps']), cue:'Pause d’1 s jambes tendues, descente lente.', aka:['leg extension'], photo:'Leg_Extensions'},
   lib_dips:{name:'Dips', kind:'bw', cat:'upper', step:1.25, sets:3, lo:6, hi:10, rest:120, muscles:M(['Pectoraux','Triceps'],['Épaules']), cue:'Descends jusqu’à avoir les bras à 90°. Le poids noté est le lest (0 = poids du corps).', aka:['dips'], photo:'Dips_-_Chest_Version'},
   lib_pushup:{name:'Pompes', kind:'bw', cat:'upper', step:1.25, sets:3, lo:8, hi:15, rest:90, muscles:M(['Pectoraux'],['Triceps','Épaules']), cue:'Corps gainé, poitrine près du sol. Le poids noté est le lest (0 = poids du corps).', aka:['push up'], photo:'Pushups'},
   lib_curlbar:{name:'Curl à la barre', kind:'load', cat:'iso', step:2, sets:3, lo:8, hi:12, rest:90, muscles:M(['Biceps']), cue:'Coudes fixes, pas de balancier.', aka:['barbell curl'], photo:'Barbell_Curl'},
-  lib_facepull:{name:'Face pull', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules'],['Dos']), cue:'Corde vers le front, coudes hauts, pause d’1 s.', aka:['face pull'], photo:'Face_Pull'},
+  lib_facepull:{name:'Face pull', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules'],['Trapèzes']), cue:'Corde vers le front, coudes hauts, pause d’1 s.', aka:['face pull'], photo:'Face_Pull'},
   lib_legraise:{name:'Relevés de jambes suspendu', kind:'bw', cat:'iso', step:1, sets:3, lo:8, hi:15, rest:90, muscles:M(['Abdos']), cue:'Enroule le bassin, sans balancer. Le poids noté est le lest (0 = poids du corps).', aka:['hanging leg raise'], photo:'Hanging_Leg_Raise'},
   // Bibliothèque : exercices les plus courants, rangés par muscle principal. aka : autres noms pour la recherche ; photo : dossier photos/.
   // Pectoraux
@@ -77,32 +78,32 @@ export const BASE_EX = {
   ex_inclpushup:{name:'Pompes mains surélevées', kind:'bw', cat:'upper', step:1.25, sets:3, lo:10, hi:20, rest:90, muscles:M(['Pectoraux'],['Triceps','Épaules']), cue:'Mains sur un banc : plus facile que les pompes au sol. Le poids noté est le lest (0 = poids du corps).', aka:['incline push up'], photo:'Incline_Push-Up'},
   ex_declpushup:{name:'Pompes pieds surélevés', kind:'bw', cat:'upper', step:1.25, sets:3, lo:8, hi:15, rest:90, muscles:M(['Pectoraux'],['Épaules','Triceps']), cue:'Pieds sur un banc, corps gainé : plus dur que les pompes au sol. Le poids noté est le lest.', aka:['decline push up'], photo:'Decline_Push-Up'},
   // Dos
-  ex_dbrow:{name:'Rowing haltère à un bras', kind:'load', cat:'upper', step:2, sets:3, lo:8, hi:12, rest:90, uni:true, muscles:M(['Dos'],['Biceps']), cue:'Main et genou sur le banc, tire le coude vers la hanche. Reps par bras.', aka:['one arm row','rowing unilatéral'], photo:'One-Arm_Dumbbell_Row'},
-  ex_tbar:{name:'Rowing T-bar', kind:'load', cat:'upper', back:true, step:2.5, sets:3, lo:8, hi:12, rest:120, muscles:M(['Dos'],['Biceps']), cue:'Dos neutre, tire la poignée vers le bas de la poitrine.', aka:['t bar row'], photo:'T-Bar_Row_with_Handle'},
-  ex_machinerow:{name:'Rowing à la machine', kind:'load', cat:'upper', step:5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Dos'],['Biceps']), cue:'Poitrine contre l’appui, serre les omoplates en fin de mouvement.', aka:['machine row'], photo:'Leverage_Iso_Row'},
+  ex_dbrow:{name:'Rowing haltère à un bras', kind:'load', cat:'upper', step:2, sets:3, lo:8, hi:12, rest:90, uni:true, muscles:M(['Dos'],['Biceps','Trapèzes']), cue:'Main et genou sur le banc, tire le coude vers la hanche. Reps par bras.', aka:['one arm row','rowing unilatéral'], photo:'One-Arm_Dumbbell_Row'},
+  ex_tbar:{name:'Rowing T-bar', kind:'load', cat:'upper', back:true, step:2.5, sets:3, lo:8, hi:12, rest:120, muscles:M(['Dos'],['Biceps','Trapèzes']), cue:'Dos neutre, tire la poignée vers le bas de la poitrine.', aka:['t bar row'], photo:'T-Bar_Row_with_Handle'},
+  ex_machinerow:{name:'Rowing à la machine', kind:'load', cat:'upper', step:5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Dos'],['Biceps','Trapèzes']), cue:'Poitrine contre l’appui, serre les omoplates en fin de mouvement.', aka:['machine row'], photo:'Leverage_Iso_Row'},
   ex_closepulldown:{name:'Tirage vertical prise serrée', kind:'load', cat:'upper', step:2.5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Dos'],['Biceps']), cue:'Mains rapprochées sur la barre ou poignée en V, tire vers le haut de la poitrine, buste légèrement incliné.', aka:['close grip pulldown','tirage triangle'], photo:'Close-Grip_Front_Lat_Pulldown'},
   ex_straightpulldown:{name:'Tirage bras tendus à la poulie', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:90, muscles:M(['Dos']), cue:'Bras presque tendus, ramène la barre vers les cuisses en serrant le dos.', aka:['straight arm pulldown','pull over poulie'], photo:'Straight-Arm_Pulldown'},
-  ex_invrow:{name:'Rowing inversé (tractions australiennes)', kind:'bw', cat:'upper', step:1.25, sets:3, lo:8, hi:15, rest:90, muscles:M(['Dos'],['Biceps']), cue:'Sous une barre basse, corps gainé, tire la poitrine vers la barre. Le poids noté est le lest.', aka:['inverted row','australian pull up'], photo:'Inverted_Row'},
+  ex_invrow:{name:'Rowing inversé (tractions australiennes)', kind:'bw', cat:'upper', step:1.25, sets:3, lo:8, hi:15, rest:90, muscles:M(['Dos'],['Biceps','Trapèzes']), cue:'Sous une barre basse, corps gainé, tire la poitrine vers la barre. Le poids noté est le lest.', aka:['inverted row','australian pull up'], photo:'Inverted_Row'},
   ex_assistpull:{name:'Tractions assistées à l’élastique', kind:'bw', cat:'upper', step:1.25, sets:3, lo:6, hi:10, rest:120, muscles:M(['Dos'],['Biceps']), cue:'Élastique sous les genoux ou les pieds pour t’aider. Le poids noté est le lest (0 = sans lest).', aka:['assisted pull up','tractions élastique'], photo:'Band_Assisted_Pull-Up'},
-  ex_rackpull:{name:'Rack pull', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:6, rest:180, muscles:M(['Dos','Fessiers'],['Ischios']), cue:'Soulevé de terre partiel, barre posée au-dessus des genoux, dos neutre.', aka:['rack pulls'], photo:'Rack_Pulls'},
+  ex_rackpull:{name:'Rack pull', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:6, rest:180, muscles:M(['Lombaires','Fessiers'],['Trapèzes','Ischios']), cue:'Soulevé de terre partiel, barre posée au-dessus des genoux, dos neutre.', aka:['rack pulls'], photo:'Rack_Pulls'},
   // Fessiers
-  ex_sumo:{name:'Soulevé de terre sumo', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:6, rest:180, muscles:M(['Fessiers','Ischios'],['Quadriceps','Dos']), cue:'Pieds écartés, pointes vers l’extérieur, mains entre les jambes : pousse le sol.', aka:['sumo deadlift','sdt sumo'], photo:'Sumo_Deadlift'},
+  ex_sumo:{name:'Soulevé de terre sumo', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:6, rest:180, muscles:M(['Fessiers','Ischios'],['Quadriceps','Lombaires']), cue:'Pieds écartés, pointes vers l’extérieur, mains entre les jambes : pousse le sol.', aka:['sumo deadlift','sdt sumo'], photo:'Sumo_Deadlift'},
   // Quadriceps
-  ex_trapbar:{name:'Soulevé de terre à la trap bar', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:8, rest:180, muscles:M(['Quadriceps','Fessiers'],['Ischios','Dos']), cue:'Debout au centre de la barre hexagonale, pousse le sol en gardant le dos neutre.', aka:['trap bar deadlift','hex bar'], photo:'Trap_Bar_Deadlift'},
+  ex_trapbar:{name:'Soulevé de terre à la trap bar', kind:'load', cat:'lower', back:true, step:5, sets:3, lo:4, hi:8, rest:180, muscles:M(['Quadriceps','Fessiers'],['Ischios','Lombaires']), cue:'Debout au centre de la barre hexagonale, pousse le sol en gardant le dos neutre.', aka:['trap bar deadlift','hex bar'], photo:'Trap_Bar_Deadlift'},
   // Ischios
-  ex_goodmorning:{name:'Good morning', kind:'load', cat:'lower', back:true, step:2.5, sets:3, lo:8, hi:10, rest:120, muscles:M(['Ischios'],['Fessiers','Dos']), cue:'Barre sur le haut du dos, genoux légèrement fléchis, hanches vers l’arrière, dos neutre.', aka:[], photo:'Good_Morning'},
+  ex_goodmorning:{name:'Good morning', kind:'load', cat:'lower', back:true, step:2.5, sets:3, lo:8, hi:10, rest:120, muscles:M(['Ischios'],['Fessiers','Lombaires']), cue:'Barre sur le haut du dos, genoux légèrement fléchis, hanches vers l’arrière, dos neutre.', aka:[], photo:'Good_Morning'},
   // Dos
-  ex_shrugbar:{name:'Shrugs à la barre', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:15, rest:90, muscles:M(['Dos']), cue:'Monte les épaules vers les oreilles, pause d’1 s, sans rouler les épaules.', aka:['shrug','trapèzes','haussements d’épaules'], photo:'Barbell_Shrug'},
-  ex_shrugdb:{name:'Shrugs haltères', kind:'load', cat:'iso', step:2, sets:3, lo:10, hi:15, rest:90, muscles:M(['Dos']), cue:'Haltères le long du corps, monte les épaules vers les oreilles, pause d’1 s.', aka:['shrug','trapèzes','haussements d’épaules'], photo:'Dumbbell_Shrug'},
+  ex_shrugbar:{name:'Shrugs à la barre', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:15, rest:90, muscles:M(['Trapèzes']), cue:'Monte les épaules vers les oreilles, pause d’1 s, sans rouler les épaules.', aka:['shrug','trapèzes','haussements d’épaules'], photo:'Barbell_Shrug'},
+  ex_shrugdb:{name:'Shrugs haltères', kind:'load', cat:'iso', step:2, sets:3, lo:10, hi:15, rest:90, muscles:M(['Trapèzes']), cue:'Haltères le long du corps, monte les épaules vers les oreilles, pause d’1 s.', aka:['shrug','trapèzes','haussements d’épaules'], photo:'Dumbbell_Shrug'},
   // Épaules
   ex_ohpbar:{name:'Développé militaire à la barre', kind:'load', cat:'upper', step:2.5, sets:3, lo:5, hi:8, rest:150, muscles:M(['Épaules'],['Triceps']), cue:'Debout, fessiers et abdos serrés, pousse la barre au-dessus de la tête.', aka:['military press','ohp','overhead press'], photo:'Standing_Military_Press'},
   ex_arnold:{name:'Développé Arnold', kind:'load', cat:'upper', step:2, sets:3, lo:8, hi:12, rest:90, muscles:M(['Épaules'],['Triceps']), cue:'Paumes vers toi en bas, tourne les poignets en poussant vers le haut.', aka:['arnold press'], photo:'Arnold_Dumbbell_Press'},
   ex_ohpmachine:{name:'Développé épaules à la machine', kind:'load', cat:'upper', step:5, sets:3, lo:8, hi:12, rest:90, muscles:M(['Épaules'],['Triceps']), cue:'Dos contre le dossier, poignées à hauteur des épaules au départ.', aka:['shoulder press machine'], photo:'Leverage_Shoulder_Press'},
   ex_cablelat:{name:'Élévations latérales à la poulie', kind:'load', cat:'iso', step:1.25, sets:3, lo:12, hi:15, rest:90, uni:true, muscles:M(['Épaules']), cue:'Poulie basse, câble tiré par la main opposée, monte jusqu’à l’horizontale. Reps par bras.', aka:['cable lateral raise']},
   ex_frontraise:{name:'Élévations frontales', kind:'load', cat:'iso', step:1, sets:3, lo:10, hi:15, rest:90, muscles:M(['Épaules']), cue:'Monte l’haltère devant toi jusqu’à hauteur des yeux, un bras après l’autre ou les deux ensemble, sans élan.', aka:['front raise'], photo:'Front_Dumbbell_Raise'},
-  ex_uprow:{name:'Rowing menton', kind:'load', cat:'upper', step:2.5, sets:3, lo:10, hi:12, rest:90, muscles:M(['Épaules'],['Dos','Biceps']), cue:'Prise moyenne, monte les coudes jusqu’à hauteur des épaules, pas plus haut.', aka:['upright row'], photo:'Upright_Barbell_Row'},
-  ex_reversemachine:{name:'Oiseau à la machine', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules'],['Dos']), cue:'Face à la machine, bras presque tendus, ouvre en serrant l’arrière des épaules.', aka:['reverse pec deck','rear delt machine'], photo:'Reverse_Machine_Flyes'},
-  ex_cablerearfly:{name:'Oiseau à la poulie', kind:'load', cat:'iso', step:1.25, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules'],['Dos']), cue:'Câbles croisés à hauteur d’épaules, ouvre les bras vers l’arrière.', aka:['cable rear delt fly'], photo:'Cable_Rear_Delt_Fly'},
+  ex_uprow:{name:'Rowing menton', kind:'load', cat:'upper', step:2.5, sets:3, lo:10, hi:12, rest:90, muscles:M(['Épaules'],['Trapèzes','Biceps']), cue:'Prise moyenne, monte les coudes jusqu’à hauteur des épaules, pas plus haut.', aka:['upright row'], photo:'Upright_Barbell_Row'},
+  ex_reversemachine:{name:'Oiseau à la machine', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules'],['Trapèzes']), cue:'Face à la machine, bras presque tendus, ouvre en serrant l’arrière des épaules.', aka:['reverse pec deck','rear delt machine'], photo:'Reverse_Machine_Flyes'},
+  ex_cablerearfly:{name:'Oiseau à la poulie', kind:'load', cat:'iso', step:1.25, sets:3, lo:12, hi:15, rest:90, muscles:M(['Épaules'],['Trapèzes']), cue:'Câbles croisés à hauteur d’épaules, ouvre les bras vers l’arrière.', aka:['cable rear delt fly'], photo:'Cable_Rear_Delt_Fly'},
   // Biceps
   ex_dbcurl:{name:'Curl haltères', kind:'load', cat:'iso', step:1, sets:3, lo:8, hi:12, rest:90, muscles:M(['Biceps']), cue:'Coudes collés au corps, tourne les paumes vers le haut en montant.', aka:['dumbbell curl','curl biceps'], photo:'Dumbbell_Bicep_Curl'},
   ex_ezcurl:{name:'Curl barre EZ', kind:'load', cat:'iso', step:2, sets:3, lo:8, hi:12, rest:90, muscles:M(['Biceps']), cue:'Barre coudée, coudes fixes, pas de balancier.', aka:['ez curl'], photo:'EZ-Bar_Curl'},
@@ -110,8 +111,8 @@ export const BASE_EX = {
   ex_concentration:{name:'Curl concentré', kind:'load', cat:'iso', step:1, sets:3, lo:10, hi:12, rest:90, uni:true, muscles:M(['Biceps']), cue:'Assis, coude contre l’intérieur de la cuisse. Reps par bras.', aka:['concentration curl'], photo:'Concentration_Curls'},
   ex_cablecurl:{name:'Curl à la poulie', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:15, rest:90, muscles:M(['Biceps']), cue:'Poulie basse, coudes fixes, serre les biceps en haut.', aka:['cable curl'], photo:'Standing_Biceps_Cable_Curl'},
   ex_spider:{name:'Curl araignée', kind:'load', cat:'iso', step:2, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps']), cue:'Buste sur un banc incliné, bras vers le sol, monte sans bouger les coudes.', aka:['spider curl'], photo:'Spider_Curl'},
-  ex_reversecurl:{name:'Curl inversé', kind:'load', cat:'iso', step:2, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps']), cue:'Paumes vers le bas : travaille aussi les avant-bras.', aka:['reverse curl'], photo:'Reverse_Barbell_Curl'},
-  ex_ropehammer:{name:'Curl marteau à la corde', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps']), cue:'Poulie basse, corde en prise neutre, coudes fixes.', aka:['rope hammer curl'], photo:'Cable_Hammer_Curls_-_Rope_Attachment'},
+  ex_reversecurl:{name:'Curl inversé', kind:'load', cat:'iso', step:2, sets:3, lo:10, hi:12, rest:90, muscles:M(['Avant-bras'],['Biceps']), cue:'Paumes vers le bas : travaille aussi les avant-bras.', aka:['reverse curl'], photo:'Reverse_Barbell_Curl'},
+  ex_ropehammer:{name:'Curl marteau à la corde', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps'],['Avant-bras']), cue:'Poulie basse, corde en prise neutre, coudes fixes.', aka:['rope hammer curl'], photo:'Cable_Hammer_Curls_-_Rope_Attachment'},
   ex_machinecurl:{name:'Curl à la machine', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:12, rest:90, muscles:M(['Biceps']), cue:'Bras sur l’appui, monte et descends sans à-coups.', aka:['machine curl'], photo:'Machine_Preacher_Curls'},
   // Triceps
   ex_kickback:{name:'Kickback triceps', kind:'load', cat:'iso', step:1, sets:3, lo:12, hi:15, rest:90, uni:true, muscles:M(['Triceps']), cue:'Buste penché, bras collé au corps, tends le coude vers l’arrière. Reps par bras.', aka:['kick back'], photo:'Tricep_Dumbbell_Kickback'},
@@ -131,7 +132,7 @@ export const BASE_EX = {
   ex_pistol:{name:'Squat sur une jambe (pistol)', kind:'bw', cat:'lower', step:1.25, sets:3, lo:5, hi:8, rest:120, uni:true, knee:true, muscles:M(['Quadriceps','Fessiers']), cue:'Jambe libre tendue devant, descends en contrôle ; aide-toi d’un support au début. Reps par jambe.', aka:['pistol squat'], photo:'Kettlebell_Pistol_Squat'},
   ex_bwsquat:{name:'Squat au poids du corps', kind:'bw', cat:'lower', step:1.25, sets:3, lo:12, hi:20, rest:90, knee:true, muscles:M(['Quadriceps'],['Fessiers']), cue:'Pieds largeur d’épaules, descends en gardant les talons au sol.', aka:['air squat'], photo:'Bodyweight_Squat'},
   // Ischios
-  ex_stiffdl:{name:'Soulevé de terre jambes tendues', kind:'load', cat:'lower', back:true, step:2.5, sets:3, lo:6, hi:10, rest:150, muscles:M(['Ischios'],['Fessiers','Dos']), cue:'Genoux presque tendus, barre près des jambes, descends tant que le dos reste neutre.', aka:['stiff leg deadlift','sdt jambes tendues'], photo:'Stiff-Legged_Barbell_Deadlift'},
+  ex_stiffdl:{name:'Soulevé de terre jambes tendues', kind:'load', cat:'lower', back:true, step:2.5, sets:3, lo:6, hi:10, rest:150, muscles:M(['Ischios'],['Fessiers','Lombaires']), cue:'Genoux presque tendus, barre près des jambes, descends tant que le dos reste neutre.', aka:['stiff leg deadlift','sdt jambes tendues'], photo:'Stiff-Legged_Barbell_Deadlift'},
   ex_dbrdl:{name:'RDL haltères', kind:'load', cat:'lower', back:true, step:2, sets:3, lo:8, hi:12, rest:120, muscles:M(['Ischios','Fessiers']), cue:'Haltères près des jambes, hanches vers l’arrière, dos neutre.', aka:['dumbbell rdl','soulevé de terre roumain'], photo:'Stiff-Legged_Dumbbell_Deadlift'},
   ex_seatedcurl:{name:'Leg curl assis', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:15, rest:90, muscles:M(['Ischios']), cue:'Cuisses bloquées, ramène les talons sous le siège, remonte lentement.', aka:['seated leg curl'], photo:'Seated_Leg_Curl'},
   ex_ghr:{name:'Glute-ham raise', kind:'bw', cat:'iso', step:1.25, sets:3, lo:6, hi:10, rest:120, muscles:M(['Ischios'],['Fessiers']), cue:'Sur le banc GHR, descends le buste puis remonte en fléchissant les genoux.', aka:['ghr'], photo:'Glute_Ham_Raise'},
@@ -143,7 +144,7 @@ export const BASE_EX = {
   ex_singlebridge:{name:'Pont fessier sur une jambe', kind:'bw', cat:'iso', step:1, sets:3, lo:10, hi:15, rest:90, uni:true, muscles:M(['Fessiers'],['Ischios']), cue:'Une jambe tendue en l’air, pousse sur le talon au sol. Reps par jambe.', aka:['single leg bridge'], photo:'Single_Leg_Glute_Bridge'},
   ex_cablekick:{name:'Kickback fessier à la poulie', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:90, uni:true, muscles:M(['Fessiers']), cue:'Sangle à la cheville, pousse la jambe vers l’arrière sans cambrer. Reps par jambe.', aka:['cable kickback'], photo:'One-Legged_Cable_Kickback'},
   ex_glutekick:{name:'Kickback fessier au sol', kind:'bw', cat:'iso', step:1, sets:3, lo:12, hi:20, rest:90, uni:true, muscles:M(['Fessiers']), cue:'À quatre pattes, monte une jambe pliée vers le plafond. Reps par jambe.', aka:['donkey kick'], photo:'Glute_Kickback'},
-  ex_kbswing:{name:'Kettlebell swing', kind:'load', cat:'lower', back:true, step:4, sets:3, lo:12, hi:20, rest:90, muscles:M(['Fessiers','Ischios'],['Dos']), cue:'Mouvement de hanches, pas un squat : projette la kettlebell avec les fessiers.', aka:['swing']},
+  ex_kbswing:{name:'Kettlebell swing', kind:'load', cat:'lower', back:true, step:4, sets:3, lo:12, hi:20, rest:90, muscles:M(['Fessiers','Ischios'],['Lombaires']), cue:'Mouvement de hanches, pas un squat : projette la kettlebell avec les fessiers.', aka:['swing']},
   ex_pullthrough:{name:'Pull-through à la poulie', kind:'load', cat:'lower', step:2.5, sets:3, lo:10, hi:15, rest:90, muscles:M(['Fessiers'],['Ischios']), cue:'Dos à la poulie basse, corde entre les jambes : hanches vers l’arrière, puis tends en serrant les fessiers.', aka:['pull through'], photo:'Pull_Through'},
   // Mollets
   ex_singlecalf:{name:'Mollets debout à une jambe', kind:'load', cat:'iso', step:2, sets:3, lo:10, hi:15, rest:90, uni:true, muscles:M(['Mollets']), cue:'Avant du pied sur une marche, haltère en main : descends le talon puis monte au maximum. Reps par jambe.', aka:['single leg calf raise']},
@@ -196,12 +197,46 @@ export const BASE_TPL = {
   FB:{name:'Full body B', focus:'Soulevé de terre roumain, tirage, développé militaire', cut:'1 série d’extensions triceps et de mollets, puis 1 série de fendu arrière',
     items:[{ex:'la_rdl'},{ex:'lib_pulldown'},{ex:'lib_ohp'},{ex:'lib_revlunge'},{ex:'ub_rope',ss:'B'},{ex:'la_calf',ss:'B'}]},
   FC:{name:'Full body C', focus:'Presse, développé incliné, rowing à la poulie', cut:'1 série de reverse fly et d’abdos, puis 1 série de hip thrust',
-    items:[{ex:'lb_press'},{ex:'ub_incl'},{ex:'lib_cablerow'},{ex:'lb_thrust'},{ex:'ua_rear',ss:'C'},{ex:'ua_abs',ss:'C'}]}
+    items:[{ex:'lb_press'},{ex:'ub_incl'},{ex:'lib_cablerow'},{ex:'lb_thrust'},{ex:'ua_rear',ss:'C'},{ex:'ua_abs',ss:'C'}]},
+  // Programmes connus (version 3.17) : organisations courantes en salle (règles de terrain), avec les exercices de la bibliothèque ;
+  // les charges suivent le moteur de l'appli. Identifiants fixes : l'historique s'y rattache.
+  PU:{name:'Push', focus:'Pectoraux, épaules, triceps',
+    items:[{ex:'lib_bench'},{ex:'ub_incl'},{ex:'lib_ohp'},{ex:'ex_cablecross'},{ex:'ua_lat',ss:'A'},{ex:'ub_rope',ss:'A'}]},
+  PL:{name:'Pull', focus:'Dos, trapèzes, biceps',
+    items:[{ex:'ua_pull'},{ex:'ub_row'},{ex:'lib_pulldown'},{ex:'lib_facepull',ss:'A'},{ex:'ex_shrugdb',ss:'A'},{ex:'ex_dbcurl'}]},
+  LG:{name:'Legs', focus:'Quadriceps, ischios, fessiers, mollets',
+    items:[{ex:'la_warm'},{ex:'lib_squat'},{ex:'la_rdl'},{ex:'lb_press'},{ex:'lb_curl',ss:'A'},{ex:'la_calf',ss:'A'},{ex:'ua_abs'}]},
+  H1:{name:'Haut 1', focus:'Force du haut du corps',
+    items:[{ex:'lib_bench'},{ex:'lib_rowbar'},{ex:'lib_ohp'},{ex:'lib_pulldown'},{ex:'ex_ezcurl',ss:'A'},{ex:'ex_pushdownbar',ss:'A'}]},
+  B1:{name:'Bas 1', focus:'Squat et ischios',
+    items:[{ex:'la_warm'},{ex:'lib_squat'},{ex:'la_rdl'},{ex:'lb_curl'},{ex:'lib_legext'},{ex:'la_calf'},{ex:'ex_plank'}]},
+  H2:{name:'Haut 2', focus:'Volume du haut du corps',
+    items:[{ex:'ub_incl'},{ex:'lib_cablerow'},{ex:'ub_chin'},{ex:'ua_lat',ss:'A'},{ex:'ua_rear',ss:'A'},{ex:'ub_ham',ss:'B'},{ex:'ub_rope',ss:'B'}]},
+  B2:{name:'Bas 2', focus:'Soulevé de terre et fessiers',
+    items:[{ex:'la_warm'},{ex:'lib_deadlift'},{ex:'lb_press'},{ex:'lb_thrust'},{ex:'ex_seatedcurl'},{ex:'lib_seatcalf'},{ex:'ex_crunch'}]},
+  SP:{name:'Pectoraux', focus:'Pectoraux et triceps en soutien',
+    items:[{ex:'lib_bench'},{ex:'ub_incl'},{ex:'ex_dbfly'},{ex:'lib_dips'},{ex:'ex_cablecross'}]},
+  SD:{name:'Dos', focus:'Dos et trapèzes',
+    items:[{ex:'ua_pull'},{ex:'lib_rowbar'},{ex:'lib_pulldown'},{ex:'ex_dbrow'},{ex:'ex_shrugbar'}]},
+  SE:{name:'Épaules', focus:'Les trois faisceaux des épaules',
+    items:[{ex:'lib_ohp'},{ex:'ua_lat'},{ex:'ex_cablelat'},{ex:'ua_rear',ss:'A'},{ex:'lib_facepull',ss:'A'}]},
+  SJ:{name:'Jambes', focus:'Quadriceps, ischios, fessiers, mollets',
+    items:[{ex:'la_warm'},{ex:'lib_squat'},{ex:'lb_press'},{ex:'la_rdl'},{ex:'lb_curl',ss:'A'},{ex:'lib_legext',ss:'A'},{ex:'la_calf'}]},
+  SB:{name:'Bras', focus:'Biceps, triceps, abdos',
+    items:[{ex:'ex_closebench'},{ex:'ex_ezcurl'},{ex:'ub_ham',ss:'A'},{ex:'ub_rope',ss:'A'},{ex:'ex_preacher',ss:'B'},{ex:'lib_ohext',ss:'B'},{ex:'ua_abs'}]},
+  CA:{name:'5 × 5 A', focus:'Squat, développé couché, rowing',
+    items:[{ex:'la_warm'},{ex:'lib_squat',sets:5,lo:5,hi:5},{ex:'lib_bench',sets:5,lo:5,hi:5},{ex:'lib_rowbar',sets:5,lo:5,hi:5}]},
+  CB:{name:'5 × 5 B', focus:'Squat, développé militaire, soulevé de terre',
+    items:[{ex:'la_warm'},{ex:'lib_squat',sets:5,lo:5,hi:5},{ex:'ex_ohpbar',sets:5,lo:5,hi:5},{ex:'lib_deadlift',sets:1,lo:5,hi:5}]}
 };
 // Programmes proposés au premier lancement. days : jours conseillés (getDay() : 0 = dimanche).
 export const PROGRAMS = {
   exemple:{ name:'Programme exemple', desc:'Haut et bas du corps en alternance : 4 séances par semaine, environ 1 h 15 chacune.', days:[1,2,5,0], tpls:['UA','LA','UB','LB'] },
-  fullbody:{ name:'Full body 3 jours', desc:'Tout le corps à chaque séance : 3 séances par semaine, environ 1 h chacune.', days:[1,3,5], tpls:['FA','FB','FC'] }
+  fullbody:{ name:'Full body 3 jours', desc:'Tout le corps à chaque séance : 3 séances par semaine, environ 1 h chacune.', days:[1,3,5], tpls:['FA','FB','FC'] },
+  ppl:{ name:'Push Pull Legs', desc:'Poussée, tirage, jambes : 3 séances qui tournent, à faire 3 ou 6 fois par semaine.', days:[1,3,5], tpls:['PU','PL','LG'] },
+  hautbas:{ name:'Haut / Bas 4 jours', desc:'Haut du corps et bas du corps en alternance, une séance de force et une de volume pour chacun : 4 séances par semaine.', days:[1,2,4,5], tpls:['H1','B1','H2','B2'] },
+  split:{ name:'Split 5 jours', desc:'Un groupe musculaire par séance : pectoraux, dos, épaules, jambes, bras. 5 séances par semaine.', days:[1,2,3,4,5], tpls:['SP','SD','SE','SJ','SB'] },
+  cinq:{ name:'Force 5 × 5', desc:'Inspiré du célèbre 5 × 5 : deux séances courtes de gros exercices en alternance, 3 fois par semaine. Les charges montent selon les règles de l’appli.', days:[1,3,5], tpls:['CA','CB'] }
 };
 // Notes du programme exemple, affichées seulement avec son planning d'origine et le sport les lundis et jeudis, match le samedi. {Sport} = nom du sport.
 export const DAY_NOTES = {

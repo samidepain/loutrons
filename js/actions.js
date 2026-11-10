@@ -2,7 +2,7 @@
 import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, nbsp, num, rid, stepValue, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
-import { activeWorkout, allTpl, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, programRotation, putSettings, rotationOf, rotationWith, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, upNext, weekInfo } from './data.js';
+import { activeWorkout, allTpl, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, normSS, planOf, programOf, programRotation, putSettings, rotationOf, rotationWith, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, toggleLink, upgradeLegacy, upNext, weekInfo } from './data.js';
 import { findPRs, initItem, prSet } from './engine.js';
 import { downloadFile, exportFile, importable, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
@@ -221,7 +221,7 @@ const A = {
   // Profil : vers les réglages de l'entraînement (Entraînement › Planning)
   'go-planning'(){ S.progTab = 'planning'; A.tab({ dataset:{ v:'training' } }); },
   // Premier lancement et programme
-  'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; U.perWeek = U.prog === 'exemple' ? 4 : 3; render(); },
+  'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; U.perWeek = PROGRAMS[U.prog] ? Math.min(6, PROGRAMS[U.prog].days.length) : 3; render(); },
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
   'setup-per-week'(b){ S.setup.perWeek = +b.dataset.v; render(); },
   'setup-restart'(b){ S.setup.restart = b.checked; },
@@ -587,16 +587,18 @@ const A = {
   'new-ex-from-pick'(){ const back = { picker:S.picker, prevDraft:S.draft }; S.picker = null; S.draft = { kind:'ex', isNew:true, id:null, data:blankEx(), after:back }; render(); window.scrollTo(0, 0); },
   // Séances modèles
   'new-tpl'(){ S.draft = { kind:'tpl', isNew:true, id:'s' + rid(), data:{ name:'', focus:'', cut:'', items:[] } }; render(); window.scrollTo(0, 0); },
-  'edit-tpl'(b){ const t = tplDef(b.dataset.v); if (!t) return; S.draft = { kind:'tpl', isNew:false, id:t.id, data:{ name:t.name, focus:t.focus || '', cut:t.cut || '', items: clone(t.items) } }; render(); window.scrollTo(0, 0); },
-  'it-up'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i > 0) { const x = a[i]; a[i] = a[i - 1]; a[i - 1] = x; } render(); },
-  'it-down'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i < a.length - 1) { const x = a[i]; a[i] = a[i + 1]; a[i + 1] = x; } render(); },
-  'it-rm'(b){ S.draft.data.items.splice(+b.dataset.i, 1); render(); },
+  'edit-tpl'(b){ const t = tplDef(b.dataset.v); if (!t) return; S.draft = { kind:'tpl', isNew:false, id:t.id, data:{ name:t.name, focus:t.focus || '', cut:t.cut || '', items: normSS(clone(t.items)) } }; render(); window.scrollTo(0, 0); },
+  // Déplacer ou retirer un exercice peut défaire un superset : les repères sont renumérotés à chaque fois
+  'it-up'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i > 0) { const x = a[i]; a[i] = a[i - 1]; a[i - 1] = x; } normSS(a); render(); },
+  'it-down'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i < a.length - 1) { const x = a[i]; a[i] = a[i + 1]; a[i + 1] = x; } normSS(a); render(); },
+  'it-rm'(b){ S.draft.data.items.splice(+b.dataset.i, 1); normSS(S.draft.data.items); render(); },
+  'it-link'(b){ toggleLink(S.draft.data.items, +b.dataset.i); render(); },
   'save-tpl'(){
     const D = S.draft; const t = D.data;
     if (!t.name.trim()) { toast('Donne un nom à la séance.'); $('#d-name').focus(); return; }
     if (!t.items.length) { toast('Ajoute au moins un exercice.'); return; }
     // Séance créée : elle entre à la fin de la rotation (figée d'abord si elle venait encore du planning d'avant)
-    const isNew = !tplDef(D.id); saveTpl(Object.assign({ id:D.id }, t)); if (isNew) { const rw = rotationWith(D.id); if (rw) putSettings(rw); } S.draft = null; S.confirm = null; S.view = 'training'; S.progTab = 'seances'; render(); toast('Séance enregistrée.');
+    normSS(t.items); const isNew = !tplDef(D.id); saveTpl(Object.assign({ id:D.id }, t)); if (isNew) { const rw = rotationWith(D.id); if (rw) putSettings(rw); } S.draft = null; S.confirm = null; S.view = 'training'; S.progTab = 'seances'; render(); toast('Séance enregistrée.');
   },
   'reset-tpl'(){ del('p_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-tpl'(){ S.confirm = 'del-tpl'; render(); },

@@ -188,3 +188,37 @@ function follow(dx){
 }
 function saveState(){ const o = {}; Object.keys(S).forEach(k => { if (k !== 'docs') o[k] = S[k]; }); return structuredClone(o); }
 function restoreState(o){ Object.keys(S).forEach(k => { if (k !== 'docs' && !(k in o)) delete S[k]; }); Object.assign(S, o); }
+
+// Barre d'onglets : glisser le doigt dessus déplace la lentille de verre à la vitesse du doigt ; au lâcher, elle va sur l'onglet
+// le plus proche, qui s'ouvre. Un simple toucher reste un clic normal (la capture du pointeur ne commence qu'au glissement).
+export function initTabSwipe(){
+  const wrap = document.querySelector('.tabs-wrap'); const lens = document.getElementById('tab-lens'); if (!wrap || !lens) return;
+  let g = null; let mute = 0;
+  const tabs = () => Array.from(wrap.querySelectorAll('.tab'));
+  wrap.addEventListener('pointerdown', e => { if (!e.isPrimary || e.button > 0) return; g = { x0:e.clientX, y0:e.clientY, drag:false, id:e.pointerId }; });
+  wrap.addEventListener('pointermove', e => {
+    if (!g || e.pointerId !== g.id) return;
+    const dx = e.clientX - g.x0;
+    if (!g.drag) {
+      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(e.clientY - g.y0)) return;
+      g.drag = true; try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
+      wrap.closest('.tabs').classList.add('drag'); lens.classList.remove('off');
+    }
+    const r = wrap.getBoundingClientRect(); const n = tabs().length || 1; const w = r.width / n;
+    g.pos = Math.max(0, Math.min(r.width - w, e.clientX - r.left - w / 2));
+    lens.style.transform = 'translateX(' + g.pos + 'px)';
+    const k = Math.round(g.pos / w); tabs().forEach((b, i) => b.classList.toggle('near', i === k));
+  });
+  const end = e => {
+    if (!g || e.pointerId !== g.id) return; const d = g; g = null; if (!d.drag) return;
+    const n = tabs().length || 1; const w = wrap.getBoundingClientRect().width / n; const k = Math.round((d.pos || 0) / w);
+    wrap.closest('.tabs').classList.remove('drag'); lens.style.transform = ''; tabs().forEach(b => b.classList.remove('near'));
+    mute = Date.now() + 400;
+    const b = tabs()[k]; if (e.type === 'pointerup' && b && !b.classList.contains('on')) b.click(); else renderTabsLens(lens);
+  };
+  wrap.addEventListener('pointerup', end); wrap.addEventListener('pointercancel', end);
+  // Le clic qui suit un glissement ne doit pas ouvrir l'onglet où le doigt a commencé
+  wrap.addEventListener('click', e => { if (Date.now() < mute && e.isTrusted) { e.stopPropagation(); e.preventDefault(); } }, true);
+}
+// Geste abandonné ou onglet déjà ouvert : la lentille revient sur l'onglet actif (sa position est dans --i)
+function renderTabsLens(lens){ lens.classList.toggle('off', !document.querySelector('.tab.on')); }
