@@ -338,18 +338,22 @@ export function daySummary(day){
   // Séance de salle prévue : aujourd'hui (jour prévu, ou objectif de la semaine pas atteint) et les jours prévus à l'avance
   let planned = null;
   if (future && !done.length && !active) planned = plannedSessions()[day] || (day === today() && weekProgress(day).done < perWeekOf() ? nextSession() : null);
-  return { date: day, done, active, planned, label: future ? p.label : 'Repos', acts: activities(day) };
+  return { date: day, done, active, planned, label: future ? p.label : 'Repos', acts: activities(day), plannedActs: plannedActivities(day) };
 }
-// Activités notées un jour donné (course, vélo…), dans l'ordre où elles ont été ajoutées
-export function activities(day){
-  const out = []; S.docs.forEach((o, id) => { if (id.indexOf('a_') === 0 && o.date === day) out.push(Object.assign({ id }, o)); });
+// Activités d'un jour (course, vélo…), dans l'ordre où elles ont été ajoutées : faites, ou prévues (planned:true, pas encore faites)
+const actsOf = (day, planned) => {
+  const out = []; S.docs.forEach((o, id) => { if (id.indexOf('a_') === 0 && o.date === day && !!o.planned === planned) out.push(Object.assign({ id }, o)); });
   return out.sort((a, b) => (a.at || 0) - (b.at || 0));
-}
-// Famille d'une activité pour le calendrier : cardio, sports collectifs ou autre (la salle, ce sont les séances)
-const CARDIO = ['run', 'bike', 'swim', 'walk'];
-export const activityFamily = type => CARDIO.indexOf(type) >= 0 ? 'cardio' : type === 'sport' ? 'collectif' : 'autre';
-// Familles d'un jour et leur état (en cours, fait, prévu), une entrée par famille, dans l'ordre salle, cardio, collectif, autre
-const FAMS = ['salle', 'cardio', 'collectif', 'autre'];
+};
+// Les activités prévues ne comptent ni dans la dépense ni dans l'eau : seules les faites passent par ici
+export const activities = day => actsOf(day, false);
+export const plannedActivities = day => actsOf(day, true);
+// Famille d'une activité pour le calendrier : cardio, sports collectifs, sports individuels ou autre (la salle, ce sont les séances).
+// INDIVIDUAL : mêmes sports que ceux notés group:'individuel' dans SPORTS (energy.js), un test les compare
+const CARDIO = ['run', 'bike', 'swim', 'walk']; export const INDIVIDUAL = ['tennis', 'badminton'];
+export const activityFamily = (type, sport) => CARDIO.indexOf(type) >= 0 ? 'cardio' : type === 'sport' ? (INDIVIDUAL.indexOf(sport) >= 0 ? 'individuel' : 'collectif') : 'autre';
+// Familles d'un jour et leur état (en cours, fait, prévu), une entrée par famille, dans l'ordre salle, cardio, collectif, individuel, autre
+const FAMS = ['salle', 'cardio', 'collectif', 'individuel', 'autre'];
 const FORCE = { planned: 1, done: 2, active: 3 };
 export function dayFamilies(day){
   const st = {}; const add = (f, s) => { if (!st[f] || FORCE[s] > FORCE[st[f]]) st[f] = s; };
@@ -357,7 +361,8 @@ export function dayFamilies(day){
   if (s.active) add('salle', 'active');
   if (s.done.length) add('salle', 'done');
   if (s.planned) add('salle', 'planned');
-  s.acts.forEach(a => add(activityFamily(a.type), 'done'));
+  s.acts.forEach(a => add(activityFamily(a.type, a.sport), 'done'));
+  s.plannedActs.forEach(a => add(activityFamily(a.type, a.sport), 'planned'));
   // jours d'entraînement et de match du module sport, aujourd'hui ou plus tard
   if (sportOn() && day >= today()) { const wd = parseIso(day).getDay(); const sp = sportInfo(); if (sp.train.indexOf(wd) >= 0 || sp.match.indexOf(wd) >= 0) add('collectif', 'planned'); }
   return FAMS.filter(f => st[f]).map(f => ({ fam: f, state: st[f] }));

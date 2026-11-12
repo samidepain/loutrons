@@ -25,7 +25,7 @@
   --ink:#0A0A0A; --muted:#5C5C5C;
   --accent:#FF7A1A; --accent-ink:#A84300; --accent-soft:#FFE8D6; --on-accent:#000000;
   --court:#3D3D3D; --court-soft:#EDEDED;
-  --fam-salle:#A84300; --fam-cardio:#1F6FD1; --fam-collectif:#7B3FD6; --fam-autre:#3D3D3D;
+  --fam-salle:#A84300; --fam-cardio:#1F6FD1; --fam-collectif:#7B3FD6; --fam-individuel:#0F766E; --fam-autre:#3D3D3D;
   --good:#186B3C; --good-soft:#DFF1E6; --warn:#7A5E00; --warn-soft:#F7EDC8; --bad:#B3261E; --bad-soft:#F8E1E2;
   --f-display:'Archivo','Arial Black',system-ui,sans-serif;
   --f-body:-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,sans-serif;
@@ -45,7 +45,7 @@
   --ink:#FFFFFF; --muted:#A3A3A3;
   --accent:#FF7A1A; --accent-ink:#FF7A1A; --accent-soft:#331A05; --on-accent:#000000;
   --court:#D4D4D4; --court-soft:#1F1F1F;
-  --fam-salle:#FF7A1A; --fam-cardio:#4DA3FF; --fam-collectif:#B48CFF; --fam-autre:#D4D4D4;
+  --fam-salle:#FF7A1A; --fam-cardio:#4DA3FF; --fam-collectif:#B48CFF; --fam-individuel:#2DD4BF; --fam-autre:#D4D4D4;
   --good:#52C383; --good-soft:#132D1D; --warn:#F2C94C; --warn-soft:#332A0E; --bad:#FF8A80; --bad-soft:#3A1A1C;
   --shade:rgba(0,0,0,.6);
   --well:#000000;
@@ -64,7 +64,7 @@
   --ink:#FFFFFF; --muted:#A3A3A3;
   --accent:#FF7A1A; --accent-ink:#FF7A1A; --accent-soft:#331A05; --on-accent:#000000;
   --court:#D4D4D4; --court-soft:#1F1F1F;
-  --fam-salle:#FF7A1A; --fam-cardio:#4DA3FF; --fam-collectif:#B48CFF; --fam-autre:#D4D4D4;
+  --fam-salle:#FF7A1A; --fam-cardio:#4DA3FF; --fam-collectif:#B48CFF; --fam-individuel:#2DD4BF; --fam-autre:#D4D4D4;
   --good:#52C383; --good-soft:#132D1D; --warn:#F2C94C; --warn-soft:#332A0E; --bad:#FF8A80; --bad-soft:#3A1A1C;
   --shade:rgba(0,0,0,.6);
   --well:#000000;
@@ -214,7 +214,7 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 /* Points du calendrier : la couleur dit la famille (salle, cardio, sports collectifs, autre), la forme dit l'état (plein : fait, anneau : prévu, point entouré : en cours) */
 .mks{display:flex;gap:2px;justify-content:center;min-height:7px}
 .mk{display:inline-block;width:7px;height:7px;border-radius:50%;flex:none;box-sizing:border-box;--c:var(--muted)}
-.mk.fam-salle{--c:var(--fam-salle)} .mk.fam-cardio{--c:var(--fam-cardio)} .mk.fam-collectif{--c:var(--fam-collectif)} .mk.fam-autre{--c:var(--fam-autre)}
+.mk.fam-salle{--c:var(--fam-salle)} .mk.fam-cardio{--c:var(--fam-cardio)} .mk.fam-collectif{--c:var(--fam-collectif)} .mk.fam-individuel{--c:var(--fam-individuel)} .mk.fam-autre{--c:var(--fam-autre)}
 .mk.done{background:var(--c)}
 .mk.planned{border:2px solid var(--c);background:transparent}
 .mk.active{background:var(--c);box-shadow:0 0 0 1.5px var(--surface-2),0 0 0 3px var(--c)}
@@ -699,7 +699,7 @@ details.cue[open]{display:flex;flex-direction:column;gap:10px}
 .water-goal .fld{width:112px;flex:none}
 .pick.static{cursor:default}
 .pick.static:active{background:var(--surface-2)}
-.pick.static.planned{border:1px dashed var(--muted)}
+.pick.planned{border:1px dashed var(--muted)}
 .mrow.fd{grid-template-columns:72px minmax(0,1fr) 104px}
 /* Raccourci du journal (habituel, repas passé, repas enregistré) : nom et détail, puis « + » rond qui ajoute d'un geste */
 .quick{display:flex;align-items:center;gap:8px}
@@ -712,6 +712,7 @@ button.plus{flex:none;width:44px;height:44px;border-radius:50%;border:none;backg
 button.plus:active{transform:scale(.93)}
 /* Supprimer une activité (écran d'un jour) : bouton rond avec une corbeille */
 button.plus.del{color:var(--bad)}
+button.plus.ok{color:var(--good)}
 .quick .mk{margin-right:6px;vertical-align:1px}
 button.plus svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .meal > .link{align-self:flex-start}

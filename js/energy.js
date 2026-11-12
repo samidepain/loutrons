@@ -18,15 +18,15 @@ export const LEVELS = {
   swim: [['easy', 'Tranquille', 'longueurs lentes', 5.8], ['mod', 'Soutenu', 'crawl, environ 45 m par minute', 8.0], ['fast', 'Rapide', 'longueurs rapides', 9.8]],                  // 18240, 18290, 18230
   walk: [['easy', 'Normale', '4,5 à 5,5 km/h', 3.8], ['mod', 'Rapide', '5,6 à 6,3 km/h', 4.8], ['fast', 'Très rapide', '6,4 à 7,1 km/h', 5.5]]                                   // 17190, 17200, 17220
 };
-// Entraînement ou loisir / match
+// Entraînement ou loisir / match ; group : sport collectif ou individuel (tennis, badminton), pour regrouper le formulaire et le calendrier
 export const SPORTS = {
-  basket:    { label:'Basket', train:7.5, match:8.0, names:['basket'] },          // 15055, 15040
-  foot:      { label:'Football', train:7.0, match:9.5, names:['foot', 'soccer'] }, // 15610, 15605
-  hand:      { label:'Handball', train:8.0, match:8.0, names:['hand'] },          // 15330
-  rugby:     { label:'Rugby', train:6.3, match:8.3, names:['rugby'] },            // 15562 (toucher), 15560
-  volley:    { label:'Volley', train:3.0, match:6.0, names:['volley'] },          // 15720, 15711
-  tennis:    { label:'Tennis', train:6.8, match:8.0, names:['tennis'] },          // 15675, 15676
-  badminton: { label:'Badminton', train:5.5, match:7.0, names:['bad'] }           // 15030, 15020
+  basket:    { group:'collectif', label:'Basket', train:7.5, match:8.0, names:['basket'] },          // 15055, 15040
+  foot:      { group:'collectif', label:'Football', train:7.0, match:9.5, names:['foot', 'soccer'] }, // 15610, 15605
+  hand:      { group:'collectif', label:'Handball', train:8.0, match:8.0, names:['hand'] },          // 15330
+  rugby:     { group:'collectif', label:'Rugby', train:6.3, match:8.3, names:['rugby'] },            // 15562 (toucher), 15560
+  volley:    { group:'collectif', label:'Volley', train:3.0, match:6.0, names:['volley'] },          // 15720, 15711
+  tennis:    { group:'individuel', label:'Tennis', train:6.8, match:8.0, names:['tennis'] },          // 15675, 15676
+  badminton: { group:'individuel', label:'Badminton', train:5.5, match:7.0, names:['bad'] }           // 15030, 15020
 };
 export const TYPES = [['run', 'Course à pied'], ['bike', 'Vélo'], ['swim', 'Natation'], ['walk', 'Marche'], ['sport', 'Sports collectifs'], ['other', 'Autre']];
 // Choix du formulaire d'activité : les activités directement (chaque sport est un choix, 'sport:basket'), « Autre » pour le reste.

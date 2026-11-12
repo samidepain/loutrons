@@ -14,7 +14,7 @@ const act = (date, type, extra) => ['a_' + date + '_' + type, Object.assign({ da
 const sport = extra => reglages(Object.assign({ modules: { knee: false, jumps: false, sport: true }, sport: { name: 'Basket', train: [4], match: [6] } }, extra));
 
 test('famille d’une activité : course, vélo, natation et marche en cardio, sport en collectif, le reste en autre', () => {
-  assert.deepEqual(['run', 'bike', 'swim', 'walk', 'sport', 'other'].map(activityFamily), ['cardio', 'cardio', 'cardio', 'cardio', 'collectif', 'autre']);
+  assert.deepEqual(['run', 'bike', 'swim', 'walk', 'sport', 'other'].map(t => activityFamily(t)), ['cardio', 'cardio', 'cardio', 'cardio', 'collectif', 'autre']);
 });
 
 test('une course et une séance le même jour donnent deux familles, la salle d’abord', () => {

@@ -455,33 +455,44 @@ const A = {
   'adj-reset'(){ putSettings({ nutrition: Object.assign({}, nutritionOf(), { adjust: 0 }) }); render(); toast('Corrections annulées.'); },
   // Activités : ajout (éventuellement le sport prévu aujourd'hui), modification, suppression
   'act-add'(b){
-    const v = b.dataset.v; const date = b.dataset.d || today();
-    S.act = v ? { type:'sport', sport: sportOf(sportInfo().name), level:v, min:90, date } : Object.assign({ date }, choice(settings().lastAct || 'run'));
+    const v = b.dataset.v; const date = b.dataset.d || today(); const planned = b.dataset.p === '1' ? { planned:true } : {};
+    S.act = v ? { type:'sport', sport: sportOf(sportInfo().name), level:v, min:90, date } : Object.assign({ date }, planned, choice(settings().lastAct || 'run'));
     S.confirm = null; render(); window.scrollTo(0, 0);
   },
   'act-cancel'(){ S.act = null; S.confirm = null; render(); },
   'act-type'(b){ const c = choice(b.dataset.v); if (c.type === 'sport' && S.act.type === 'sport') c.level = S.act.level || 'train'; Object.assign(S.act, { level:null, sport:null }, c); render(); },
   'act-level'(b){ S.act.level = b.dataset.v; render(); },
   'act-edit'(b){ const o = S.docs.get(b.dataset.v); if (!o) return; S.act = Object.assign({}, o, { edit:b.dataset.v }); S.confirm = null; render(); window.scrollTo(0, 0); },
-  'act-save'(){
-    const A = S.act; const a = actDoc(A);
+  // data-v="done" (depuis une activité prévue) : l'enregistre comme faite, avec ses calories calculées maintenant
+  'act-save'(b){
+    const A = S.act; const a = actDoc(A); const done = !!(b && b.dataset.v === 'done'); const planned = !!A.planned && !done;
+    if (done && A.date > today()) { toast('Cette activité est prévue plus tard : change sa date pour la noter.'); return; }
     if (!(a.min > 0 && a.min <= 900)) { toast('Indique la durée, en minutes.'); return; }
     if (a.type === 'run' && !(a.km > 0 && a.km <= 300)) { toast('Indique la distance, en kilomètres.'); return; }
     if (LEVELS[a.type] && !a.level) { toast('Choisis l’allure.'); return; }
     if (a.type === 'sport' && !(a.sport && a.level)) { toast('Choisis le sport, puis entraînement ou match.'); return; }
     if (a.kcal != null && !(a.kcal >= 0 && a.kcal <= 5000)) { toast('Calories : entre 0 et 5 000 kcal.'); return; }
-    const date = A.date && A.date <= today() ? A.date : today();
-    const doc = { date, type:a.type, min:a.min, at: A.at || Date.now() };
+    // Une activité prévue peut avoir une date à venir ; une activité faite, jamais
+    const date = A.date && (planned ? (A.edit || A.date >= today()) : A.date <= today()) ? A.date : today();
+    const doc = { date, type:a.type, min:a.min, at: done ? Date.now() : A.at || Date.now() };
+    if (planned) doc.planned = true;
     if (a.type === 'run') doc.km = a.km;
     if (a.level) doc.level = a.level;
     if (a.type === 'sport') doc.sport = a.sport;
     if (a.type === 'other') { if (a.name) doc.name = a.name; doc.kcal = a.kcal; }
-    else doc.kcal = activityKcal(doc, bodyweight());
+    else if (!planned) doc.kcal = activityKcal(doc, bodyweight()); // prévue : calories calculées quand elle sera faite, avec le poids de ce jour-là
     // L'identifiant porte la date : changer la date, c'est déplacer l'activité
     const id = A.edit && A.edit.indexOf('a_' + date + '_') === 0 ? A.edit : 'a_' + date + '_' + rid();
     if (A.edit && A.edit !== id) del(A.edit);
     put(id, doc); if (!A.edit) putSettings({ lastAct: choiceOf(a) });
-    S.act = null; render(); toast(A.edit ? 'Activité modifiée.' : 'Activité ajoutée.');
+    S.act = null; render(); toast(done ? 'Activité faite.' : planned ? (A.edit ? 'Activité prévue modifiée.' : 'Activité prévue.') : A.edit ? 'Activité modifiée.' : 'Activité ajoutée.');
+  },
+  // Un geste : une activité prévue (aujourd'hui ou avant) devient faite
+  'act-done'(b){
+    const o = S.docs.get(b.dataset.v); if (!o || !o.planned || o.date > today()) return;
+    const d = Object.assign({}, o, { at: Date.now() }); delete d.planned;
+    if (d.type !== 'other') d.kcal = activityKcal(d, bodyweight());
+    put(b.dataset.v, d); render(); toast('Activité faite.');
   },
   'act-del'(){ S.confirm = 'act-del'; render(); },
   'act-ask-del'(b){ S.confirm = 'act-del:' + b.dataset.v; render(); },
