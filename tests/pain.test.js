@@ -61,7 +61,7 @@ test('poignet, hanche, nuque, autre : la douleur est notée mais rien n’est ad
   assert.equal(ZONES.wrist.hits, null);
   assert.equal(objectif('ua_bench').type, 'up');
   const a = painAdvice('wrist');
-  assert.match(a.lines.join(' '), /ne sais pas quels exercices/);
+  assert.match(a.lines.join(' '), /sans modifier ton programme/);
   assert.match(a.lines.join(' '), /Ce n’est pas un diagnostic/);
 });
 
@@ -115,6 +115,7 @@ test('lecture du poids : trop tôt avec 2 pesées, sinon tendance avec sa marge,
   assert.match(weightReading(), /stable, compte tenu de la marge/);
   donnees(docs(reglages(), b('2026-10-13', 82), b('2026-10-27', 80.8), b('2026-11-10', 79.6)));
   assert.match(weightReading(), /plutôt en baisse/);
+  assert.match(weightReading(), /3 pesées du 13 oct\. au 10 nov\./);   // la période analysée est dite
   assert.match(weightReading(), /pas une certitude/);
 });
 

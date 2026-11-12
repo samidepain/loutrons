@@ -51,3 +51,13 @@ test('rappel : les activités prévues d’un jour passé (14 jours au plus) et 
   }));
   assert.deepEqual(pendingActivities('2026-11-12').map(a => a.date), ['2026-11-08', '2026-11-10']);
 });
+
+test('prochaine pesée : 14 jours après la dernière, due le jour venu, rien sans pesée', async () => {
+  const { nextWeigh } = await import('../js/data.js');
+  jour('2026-11-10');
+  donnees(docs(reglages()));
+  assert.equal(nextWeigh('2026-11-10'), null);
+  donnees(docs(reglages(), { 'b_2026-11-01': { date: '2026-11-01', weight: 80 } }));
+  assert.deepEqual(nextWeigh('2026-11-10'), { date: '2026-11-15', last: '2026-11-01', due: false });
+  assert.equal(nextWeigh('2026-11-15').due, true);
+});

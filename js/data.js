@@ -308,6 +308,8 @@ export function bodyDocs(){ const out = []; S.docs.forEach((o, id) => { if (id.i
 // Une pesée toutes les 2 semaines suffit : le rappel apparaît 14 jours après la dernière
 export const WEIGH_DAYS = 14;
 export function lastWeighIn(){ const b = bodyDocs().filter(x => num(x.weight) > 0); return b.length ? b[b.length - 1] : null; }
+// Prochaine pesée conseillée : 14 jours après la dernière (due : le jour est venu) ; null si aucune pesée n'a encore été notée
+export function nextWeigh(day){ const l = lastWeighIn(); if (!l) return null; const date = addDays(l.date, WEIGH_DAYS); return { date, last: l.date, due: day >= date }; }
 export function weighDue(day){ const l = lastWeighIn(); return !!l && daysBetween(l.date, day) >= WEIGH_DAYS; }
 export function bodyweight(){ const b = bodyDocs().filter(x => num(x.weight) > 0); return b.length ? num(b[b.length - 1].weight) : null; }
 export function validSets(arr){ return (arr || []).filter(s => s && s.done && num(s.reps) > 0); }

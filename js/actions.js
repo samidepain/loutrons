@@ -742,6 +742,14 @@ document.addEventListener('error', e => {
   box.hidden = true; const par = box.parentElement; const m = par && par.querySelector('.photos-off'); if (m) m.hidden = false;
   const cap = par && par.querySelector('.mv-cap'); if (cap) cap.hidden = true;
 }, true);
+// Groupe radio (choix unique du formulaire d'activité) : les flèches passent au choix voisin, comme pour une vraie case ronde
+document.addEventListener('keydown', e => {
+  const r = e.target.closest && e.target.closest('[role="radio"]'); const k = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].indexOf(e.key); if (!r || k < 0) return;
+  const g = r.closest('[role="radiogroup"]'); if (!g) return; const all = Array.from(g.querySelectorAll('[role="radio"]')); const next = all[(all.indexOf(r) + (k < 2 ? 1 : all.length - 1)) % all.length];
+  e.preventDefault(); const label = g.getAttribute('aria-label'); next.click();
+  // l'écran vient d'être redessiné : le focus revient sur le choix retenu
+  const again = Array.from(document.querySelectorAll('[role="radiogroup"]')).find(x => x.getAttribute('aria-label') === label); const on = again && again.querySelector('[aria-checked="true"]'); if (on) on.focus();
+});
 // Calendrier : glisser vers la gauche (mois suivant) ou vers la droite (mois précédent)
 let swipe = null;
 document.addEventListener('touchstart', e => { swipe = e.target.closest('.cal-month') ? { x:e.touches[0].clientX, y:e.touches[0].clientY } : null; }, { passive:true });

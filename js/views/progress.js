@@ -3,7 +3,7 @@ import { addDays, esc, fmtDate, fmtInt, fmtKg, mondayOf, nbsp, num, parseIso, to
 import { JUMP_PROTOCOL, MUSCLES } from '../library.js';
 import { S } from '../store.js';
 import { painEntries, painZones, ZONES } from '../pain.js';
-import { allEx, blockRange, bodyDocs, canon, countSets, jumpsOn, kneeEntries, kneeOn, lastWeighIn, nextSession, perWeekOf, settings, testForBlock, tplDef, weekInfo, workouts } from '../data.js';
+import { allEx, blockRange, bodyDocs, canon, countSets, jumpsOn, kneeEntries, kneeOn, lastWeighIn, nextSession, nextWeigh, perWeekOf, settings, testForBlock, tplDef, weekInfo, workouts } from '../data.js';
 import { blockReport, exerciseGains, exerciseProgress, fatigueCheck, muscleDone, musclePlanned, PERIODS, periodStart, recordLog, setScore, weeklyRhythm } from '../engine.js';
 import { bars, chart } from '../chart.js';
 import { viewHistory } from './history.js';
@@ -108,10 +108,10 @@ function bodyCards(bd, inRange, wk){
   const wPts = pt('weight'); const sPts = pt('sleep'); const last = lastWeighIn(); const nut = nutritionOf();
   const gp = nut.on ? myPlan() : null; const gl = gp && gp.target && (gp.status === 'ok' || gp.status === 'fast') ? gp.target : null;
   let h = '<section class="card"><h3>Poids de corps</h3>';
-  h += last ? '<p class="muted small">' + t(dot('Dernière pesée : ' + fmtKg(num(last.weight)) + ' kg le ' + fmtDate(last.date) + (height ? ' · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(r1(num(last.weight) / Math.pow(height / 100, 2))) : ''))) + (nut.on && nut.goal === 'gain' ? ' En prise de masse musculaire, une hausse lente et régulière est attendue.' : '') + '</p>' : '<p class="muted small">Note ton poids dans Aujourd’hui et ta taille dans ton profil.</p>';
+  h += last ? '<p class="muted small">' + t(dot('Dernière pesée : ' + fmtKg(num(last.weight)) + ' kg le ' + fmtDate(last.date) + (height ? ' · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(r1(num(last.weight) / Math.pow(height / 100, 2))) : ''))) + (nut.on && nut.goal === 'gain' ? ' En prise de masse musculaire, une hausse lente et régulière est attendue.' : '') + '</p>' + (() => { const nw = nextWeigh(today()); return '<p class="muted small">' + t(nw.due ? 'Prochaine pesée conseillée : maintenant, le matin avant de manger (une toutes les 2 semaines).' : dot('Prochaine pesée conseillée : vers le ' + fmtDate(nw.date) + ' (une toutes les 2 semaines)')) + '</p>'; })() : '<p class="muted small">Note ton poids dans Aujourd’hui et ta taille dans ton profil : une pesée toutes les 2 semaines suffit.</p>';
   h += chart([{ pts:wPts }], Object.assign({ label:'Poids en kg', unit:'kg', empty:'Pas de pesée sur cette période.' }, gl ? { thresh:gl, threshLabel:'objectif', threshColor:'var(--good)' } : {}));
   if (wPts.length === 1) h += '<p class="muted small">Une seule pesée sur la période : il en faut 2 pour voir une évolution.</p>';
-  if (wPts.length > 1) { const a = wPts[0], b = wPts[wPts.length - 1]; h += '<p class="small">' + t('Sur la période : ' + fmtKg(a.y) + ' kg le ' + fmtDate(a.date) + ', puis ' + fmtKg(b.y) + ' kg le ' + fmtDate(b.date) + ' (' + (b.y >= a.y ? '+' : '−') + fmtKg(r1(Math.abs(b.y - a.y))) + ' kg, ' + wPts.length + ' pesées).') + '</p>'; }
+  if (wPts.length > 1) { const a = wPts[0], b = wPts[wPts.length - 1]; h += '<p class="small">' + t('Sur la période : ' + fmtKg(a.y) + ' kg le ' + fmtDate(a.date) + ', puis ' + fmtKg(b.y) + ' kg le ' + fmtDate(b.date) + ' (' + (b.y >= a.y ? '+' : '−') + fmtKg(r1(Math.abs(b.y - a.y))) + ' kg, ' + wPts.length + ' pesées).' + (wPts.length < 3 ? ' Deux pesées ne font pas une tendance : le poids varie d’un jour à l’autre.' : '')) + '</p>'; }
   h += '<p class="small">' + esc(weightReading()) + '</p></section>';
   h += '<section class="card"><h3>Sommeil</h3>' + chart([{ pts:sPts, color:'var(--court)' }], { label:'Sommeil en heures', unit:'h', yMin:0, thresh:7, threshLabel:'7 h', empty:'Pas de nuit notée sur cette période. Note tes heures de sommeil dans Aujourd’hui.' });
   if (sPts.length) h += '<p class="muted small">' + t('Moyenne sur la période : ' + fmtKg(r1(sPts.reduce((a, p) => a + p.y, 0) / sPts.length)) + ' h (' + sPts.length + ' nuit' + (sPts.length > 1 ? 's' : '') + ' notée' + (sPts.length > 1 ? 's' : '') + '). Ligne pointillée : 7 h.') + '</p>';

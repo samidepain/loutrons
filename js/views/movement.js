@@ -11,12 +11,12 @@ const alt = (e, n) => esc(e.name) + ' : position ' + (n ? 'd’arrivée' : 'de d
 // Photos du domaine public (Free Exercise DB) : chargées à l'affichage, puis gardées pour le hors connexion par le service worker
 function photos(e){
   if (!e.photo) return '';
-  const off = '<p class="photos-off muted small" hidden>Les photos s’affichent avec une connexion internet.</p>';
+  const off = '<p class="photos-off muted small" hidden>La photo n’a pas pu se charger. Elle s’affiche avec une connexion internet, puis reste disponible hors connexion ; le schéma des muscles marche sans réseau.</p>';
   // Moins d'animations demandé : les deux photos côte à côte, sans alternance
   if (lessMotion()) return '<div class="photos">' + [0, 1].map(n => '<figure><img src="' + src(e, n) + '" width="360" height="240" loading="lazy" alt="' + alt(e, n) + '"><figcaption>' + (n ? 'Arrivée' : 'Départ') + '</figcaption></figure>').join('') + '</div>' + off;
   // Alternance en CSS (2,9 s par cycle) ; un toucher fige l'animation où elle en est, sans redessiner l'écran
   // Nom du bouton pour les lecteurs d'écran : l'action (texte caché), puis la description des deux photos
-  return '<button type="button" class="mv-photos" data-act="move-pause" aria-pressed="false"><span class="sr">Mettre en pause l’animation : </span>'
+  return '<button type="button" class="mv-photos" data-act="move-pause" aria-pressed="false"><span class="photos-wait" aria-hidden="true">Chargement de la photo…</span><span class="sr">Mettre en pause l’animation : </span>'
     + [0, 1].map(n => '<img class="mv-' + (n ? 'b' : 'a') + '" src="' + src(e, n) + '" width="360" height="240" alt="' + alt(e, n) + '">').join('') + '</button>'
     + '<p class="mv-cap"><span class="mv-ls"><span class="mv-l mv-la">Départ</span><span class="mv-l mv-lb">Arrivée</span></span><span class="mv-hint">touche pour mettre en pause</span><span class="mv-p">En pause · touche pour reprendre</span></p>' + off;
 }
@@ -25,7 +25,9 @@ export const hasMovement = e => !!e && !!(e.photo || e.cue || musclesForMap(e));
 // Photos, consignes (dans la fenêtre seulement), puis silhouette en grand et noms des muscles
 export function movementBlock(e, opts){
   const m = musclesForMap(e); const cue = opts && opts.cue && e.cue;
-  return '<div class="mv">' + photos(e) + (cue ? '<div class="stack mv-cue"><h3>Consignes</h3><p>' + esc(e.cue) + '</p></div>' : '') + (m ? bodyMap(m) : '') + '</div>';
+  // Pas de photo pour cet exercice : une ligne le dit, au lieu de laisser croire qu'un bloc manque
+  const nophoto = !e.photo && m ? '<p class="muted small">Pas de photo pour cet exercice : le schéma montre les muscles travaillés.</p>' : '';
+  return '<div class="mv">' + photos(e) + nophoto + (cue ? '<div class="stack mv-cue"><h3>Consignes</h3><p>' + esc(e.cue) + '</p></div>' : '') + (m ? bodyMap(m) : '') + '</div>';
 }
 // Fenêtre ouverte depuis la séance
 export function viewMovement(){

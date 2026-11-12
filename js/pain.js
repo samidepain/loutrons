@@ -66,8 +66,8 @@ export function painAdvice(z, held){
   const r = painRecent(z); if (!r.length) return null; const Z = ZONES[z];
   const max = Math.max.apply(null, r.map(k => k.v));
   const lines = [Z.label + ' : jusqu’à ' + max + '/10 ces ' + PAIN_DAYS + ' derniers jours (seuil de prudence : ' + PAIN_LIMIT + '/10).'];
-  lines.push(Z.hits ? 'Je ne monte pas la charge des exercices qui sollicitent ' + Z.what + '. Choisis une amplitude confortable, ou remplace un mouvement qui déclenche la douleur.'
-    : 'Je ne sais pas quels exercices sollicitent cette zone, donc je ne change rien à tes charges. Évite ce qui déclenche la douleur.');
+  lines.push(Z.hits ? 'Je ne monte pas la charge des exercices qui sollicitent ' + Z.what + ' : c’est une règle de prudence de l’appli. Choisis une amplitude confortable, ou remplace un mouvement qui déclenche la douleur.'
+    : 'Je consigne cette douleur sans modifier ton programme : je ne peux pas relier cette zone à tes exercices de façon fiable, donc tes charges restent calculées comme d’habitude. À toi d’adapter les mouvements qui la déclenchent.');
   if (held && held.length) lines.push('Dans ta prochaine séance, charge maintenue sur : ' + held.join(', ') + '.');
   const fl = []; r.forEach(k => k.flags.forEach(f => { if (fl.indexOf(f) < 0 && FLAG_LABEL[f]) fl.push(f); }));
   if (fl.indexOf('saddle') >= 0) lines.splice(1, lines.length, 'Engourdissement de l’entrejambe ou troubles urinaires ou intestinaux avec une douleur au dos : c’est une urgence médicale, consulte sans attendre.');

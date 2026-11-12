@@ -616,6 +616,8 @@ input[type=search]{-webkit-appearance:none;appearance:none}
 .mv{display:flex;flex-direction:column;gap:12px}
 .mv-photos{display:grid;width:100%;padding:0;border:none;border-radius:14px;overflow:hidden;background:var(--surface-2);aspect-ratio:3/2}
 .mv-photos img{grid-area:1/1;display:block;width:100%;height:100%;object-fit:cover}
+/* Attente : le texte est sous les photos et se découvre tant qu'elles ne sont pas chargées */
+.photos-wait{grid-area:1/1;place-self:center;padding:0 16px;font-size:15px;color:var(--muted);text-align:center}
 .mv-photos .mv-a,.mv-cap .mv-la{animation:mv-a 2.9s infinite}
 .mv-photos .mv-b,.mv-cap .mv-lb{animation:mv-b 2.9s infinite}
 @keyframes mv-a{0%,41%{opacity:1}50%,91%{opacity:0}100%{opacity:1}}

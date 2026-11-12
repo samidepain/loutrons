@@ -2,7 +2,7 @@
 // puis le suivi du jour en lignes compactes (eau, poids et sommeil, activités, genou).
 import { addDays, capFirst, greeting, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
-import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, tplItems, WEIGH_DAYS, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
+import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, nextWeigh, tplItems, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
 import { fatigueCheck, recentRecord } from '../engine.js';
 import { FLAG_LABEL, PAIN_LIMIT, painAdvice, painZones, ZONES } from '../pain.js';
 import { useShare } from '../backup.js';
@@ -107,7 +107,7 @@ function painLine(d){
   const day = (S.docs.get('d_' + d) || {}).z || {}; const k = S.docs.get('k_' + d);
   const val = z => z === 'knee' ? (k ? k.stairs : null) : day[z] ? day[z].v : null;
   const solo = zs.length === 1 && zs[0] === 'knee'; const sum = zs.filter(z => val(z) != null).map(z => solo ? val(z) + '/10' : ZONES[z].label + ' ' + val(z));
-  const tail = z => z === 'knee' ? 'sauts suspendus et charges maintenues' : ZONES[z].hits ? 'charges maintenues sur les exercices concernés' : 'je note, sans pouvoir adapter tes exercices';
+  const tail = z => z === 'knee' ? 'sauts suspendus et charges maintenues' : ZONES[z].hits ? 'charges maintenues sur les exercices concernés' : 'je la consigne sans modifier ton programme';
   let b = '';
   zs.forEach(z => {
     const v = val(z); const fl = z !== 'knee' && day[z] ? day[z].flags || [] : [];
@@ -139,9 +139,11 @@ export function viewToday(){
   // Ton suivi du jour
   h += '<h2>Ton suivi du jour</h2>' + waterLine();
   const b = S.docs.get('b_' + d) || {};
-  const corps = [b.weight != null ? fmtKg(num(b.weight)) + ' kg' : '', b.sleep != null ? fmtKg(num(b.sleep)) + ' h' : ''].filter(Boolean).join(' · ') || 'À noter';
-  const lw = lastWeighIn();
-  const wnote = lw ? withDot('Dernière pesée : ' + fmtKg(num(lw.weight)) + ' kg le ' + fmtDate(lw.date)) + ' Une pesée toutes les 2 semaines suffit' + (weighDue(d) ? ' : c’est le moment, le matin avant de manger.' : ' : ' + withDot('la prochaine vers le ' + fmtDate(addDays(lw.date, WEIGH_DAYS)))) : 'Une pesée toutes les 2 semaines suffit : note ton poids le matin, avant de manger.';
+  // Ligne repliée : le sommeil du jour (chaque jour) et, sans pesée aujourd'hui, le moment de la prochaine pesée (toutes les 2 semaines)
+  const lw = lastWeighIn(); const nw = nextWeigh(d);
+  const rythme = b.weight != null || !nw ? '' : nw.due ? 'pesée à faire' : 'pesée le ' + fmtDate(nw.date);
+  const corps = [b.weight != null ? fmtKg(num(b.weight)) + ' kg' : '', b.sleep != null ? fmtKg(num(b.sleep)) + ' h' : '', rythme].filter(Boolean).join(' · ') || 'À noter';
+  const wnote = lw ? withDot('Dernière pesée : ' + fmtKg(num(lw.weight)) + ' kg le ' + fmtDate(lw.date)) + ' ' + (nw.due ? 'Une pesée toutes les 2 semaines suffit : c’est le moment, le matin avant de manger.' : withDot('Une pesée toutes les 2 semaines suffit : la prochaine est conseillée vers le ' + fmtDate(nw.date))) + ' Tu peux te peser plus souvent si tu veux, mais ce n’est pas nécessaire.' : 'Une pesée toutes les 2 semaines suffit : note ton poids le matin, avant de manger.';
   let cb = '<p class="muted small">' + esc(nbsp(wnote)) + '</p><p class="muted small">Nuit de moins de 6 h : garde 1 rep de plus en réserve.</p>';
   cb += '<div class="fields"><label class="f"><span>Poids (kg)</span><input class="n" id="b-weight" data-b="weight" inputmode="decimal" value="' + esc(b.weight == null ? '' : fmtKg(num(b.weight))) + '" placeholder="' + esc(bodyweight() ? fmtKg(bodyweight()) : 'ex. 75') + '"></label><label class="f"><span>Sommeil (h)</span><input class="n" id="b-sleep" data-b="sleep" inputmode="decimal" value="' + esc(b.sleep == null ? '' : fmtKg(num(b.sleep))) + '" placeholder="ex. 7,5"></label></div>';
   cb += '<div class="stack" style="gap:6px"><span class="label">Qualité du sommeil</span><div class="chips">' + [1,2,3,4,5].map(v => '<button type="button" class="chip' + (b.sleepQ === v ? ' on' : '') + '" data-act="sleepq" data-v="' + v + '" aria-pressed="' + (b.sleepQ === v) + '">' + v + '</button>').join('') + '</div><span class="muted small">1 = très mauvaise, 5 = excellente</span></div>';

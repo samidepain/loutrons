@@ -46,7 +46,7 @@ export function weightReading(){
   if (!t) return 'Une pesée toutes les 2 semaines suffit. Il en faut au moins ' + CHECK.weighins + ', sur environ un mois, pour voir une tendance : une seule mesure varie avec l’eau, le sel et les repas.' + (w.pts.length ? ' Pour l’instant : ' + w.pts.length + ' pesée' + (w.pts.length > 1 ? 's' : '') + ' sur les 6 dernières semaines.' : '');
   const p = Math.round(t.perWeek * 100) / 100, se = Math.round(t.se * 100) / 100;
   const dir = Math.abs(t.perWeek) <= t.se ? 'stable, compte tenu de la marge' : 'plutôt ' + (p > 0 ? 'en hausse' : 'en baisse') + ', d’environ ' + fmtKg(Math.abs(p)) + ' kg par semaine';
-  return 'Sur tes ' + t.n + ' dernières pesées, ton poids est ' + dir + ' (marge ± ' + fmtKg(se) + ' kg par semaine). C’est une tendance, pas une certitude : le poids varie d’un jour à l’autre, et la marge se resserre avec les pesées suivantes.';
+  return 'Sur tes ' + t.n + ' pesées du ' + fmtDate(w.pts[0].date) + ' au ' + fmtDate(w.pts[w.pts.length - 1].date) + ', ton poids est ' + dir + ' (marge ± ' + fmtKg(se) + ' kg par semaine). C’est une tendance, pas une certitude : le poids varie d’un jour à l’autre, et la marge se resserre avec les pesées suivantes.';
 }
 export function checkDue(){
   const nc = nextCheck(); const d = today(); if (!nc || d < nc.date) return null;
