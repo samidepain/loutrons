@@ -10,6 +10,7 @@ import { dayDoc, fullDay, totals } from '../food.js';
 import { lineCard } from './activity.js';
 
 export const nutritionOf = () => settings().nutrition || {};
+export const GOALS = { lose:'Perdre de la masse grasse', keep:'Maintenir mon poids', gain:'Prendre de la masse musculaire' };
 // Données de la personne : réglages et dernière pesée, ou ce qui est saisi à l'accueil
 export function profileData(){ const s = settings(); return { sex: s.sex, birth: s.birth, height: num(s.height), weight: bodyweight() }; }
 export function setupData(U){ return { sex: U.sex, birth: U.birth, height: num(U.height), weight: num(U.weight) }; }
@@ -154,11 +155,11 @@ export function goalForm(n, pl){
 // Carte du profil : proposer le suivi, ou le régler
 export function goalProfileCard(){
   const n = nutritionOf();
-  let h = '<section class="card" id="goal-card"><h3>Ton alimentation</h3>';
+  let h = '<section class="card" id="goal-card">';
   if (!n.on) return h + emile('<p>Veux-tu suivre ton alimentation ? Je calcule tes besoins en calories et en protéines, et un rythme réaliste pour perdre de la masse grasse ou prendre de la masse musculaire.</p><button type="button" class="btn primary" data-act="n-on" data-v="1">Oui, je veux suivre</button>') + '</section>';
   // Suivi activé : deux lignes de réglage (comme « Toi »), puis l'avis d'Émile, les besoins et le point des 2 semaines
-  const pl = myPlan(); const G = { lose:'Perdre de la masse grasse', keep:'Maintenir mon poids', gain:'Prendre de la masse musculaire' };
-  return '<h2 id="goal-card">Ton alimentation</h2>' + lineCard('p-act', 'Activité au quotidien', (ACTIVITY[n.activity] || {}).label || 'À indiquer', '', actPicks(n))
+  const pl = myPlan(); const G = GOALS;
+  return lineCard('p-act', 'Activité au quotidien', (ACTIVITY[n.activity] || {}).label || 'À indiquer', '', actPicks(n))
     + lineCard('p-goal', 'Objectif', G[n.goal || 'keep'] + (n.goal !== 'keep' && num(n.target) ? ' · ' + fmtKg(num(n.target)) + ' kg' : ''), '', goalPicks(n))
     + '<section class="card">' + verdict(pl, n) + needs(pl) + checkSummary(n) + '<button type="button" class="btn ghost" data-act="n-on" data-v="0">Arrêter le suivi</button></section>';
 }

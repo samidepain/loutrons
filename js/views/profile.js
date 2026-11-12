@@ -1,4 +1,4 @@
-// Écran Profil : ce qui te concerne, ton alimentation, apparence, sauvegarde, et « La science » ; les réglages de l'entraînement sont dans Entraînement › Planning.
+// Écran Profil : en-tête, progrès et liste des paramètres (informations, alimentation, apparence, sauvegarde), puis « La science » ; les réglages de l'entraînement sont dans Entraînement › Planning.
 import { esc, mondayOf, nbsp, fmtDate, fmtDateLong, fmtDateYear, fmtKg, fmtMonth, num, today, withDot } from '../util.js';
 import { S } from '../store.js';
 import { backupDue, bodyDocs, jumpsOn, kneeOn, settings, startDate, workouts } from '../data.js';
@@ -7,7 +7,7 @@ import { lineCard } from './activity.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
 import { emile } from '../emile.js';
-import { goalProfileCard } from './goal.js';
+import { GOALS, goalProfileCard, nutritionOf } from './goal.js';
 import { painZones } from '../pain.js';
 
 // « Tu es un loutron ou une loutronne ? » : facultatif, un second appui sur le choix l'annule
@@ -28,23 +28,41 @@ export function viewProfile(){
   h += '</section>';
   // Raccourci vers Progrès : dernière séance et records, sans répéter les courbes
   if (ws.length) { const lastDay = ws.map(w => w.date).sort().pop(); h += '<button type="button" class="pick" data-act="tab" data-v="progress"><span class="stack prof-id"><span class="n">Tes progrès</span><span class="m">' + esc(withDot('Dernière séance : ' + fmtDate(lastDay))) + '</span></span><span aria-hidden="true">›</span></button>'; }
-  // Toi : une ligne par réglage (nom à gauche, valeur à droite), qui s'ouvre sur place ; enregistré à la sortie du champ, comme avant
-  const vide = 'À indiquer'; const age = s.birth ? Math.floor((Date.parse(today()) - Date.parse(s.birth)) / 31557600000) : null;
-  h += '<h2>Toi</h2>';
-  h += lineCard('p-name', 'Prénom ou pseudo', who || vide, '', '<label class="f"><span>Prénom ou pseudo (obligatoire)</span><input id="set-name" value="' + esc(s.name || '') + '" autocomplete="nickname"></label>');
-  h += lineCard('p-sex', 'Tu es', s.sex === 'm' ? 'Loutron' : s.sex === 'f' ? 'Loutronne' : vide, '', sexChips('set-sex', s.sex));
-  h += lineCard('p-birth', 'Date de naissance', s.birth ? fmtDateYear(s.birth) + ' · ' + age + ' ans' : vide, '', '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>');
-  h += lineCard('p-height', 'Taille', s.height == null ? vide : fmtKg(num(s.height)) + ' cm', '', '<label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>');
-  h += lineCard('p-weight', 'Poids', last ? fmtKg(num(last.weight)) + ' kg' : vide, '', '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label><p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est noté à la date du jour.</p>');
-  h += goalProfileCard();
-  const t = s.theme || 'auto';
-  // Apparence : trois vignettes qui montrent chaque thème (automatique : moitié claire, moitié sombre)
-  h += '<h2>Apparence</h2><section class="card"><div class="theme-picks" role="group" aria-label="Apparence">' + [['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(o => '<button type="button" class="theme-pick' + (t === o[0] ? ' on' : '') + '" data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (t === o[0]) + '"><span class="tp tp-' + o[0] + '" aria-hidden="true"><i></i><i></i></span>' + o[1] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
-  h += '<h2>Entraînement</h2><button type="button" class="pick" data-act="go-planning"><span class="stack prof-id"><span class="n">Réglages de l’entraînement</span><span class="m">Début du programme, douleurs suivies, détente et sport, exercices masqués : dans Entraînement</span></span><span aria-hidden="true">›</span></button>';
-  h += viewSettingsCards();
+  // Paramètres : une ligne par rubrique, chacune ouvre son écran (viewSettings) au lieu d'un long écran de réglages
+  const n = nutritionOf(); const ws2 = workouts(); const due = backupDue() || (!s.lastExport && ws2.length > 0);
+  const info = [who, s.height != null && fmtKg(num(s.height)) + ' cm', last && fmtKg(num(last.weight)) + ' kg'].filter(Boolean).join(' · ');
+  h += '<h2>Paramètres</h2>';
+  h += row('toi', 'Informations personnelles', info || 'Prénom, taille, poids');
+  h += row('food', 'Alimentation', n.on ? GOALS[n.goal || 'keep'] : 'Suivi désactivé');
+  h += row('look', 'Apparence', THEMES[s.theme || 'auto']);
+  h += '<button type="button" class="pick" data-act="go-planning"><span class="stack prof-id"><span class="n">Entraînement</span><span class="m">Début du programme, douleurs suivies, détente et sport, exercices masqués</span></span><span aria-hidden="true">›</span></button>';
+  h += row('data', 'Sauvegarde et données', s.lastExport ? withDot('Dernière sauvegarde : ' + fmtDate(s.lastExport)) : 'Aucune sauvegarde', due ? '<span class="pill warn">À sauvegarder</span>' : '');
   h += '<h2>À propos</h2><button type="button" class="pick" data-act="science"><span class="stack prof-id"><span class="n">La science</span><span class="m">Comment l’appli fixe tes objectifs, et ses sources</span></span><span aria-hidden="true">›</span></button>';
   h += '<p class="muted small prof-ver">Loutrons · version ' + esc(VERSION) + '</p>';
   return h;
+}
+const THEMES = { auto:'Automatique', light:'Clair', dark:'Sombre' };
+const row = (v, n, m, pill) => '<button type="button" class="pick" data-act="set-open" data-v="' + v + '"><span class="stack prof-id"><span class="n">' + n + '</span><span class="m">' + esc(m) + '</span>' + (pill || '') + '</span><span aria-hidden="true">›</span></button>';
+// Écran d'une rubrique des paramètres (S.set) ; mêmes lignes et champs qu'avant, enregistrés à la sortie du champ
+const SET_TITLES = { toi:'Informations personnelles', food:'Alimentation', look:'Apparence', data:'Sauvegarde et données' };
+export function viewSettings(){
+  const k = SET_TITLES[S.set] ? S.set : 'toi';
+  let h = '<div class="row"><button type="button" class="link" data-act="profile" data-back>‹ Profil</button></div><h1>' + SET_TITLES[k] + '</h1>';
+  return h + (k === 'toi' ? settingsToi() : k === 'food' ? goalProfileCard() : k === 'look' ? settingsLook() : viewSettingsCards());
+}
+function settingsToi(){
+  const s = settings(); const pesees = bodyDocs().filter(b => num(b.weight) > 0); const last = pesees[pesees.length - 1]; const who = String(s.name || '').trim();
+  const vide = 'À indiquer'; const age = s.birth ? Math.floor((Date.parse(today()) - Date.parse(s.birth)) / 31557600000) : null;
+  let h = lineCard('p-name', 'Prénom ou pseudo', who || vide, '', '<label class="f"><span>Prénom ou pseudo (obligatoire)</span><input id="set-name" value="' + esc(s.name || '') + '" autocomplete="nickname"></label>');
+  h += lineCard('p-sex', 'Tu es', s.sex === 'm' ? 'Loutron' : s.sex === 'f' ? 'Loutronne' : vide, '', sexChips('set-sex', s.sex));
+  h += lineCard('p-birth', 'Date de naissance', s.birth ? fmtDateYear(s.birth) + ' · ' + age + ' ans' : vide, '', '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>');
+  h += lineCard('p-height', 'Taille', s.height == null ? vide : fmtKg(num(s.height)) + ' cm', '', '<label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>');
+  return h + lineCard('p-weight', 'Poids', last ? fmtKg(num(last.weight)) + ' kg' : vide, '', '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label><p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est noté à la date du jour.</p>');
+}
+// Apparence : trois vignettes qui montrent chaque thème (automatique : moitié claire, moitié sombre)
+function settingsLook(){
+  const t = settings().theme || 'auto';
+  return '<section class="card"><div class="theme-picks" role="group" aria-label="Apparence">' + Object.keys(THEMES).map(k => '<button type="button" class="theme-pick' + (t === k ? ' on' : '') + '" data-act="theme" data-v="' + k + '" aria-pressed="' + (t === k) + '"><span class="tp tp-' + k + '" aria-hidden="true"><i></i><i></i></span>' + THEMES[k] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
 }
 export function viewSciencePage(){
   return '<div class="row"><button type="button" class="link" data-act="profile" data-back>‹ Profil</button></div><h1>La science</h1>' + viewScience();
@@ -55,7 +73,7 @@ function viewSettingsCards(){
   // État de la sauvegarde d'un coup d'œil ; l'export JSON passe en orange seulement quand il est à faire (même règle que le rappel d'Aujourd'hui)
   const ws = workouts(); const due = backupDue() || (!s.lastExport && ws.length > 0);
   const pill = s.lastExport ? '<span class="pill ' + (due ? 'warn' : 'good') + '">' + esc(due ? 'À sauvegarder' : 'Sauvegardé') + '</span>' : '<span class="pill ' + (due ? 'warn' : 'court') + '">' + esc(due ? 'Pas encore sauvegardé' : 'Aucune sauvegarde') + '</span>';
-  h += '<h2>Tes données</h2><section class="card">' + pill + '<p class="small">Tes séances sont enregistrées seulement sur cet appareil. Exporte-les régulièrement.</p>';
+  h += '<section class="card">' + pill + '<p class="small">Tes séances sont enregistrées seulement sur cet appareil. Exporte-les régulièrement.</p>';
   h += '<p class="small"><b>' + (s.lastExport ? esc(withDot('Dernière sauvegarde : ' + fmtDateLong(s.lastExport))) : 'Aucune sauvegarde pour l’instant.') + '</b> Seul l’export JSON compte comme sauvegarde.</p>';
   h += '<div class="row"><button type="button" class="btn' + (due ? ' primary' : '') + '" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
   if (useShare('json')) h += '<p class="muted small">«&nbsp;Exporter&nbsp;» ouvre le menu de partage&nbsp;: choisis «&nbsp;Enregistrer dans Fichiers&nbsp;» pour garder une copie, ou envoie le fichier.</p>';

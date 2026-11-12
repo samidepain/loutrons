@@ -389,10 +389,11 @@ const A = {
     if (F.code) doc.code = F.code;
     put(id, doc); toast('Aliment enregistré.'); pickFood(foodFromDoc(id, doc));
   },
-  'goal-edit'(){ if (nutritionOf().on) S.todayOpen = 'p-goal'; A.profile(); const c = $('#goal-card'); if (c) c.scrollIntoView({ block:'start' }); },
+  'goal-edit'(){ S.todayOpen = nutritionOf().on ? 'p-goal' : null; S.set = 'food'; A.profile({ dataset:{ v:'settings' } }); },
+  'set-open'(b){ S.set = b.dataset.v; S.todayOpen = null; S.view = 'settings'; render(); window.scrollTo(0, 0); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
-  profile(){ if (S.view !== 'profile' && S.view !== 'science') S.from = S.view; S.view = 'profile'; S.act = null; S.move = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  profile(b){ if (!['profile', 'science', 'settings'].includes(S.view)) S.from = S.view; S.view = b && b.dataset && b.dataset.v === 'settings' ? 'settings' : 'profile'; S.act = null; S.move = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
   'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
