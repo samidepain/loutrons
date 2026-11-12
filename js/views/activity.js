@@ -1,7 +1,7 @@
 // Aujourd'hui : activités du jour (avec la séance de muscu, prévue ou faite) et eau ; fenêtre d'ajout d'une activité.
-import { addDays, capFirst, esc, fmtDateLong, fmtInt, fmtKg, lowFirst, num, today } from '../util.js';
+import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtInt, fmtKg, lowFirst, num, today } from '../util.js';
 import { S } from '../store.js';
-import { bodyweight, plannedActivities, settings, sportInfo } from '../data.js';
+import { bodyweight, pendingActivities, plannedActivities, settings, sportInfo } from '../data.js';
 import { ICONS } from '../icons.js';
 import { activityKcal, activityName, CHOICES, choiceOf, dayEnergy, EFFORT, glassOf, LEVELS, SPORTS, sportPlanned, waterAuto, waterBase, waterChosen, waterGoal, waterOf, WATER } from '../energy.js';
 import { ring } from '../ring.js';
@@ -35,7 +35,7 @@ export function activitiesLine(){
   const plan = plannedActivities(d);
   const value = last ? last.name + (num(last.a.min) ? ' · ' + num(last.a.min) + ' min' : '') + (acts.length > 1 ? ' · +' + (acts.length - 1) : '') : plan.length ? 'Prévue : ' + activityName(plan[0]) + (plan.length > 1 ? ' · +' + (plan.length - 1) : '') : 'Aucune';
   let h = e.kcal ? '<p class="muted small num">Dépense du jour : ' + kcalText(e.kcal) + '</p>' : '';
-  if (!e.items.length && !plan.length) h += '<p class="muted small">Note ici tes autres sports pour estimer ta dépense du jour : ta séance de muscu s’ajoute toute seule.</p>';
+  if (!e.items.length && !plan.length && !pendingActivities(d).length) h += '<p class="muted small">Note ici tes autres sports pour estimer ta dépense du jour : ta séance de muscu s’ajoute toute seule.</p>';
   e.items.forEach(i => {
     const det = i.kind === 'session' ? i.min + ' min · séance ' + EFFORT[i.effort].label.toLowerCase()
       : i.kind === 'planned' ? (i.active ? 'en cours' : 'prévue') + ' · environ ' + i.min + ' min' : actDetail(i.a);
@@ -45,6 +45,10 @@ export function activitiesLine(){
   // Activités prévues pour aujourd'hui : toucher la ligne la modifie, la coche la note comme faite
   plan.forEach(a => { h += '<div class="quick"><button type="button" class="pick planned" data-act="act-edit" data-v="' + esc(a.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(activityName(a)) + '</span><span class="m">' + esc('prévue · ' + actDetail(a)) + '</span></span></button>'
     + '<button type="button" class="plus ok" data-act="act-done" data-v="' + esc(a.id) + '" aria-label="' + esc('Marquer ' + lowFirst(activityName(a)) + ' comme faite') + '">' + ICONS.check + '</button></div>'; });
+  // Activités prévues les jours précédents et jamais notées : la coche les note à leur date, toucher la ligne permet de les retirer
+  const late = pendingActivities(d);
+  late.forEach(a => { h += '<div class="quick"><button type="button" class="pick planned" data-act="act-edit" data-v="' + esc(a.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(activityName(a)) + '</span><span class="m">' + esc('prévue le ' + fmtDate(a.date) + ' · pas notée') + '</span></span></button>'
+    + '<button type="button" class="plus ok" data-act="act-done" data-v="' + esc(a.id) + '" aria-label="' + esc('Marquer ' + lowFirst(activityName(a)) + ' du ' + fmtDate(a.date) + ' comme faite') + '">' + ICONS.check + '</button></div>'; });
   // Sport collectif prévu aujourd'hui et pas encore noté : un geste pour l'ajouter
   const sp = sportPlanned(d);
   if (sp && !e.items.some(i => i.kind === 'activity' && i.a.type === 'sport')) h += '<button type="button" class="btn" data-act="act-add" data-v="' + sp + '">+ ' + esc(sp === 'match' ? 'Le match prévu aujourd’hui' : capFirst(sportInfo().name) + ' prévu aujourd’hui') + '</button>';
@@ -93,6 +97,8 @@ export function viewActivity(){
   }
   if (A.type === 'other') h += '<p class="muted small">« Autre » : pour une activité qui n’est pas dans la liste.</p>';
   if (A.type === 'other') h += '<label class="f"><span>Activité</span><input data-ac="name" value="' + esc(A.name || '') + '" placeholder="ex. escalade, yoga, ski"></label>';
+  // Prévoir : aujourd'hui, demain ou après-demain en un geste (la date exacte reste dans le champ)
+  if (pl && !A.edit) h += '<div class="stack"><span class="label">Quand</span><div class="chips" role="group" aria-label="Jour prévu">' + [[0, 'Aujourd’hui'], [1, 'Demain'], [2, 'Après-demain']].map(o => { const dd = addDays(today(), o[0]); return '<button type="button" class="chip txt' + (A.date === dd ? ' on' : '') + '" data-act="act-pdate" data-v="' + dd + '" aria-pressed="' + (A.date === dd) + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
   h += '<div class="fields"><label class="f"><span>Durée (min)</span><input class="n" data-ac="min" inputmode="numeric" value="' + esc(A.min == null ? '' : A.min) + '" placeholder="ex. 45"></label>';
   if (A.type === 'run') h += '<label class="f"><span>Distance (km)</span><input class="n" data-ac="km" inputmode="decimal" value="' + esc(A.km == null ? '' : A.km) + '" placeholder="ex. 8"></label>';
   if (A.type === 'other') h += '<label class="f"><span>Calories actives</span><input class="n" data-ac="kcal" inputmode="numeric" value="' + esc(A.kcal == null ? '' : A.kcal) + '" placeholder="facultatif"></label>';

@@ -461,6 +461,7 @@ const A = {
   },
   'act-cancel'(){ S.act = null; S.confirm = null; render(); },
   'act-type'(b){ const c = choice(b.dataset.v); if (c.type === 'sport' && S.act.type === 'sport') c.level = S.act.level || 'train'; Object.assign(S.act, { level:null, sport:null }, c); render(); },
+  'act-pdate'(b){ S.act.date = b.dataset.v; render(); },
   'act-level'(b){ S.act.level = b.dataset.v; render(); },
   'act-edit'(b){ const o = S.docs.get(b.dataset.v); if (!o) return; S.act = Object.assign({}, o, { edit:b.dataset.v }); S.confirm = null; render(); window.scrollTo(0, 0); },
   // data-v="done" (depuis une activité prévue) : l'enregistre comme faite, avec ses calories calculées maintenant

@@ -348,6 +348,12 @@ const actsOf = (day, planned) => {
 // Les activités prévues ne comptent ni dans la dépense ni dans l'eau : seules les faites passent par ici
 export const activities = day => actsOf(day, false);
 export const plannedActivities = day => actsOf(day, true);
+// Activités prévues dont le jour est passé (14 jours au plus) et jamais notées : Aujourd'hui les rappelle pour les noter ou les retirer
+export const pendingActivities = day => {
+  const from = addDays(day, -14); const out = [];
+  S.docs.forEach((o, id) => { if (id.indexOf('a_') === 0 && o.planned && o.date < day && o.date >= from) out.push(Object.assign({ id }, o)); });
+  return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.at || 0) - (b.at || 0));
+};
 // Famille d'une activité pour le calendrier : cardio, sports collectifs, sports individuels ou autre (la salle, ce sont les séances).
 // INDIVIDUAL : mêmes sports que ceux notés group:'individuel' dans SPORTS (energy.js), un test les compare
 const CARDIO = ['run', 'bike', 'swim', 'walk']; export const INDIVIDUAL = ['tennis', 'badminton'];

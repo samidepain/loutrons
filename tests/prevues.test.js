@@ -1,7 +1,7 @@
 // Activités prévues à l'avance (planned:true) et familles collectif / individuel.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activities, activityFamily, dayFamilies, daySummary, plannedActivities } from '../js/data.js';
+import { activities, activityFamily, dayFamilies, daySummary, pendingActivities, plannedActivities } from '../js/data.js';
 import { dayEnergy, SPORTS } from '../js/energy.js';
 import { donnees, docs, jour, reglages } from './aide.js';
 
@@ -37,4 +37,17 @@ test('calendrier : une activité prévue donne un anneau, une activité faite un
   }));
   assert.deepEqual(dayFamilies('2026-11-14'), [{ fam: 'individuel', state: 'planned' }]);
   assert.deepEqual(dayFamilies('2026-11-15'), [{ fam: 'cardio', state: 'done' }]);   // nage prévue et marche faite : même famille, le fait l'emporte
+});
+
+test('rappel : les activités prévues d’un jour passé (14 jours au plus) et jamais notées, de la plus ancienne à la plus récente', () => {
+  jour('2026-11-12');
+  donnees(docs(reglages(), pesee, {
+    'a_2026-11-10_a': { date: '2026-11-10', type: 'run', min: 40, km: 7, planned: true },
+    'a_2026-11-08_a': { date: '2026-11-08', type: 'walk', min: 30, level: 'easy', planned: true },
+    'a_2026-10-20_a': { date: '2026-10-20', type: 'swim', min: 30, level: 'mod', planned: true },   // trop ancienne
+    'a_2026-11-09_a': { date: '2026-11-09', type: 'bike', min: 30, level: 'mod', kcal: 260 },        // faite : pas un rappel
+    'a_2026-11-12_a': { date: '2026-11-12', type: 'run', min: 30, km: 5, planned: true },            // aujourd'hui : pas en retard
+    'a_2026-11-14_a': { date: '2026-11-14', type: 'run', min: 30, km: 5, planned: true }             // à venir
+  }));
+  assert.deepEqual(pendingActivities('2026-11-12').map(a => a.date), ['2026-11-08', '2026-11-10']);
 });
