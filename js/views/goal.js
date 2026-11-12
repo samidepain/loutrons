@@ -42,6 +42,7 @@ function weighPoints(start, to){
 // Lecture prudente de la courbe de poids (Progrès) : tendance sur les 6 dernières semaines et sa marge, sans jugement
 export function weightReading(){
   const w = weighPoints(addDays(today(), -42), today()); const t = weightTrend(w.pts, w.from, today());
+  if (!t && w.pts.length >= CHECK.weighins) { const span = daysBetween(w.pts[0].date, w.pts[w.pts.length - 1].date); return 'Tu as ' + w.pts.length + ' pesées, mais elles couvrent ' + span + ' jours : il en faut au moins ' + CHECK.weighins + ' sur environ ' + CHECK.span + ' jours pour voir une tendance. Une seule mesure varie avec l’eau, le sel et les repas : continue une pesée toutes les 2 semaines, je ne conclus rien pour l’instant.'; }
   if (!t) return 'Une pesée toutes les 2 semaines suffit. Il en faut au moins ' + CHECK.weighins + ', sur environ un mois, pour voir une tendance : une seule mesure varie avec l’eau, le sel et les repas.' + (w.pts.length ? ' Pour l’instant : ' + w.pts.length + ' pesée' + (w.pts.length > 1 ? 's' : '') + ' sur les 6 dernières semaines.' : '');
   const p = Math.round(t.perWeek * 100) / 100, se = Math.round(t.se * 100) / 100;
   const dir = Math.abs(t.perWeek) <= t.se ? 'stable, compte tenu de la marge' : 'plutôt ' + (p > 0 ? 'en hausse' : 'en baisse') + ', d’environ ' + fmtKg(Math.abs(p)) + ' kg par semaine';

@@ -37,7 +37,7 @@ function actRow(a, kg){
 export function viewDay(){
   const day = S.day; const s = daySummary(day); const t = today(); const kg = bodyweight();
   const kc = k => k == null ? '' : ' · ≈ ' + Math.round(k / 10) * 10 + ' kcal';
-  let h = '<div class="row"><button type="button" class="link" data-act="day-close" data-back>‹ Aujourd’hui</button></div><h1>' + esc(capFirst(fmtDateLong(day))) + '</h1>';
+  let h = '<div class="row"><button type="button" class="link" data-act="day-close" data-back>‹ ' + (S.calMonth ? 'Calendrier' : 'Aujourd’hui') + '</button></div><h1>' + esc(capFirst(fmtDateLong(day))) + '</h1>';
   const sp = dayFamilies(day).some(f => f.fam === 'collectif' && f.state === 'planned');
   // Séance de salle : en cours, faite ou prévue
   h += '<section class="card"><h2>Séance</h2><div class="cal-detail">';

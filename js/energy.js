@@ -28,7 +28,7 @@ export const SPORTS = {
   tennis:    { label:'Tennis', train:6.8, match:8.0, names:['tennis'] },          // 15675, 15676
   badminton: { label:'Badminton', train:5.5, match:7.0, names:['bad'] }           // 15030, 15020
 };
-export const TYPES = [['run', 'Course à pied'], ['bike', 'Vélo'], ['swim', 'Natation'], ['walk', 'Marche'], ['sport', 'Sport'], ['other', 'Autre']];
+export const TYPES = [['run', 'Course à pied'], ['bike', 'Vélo'], ['swim', 'Natation'], ['walk', 'Marche'], ['sport', 'Sports collectifs'], ['other', 'Autre']];
 // Choix du formulaire d'activité : les activités directement (chaque sport est un choix, 'sport:basket'), « Autre » pour le reste.
 // Les documents gardent type:'sport' et sport:'basket' : les anciennes activités restent lisibles.
 export const CHOICES = TYPES.filter(t => t[0] !== 'sport' && t[0] !== 'other').concat(Object.keys(SPORTS).map(k => ['sport:' + k, SPORTS[k].label]), [TYPES[TYPES.length - 1]]);
@@ -82,7 +82,7 @@ export function activityKcal(a, kg){
 }
 export function activityName(a){
   if (a.type === 'other') return String(a.name || '').trim() || 'Autre activité';
-  if (a.type === 'sport') return (SPORTS[a.sport] ? SPORTS[a.sport].label : 'Sport') + (a.level === 'match' ? ' (match)' : '');
+  if (a.type === 'sport') return (SPORTS[a.sport] ? SPORTS[a.sport].label : 'Sport collectif') + (a.level === 'match' ? ' (match)' : '');
   return typeName(a.type);
 }
 

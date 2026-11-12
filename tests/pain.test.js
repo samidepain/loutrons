@@ -118,6 +118,18 @@ test('lecture du poids : trop tôt avec 2 pesées, sinon tendance avec sa marge,
   assert.match(weightReading(), /pas une certitude/);
 });
 
+test('lecture du poids : 3 pesées sur moins d’un mois ne donnent pas de tendance, et le message dit pourquoi', () => {
+  jour('2026-11-10');
+  const b = (date, weight) => ({ ['b_' + date]: { date, weight } });
+  donnees(docs(reglages(), b('2026-10-15', 75.4), b('2026-10-28', 75), b('2026-11-09', 74.8)));
+  assert.match(weightReading(), /Tu as 3 pesées, mais elles couvrent 25 jours/);
+  assert.doesNotMatch(weightReading(), /plutôt|stable/);
+});
+
+test('une ancienne activité « sport » sans sport précis s’affiche « Sport collectif »', () => {
+  assert.equal(activityName({ type: 'sport', min: 60, level: 'train' }), 'Sport collectif');
+});
+
 test('formulaire d’activité : chaque sport est un choix direct, « Autre » en dernier ; les anciennes activités restent lisibles', () => {
   assert.deepEqual(CHOICES.map(c => c[0]), ['run', 'bike', 'swim', 'walk', 'sport:basket', 'sport:foot', 'sport:hand', 'sport:rugby', 'sport:volley', 'sport:tennis', 'sport:badminton', 'other']);
   assert.ok(!CHOICES.some(c => c[0] === 'sport'));
