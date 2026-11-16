@@ -11,3 +11,6 @@ CLAUDE.md
 !.claude/skills/loutrons-frontend/
 .agents/
 skills-lock.json
+
+# Originaux des avatars (images générées, fond gris) : seuls les calques découpés sont publiés
+avatars/source/
