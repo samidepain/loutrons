@@ -19,20 +19,21 @@ export const SLOTS = [
 ];
 // Catalogue : { id (unique, ne change plus : les avatars enregistrés s'y rattachent), slot, name }. Image : avatars/<slot>/<id>.webp,
 // ou « file ». Ajouter un élément : son image, une ligne ici, et son chemin dans FILES de sw.js (npm test le vérifie).
-// unlock (facultatif, pour plus tard) : condition de déblocage (niveau, XP, objectif, saison) ; un élément qui en porte une n'est pas proposé.
+// unlock (facultatif) : { level: n } débloque l'élément à ce niveau (js/levels.js) ; une autre condition (objectif, saison) reste fermée tant que sa règle n'est pas écrite.
 export const ITEMS = [];
 export const fileOf = it => it.file || 'avatars/' + it.slot + '/' + it.id + '.webp';
-export const slotItems = (slot, items = ITEMS) => items.filter(it => it.slot === slot && !it.unlock);
-// La personnalisation s'ouvre quand chaque couche obligatoire a au moins une illustration
+export const unlocked = (it, level = 0) => !it.unlock || (it.unlock.level != null && level >= it.unlock.level);
+export const slotItems = (slot, items = ITEMS, level = 0) => items.filter(it => it.slot === slot && unlocked(it, level));
+// La personnalisation s'ouvre quand chaque couche obligatoire a au moins une illustration disponible dès le niveau 1
 export const avatarReady = (items = ITEMS) => SLOTS.every(s => !s.need || slotItems(s.id, items).length > 0);
 // Configuration valide, { couche: identifiant } : un élément inconnu ou verrouillé est retiré, une couche obligatoire reprend son premier élément
-export function avatarOf(cfg, items = ITEMS){
+export function avatarOf(cfg, items = ITEMS, level = 0){
   const out = {};
-  SLOTS.forEach(s => { const l = slotItems(s.id, items); const it = l.find(x => x.id === (cfg || {})[s.id]) || (s.need ? l[0] : null); if (it) out[s.id] = it.id; });
+  SLOTS.forEach(s => { const l = slotItems(s.id, items, level); const it = l.find(x => x.id === (cfg || {})[s.id]) || (s.need ? l[0] : null); if (it) out[s.id] = it.id; });
   return out;
 }
 // Éléments à dessiner, du fond vers le dessus
-export function layersOf(cfg, items = ITEMS){
-  const c = avatarOf(cfg, items);
+export function layersOf(cfg, items = ITEMS, level = 0){
+  const c = avatarOf(cfg, items, level);
   return SLOTS.filter(s => c[s.id]).map(s => items.find(it => it.id === c[s.id]));
 }

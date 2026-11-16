@@ -16,7 +16,7 @@ Le `CLAUDE.md` à la racine décrit l'architecture, le modèle de données et l'
    - Tailwind, shadcn, React ou d'autres composants à installer ;
    - une police ou une palette nouvelle ;
    - une icône chargée depuis un CDN ;
-   - des images générées par une IA ;
+   - des images générées par une IA, sauf les illustrations d'Émile et des avatars (autorisées depuis novembre 2026, voir la section 5) ;
    - un « style » complet à appliquer, comme le glassmorphisme ou le néomorphisme (le verre de Loutrons est limité à trois éléments, voir la section 5).
 3. **On réutilise avant de créer.** On ajoute un composant seulement si aucun composant existant ne convient (voir la section 6).
 4. **On ne change jamais une fonctionnalité au passage.** Une retouche visuelle ne modifie ni les calculs, ni les données, ni les textes des sources scientifiques.
@@ -210,7 +210,7 @@ Un nouveau composant les utilise ; les anciens règles passent dessus au fil des
   - ses conseils sont calculés par des règles et restent courts ;
   - il a une croix pour fermer, avec une clé qui décrit la situation : `emile(body, { key })` ;
   - les objectifs de chaque exercice restent des calculs sans signature ;
-  - **seulement les deux images existantes** : `icons/logo.png` (Émile en pied) et `icons/emile.png` (son visage). On peut les animer en entier (déplacement, échelle, opacité), jamais les redessiner. Les images d'ambiance (dossier `design_glow/`, hors dépôt) ne sont pas des assets. De nouvelles poses ne peuvent venir que de la personne, dans le style exact du logo ;
+  - images d'Émile : `icons/logo.png` (en pied) et `icons/emile.png` (son visage), qu'on peut animer en entier (déplacement, échelle, opacité) sans les redessiner. Depuis novembre 2026, à la demande de la personne, de nouvelles illustrations (avatars en couches, nouvelles poses) peuvent être faites par une IA : même loutre, style 2D illustré de la planche de référence, fond transparent, regardées une par une avant d'entrer dans le dépôt ; jamais de forme provisoire à la place d'une illustration. Les images d'ambiance (dossier `design_glow/`, hors dépôt) ne sont pas des assets ;
   - sur Aujourd'hui, un seul conseil à la fois : `emileQueue([{ rank, html }])` garde le plus important (1 : demande une réponse ; 2 : alerte ; 3 : sauvegarde ; 4 : rappel ; 5 : message de la semaine) et range les autres derrière « N autres conseils ».
 
 ## 6. Composants existants (`index.html`)
@@ -271,6 +271,7 @@ Un nouveau composant les utilise ; les anciens règles passent dessus au fil des
 | États communs | désactivé : opacité `--dim` (`.btn`, `.chip`, `.pick`, `.step`, `button.plus`, champs) ; survol : seulement à la souris (`@media (hover:hover) and (pointer:fine)`), jamais nécessaire ; appui : `--press` ; erreur et réussite : `.alert.bad` / `.alert.good`, `toast()` pour une confirmation brève |
 | Bouton icône | `button.plus` (44 px, « + »), `button.step` (− et +), `.emile-x` (fermer) : rond, sans lumière, `aria-label` obligatoire |
 | Avatar en couches (version 3.31, caché tant que `ITEMS` de `js/avatar.js` est vide) | `avatarImg(cfg, cls)` (`views/avatar.js`) : `.av` > `.av-in` > images superposées ; `.head` cadre la tête ; éditeur `viewAvatar()` (fenêtre `S.avatar`) : `.av-stage` (aperçu fixe), `.seg` des catégories, `.av-grid` > `button.av-item` (`av-pick`), « Revenir en arrière », « Réinitialiser », « Enregistrer mon avatar » ; jamais de forme provisoire à la place d'une illustration |
+| Niveau, XP et badges (version 3.33, `js/levels.js`, calculés sans stockage) | `levelBar()` (`views/profile.js`) : `.lvl` (niveau, XP, `.bar`, reste avant le niveau suivant), dans l'en-tête du profil, l'écran « Niveau et badges » (`S.set = 'level'`, `viewLevel()`) et la fin de séance ; badges : `.badges` > `.badge` (`.got` : pastille orange, sinon estompé avec ce qu'il faut faire) ; règles de jeu, jamais présentées comme des règles d'entraînement |
 | Texte secondaire | `.muted`, `.small`, `.label`, `.hero-date` |
 
 **Créer un composant** :

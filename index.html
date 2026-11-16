@@ -279,6 +279,16 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .av-item .av{width:100%;border-radius:var(--r-sm)}
 .av-item .small{text-align:center;overflow-wrap:anywhere}
 .av-item.on{box-shadow:inset 0 0 0 2px var(--accent-ink),var(--glow-2)}
+.av-item:disabled{opacity:var(--dim)}
+/* Niveau : barre d'XP vers le niveau suivant ; badges en deux colonnes (obtenu : pastille orange, à gagner : estompé) */
+.lvl{display:flex;flex-direction:column;gap:var(--s-1)}
+.lvl b{font-family:var(--f-display);font-weight:800;font-size:var(--t-h3)}
+.badges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-3)}
+.badge{display:flex;align-items:center;gap:var(--s-2);min-width:0}
+.badge b{overflow-wrap:anywhere}
+.badge:not(.got){opacity:.6}
+.badge:not(.got) .ic{background:var(--surface-2);color:var(--muted)}
+@media (max-width:360px){.badges{grid-template-columns:1fr}}
 /* Écran de planification : un jour par ligne (jour et date, séance, coche ou « + ») */
 .pdays{gap:var(--s-2)}
 .pday{justify-content:flex-start}

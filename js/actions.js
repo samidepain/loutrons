@@ -20,7 +20,8 @@ import { ownRecipe } from './recipes.js';
 import { gramsOf, measuresFor } from './measures.js';
 import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, mySports, sportOf, WATER_RANGE, waterOf } from './energy.js';
 import { actDoc, actPreview, liters } from './views/activity.js';
-import { avatarOf } from './avatar.js';
+import { avatarOf, ITEMS } from './avatar.js';
+import { xpState } from './levels.js';
 
 // Supprime une séance perso (jamais une séance de base) et la retire de la rotation et du planning ; faux si elle n'existe pas ou est de base
 function deleteTpl(id){
@@ -415,13 +416,13 @@ const A = {
   'plan-open'(){ S.plan = true; S.confirm = null; render(); window.scrollTo(0, 0); },
   'plan-close'(){ S.plan = null; render(); },
   // Avatar (profil) : brouillon S.avatar, enregistré seulement par « Enregistrer » ; hist : choix précédents, pour revenir en arrière
-  'av-open'(){ S.avatar = { cfg: avatarOf(settings().avatar), cat: null, hist: [] }; render(); window.scrollTo(0, 0); },
+  'av-open'(){ S.avatar = { cfg: avatarOf(settings().avatar, ITEMS, xpState().level), cat: null, hist: [] }; render(); window.scrollTo(0, 0); },
   'av-cat'(b){ S.avatar.cat = b.dataset.v; render(); },
   'av-pick'(b){ const E = S.avatar; E.hist.push(E.cfg); E.cfg = Object.assign({}, E.cfg, { [b.dataset.s]: b.dataset.v }); render(); },
   'av-undo'(){ const E = S.avatar; if (E.hist.length) E.cfg = E.hist.pop(); render(); },
   'av-reset'(){ const E = S.avatar; E.hist.push(E.cfg); E.cfg = avatarOf(null); render(); },
   'av-cancel'(){ S.avatar = null; render(); },
-  'av-save'(){ putSettings({ avatar: avatarOf(S.avatar.cfg) }); S.avatar = null; render(); toast('Avatar enregistré.'); },
+  'av-save'(){ putSettings({ avatar: avatarOf(S.avatar.cfg, ITEMS, xpState().level) }); S.avatar = null; render(); toast('Avatar enregistré.'); },
   'cal-hist'(b){ S.day = null; S.stat = null; S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
   'set-sex'(b){ putSettings({ sex: settings().sex === b.dataset.v ? null : b.dataset.v }); render(); },
   theme(b){ putSettings({ theme: b.dataset.v }); applyTheme(b.dataset.v); render(); },

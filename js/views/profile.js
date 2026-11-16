@@ -1,6 +1,6 @@
 // Écran Profil : en-tête, progrès et liste des paramètres (informations, douleurs, autres sports, alimentation, apparence, sauvegarde) ;
 // les réglages de l'entraînement sont dans Entraînement › Planning.
-import { esc, mondayOf, nbsp, fmtDate, fmtDateLong, fmtDateYear, fmtKg, fmtMonth, num, today, withDot } from '../util.js';
+import { esc, mondayOf, nbsp, fmtDate, fmtDateLong, fmtDateYear, fmtInt, fmtKg, fmtMonth, num, today, withDot } from '../util.js';
 import { S } from '../store.js';
 import { backupDue, bodyDocs, mods, settings, sportInfo, startDate, workouts } from '../data.js';
 import { DAY_ORDER, DAY_SHORT } from '../library.js';
@@ -14,6 +14,8 @@ import { GOALS, goalProfileCard, nutritionOf } from './goal.js';
 import { painZones, ZONE_IDS, ZONES } from '../pain.js';
 import { avatarReady } from '../avatar.js';
 import { avatarImg } from './avatar.js';
+import { badges, XP, xpState } from '../levels.js';
+import { ic } from '../icons.js';
 
 // « Tu es un loutron ou une loutronne ? » : facultatif, un second appui sur le choix l'annule
 export function sexChips(act, val){
@@ -28,12 +30,14 @@ export function viewProfile(){
   // En-tête en carte vedette : initiale, prénom, ancienneté, puis séances, semaines et records ; sans séance, Émile dit quand les chiffres arrivent (jamais de « 0 »)
   const ws = workouts().filter(w => w.status === 'terminée'); const since = s.created || (ws[0] && ws[0].date) || startDate(); const who = String(s.name || '').trim(); const wk = new Set(ws.map(w => mondayOf(w.date))).size; const recs = recordLog().length;
   h += '<section class="card hero prof-card"><div class="prof-head">' + (avatarReady() ? avatarImg(s.avatar, 'head prof-av') : '<span class="prof-ini" aria-hidden="true">' + esc((who[0] || '?').toUpperCase()) + '</span>') + '<div class="prof-id"><h1>' + esc(who || 'Profil') + '</h1><span class="muted">' + esc((s.sex === 'f' ? 'Loutronne' : s.sex === 'm' ? 'Loutron' : 'Sur Loutrons') + ' depuis ' + fmtMonth(since.slice(0, 7))) + '</span></div></div>';
+  if (ws.length) h += levelBar();
   h += ws.length ? '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">' + (ws.length > 1 ? 'séances' : 'séance') + '</span></div><div class="stat"><span class="v num">' + wk + '</span><span class="l">' + (wk > 1 ? 'semaines actives' : 'semaine active') + '</span></div><div class="stat"><span class="v num">' + (recs || '—') + '</span><span class="l">' + (recs > 1 ? 'records' : 'record') + '</span></div></div>'
     : emile('<p>' + esc(nbsp('Dès ta première séance, tes chiffres et tes records apparaissent ici.')) + '</p>');
   if (avatarReady()) h += '<button type="button" class="btn" data-act="av-open">Personnaliser mon avatar</button>';
   h += '</section>';
   // Raccourci vers Progrès : dernière séance et records, sans répéter les courbes
   if (ws.length) { const lastDay = ws.map(w => w.date).sort().pop(); h += '<button type="button" class="pick" data-act="tab" data-v="progress"><span class="stack prof-id"><span class="n">Tes progrès</span><span class="m">' + esc(withDot('Dernière séance : ' + fmtDate(lastDay))) + '</span></span><span aria-hidden="true">›</span></button>'; }
+  if (ws.length) { const got = badges().filter(b => b.got).length; h += row('level', 'Niveau et badges', 'Niveau ' + xpState().level + ' · ' + got + (got > 1 ? ' badges' : ' badge')); }
   // Paramètres : une ligne par rubrique, chacune ouvre son écran (viewSettings) au lieu d'un long écran de réglages
   const n = nutritionOf(); const ws2 = workouts(); const due = backupDue() || (!s.lastExport && ws2.length > 0);
   const info = [who, s.height != null && fmtKg(num(s.height)) + ' cm', last && fmtKg(num(last.weight)) + ' kg'].filter(Boolean).join(' · ');
@@ -50,13 +54,29 @@ export function viewProfile(){
   return h;
 }
 const THEMES = { auto:'Automatique', light:'Clair', dark:'Sombre' };
+// Niveau, XP et barre vers le niveau suivant (en-tête du profil, écran « Niveau et badges », fin de séance)
+export function levelBar(){
+  const x = xpState(); const pct = Math.round((x.total - x.from) / (x.to - x.from) * 100);
+  return '<div class="lvl"><div class="row between"><b>Niveau ' + x.level + '</b><span class="muted small num">' + fmtInt(x.total) + '&nbsp;XP</span></div><div class="bar" aria-hidden="true"><i style="width:' + pct + '%"></i></div><span class="muted small">' + esc(nbsp('Encore ' + fmtInt(x.to - x.total) + ' XP avant le niveau ' + (x.level + 1))) + '</span></div>';
+}
+// Écran « Niveau et badges » : où en est la personne, d'où vient son XP, comment en gagner, et ses badges (obtenus d'abord)
+function viewLevel(){
+  const x = xpState(); const p = x.parts; const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+  const ligne = (nom, part) => '<div class="row between"><span>' + nom + '</span><b class="num">' + fmtInt(part.xp) + '&nbsp;XP</b></div>';
+  let h = '<section class="card hero">' + levelBar() + '</section>';
+  h += '<section class="card"><h3>D’où vient ton XP</h3>' + ligne(pl(p.sessions.n, 'séance'), p.sessions) + ligne('Régularité', p.regular) + ligne(pl(p.records.n, 'record'), p.records) + ligne(pl(p.blocks.n, 'bloc') + (p.blocks.n > 1 ? ' terminés' : ' terminé'), p.blocks)
+    + '<p class="muted small">' + esc(nbsp(XP.session + ' XP par séance terminée (une par jour), ' + XP.regular + ' de plus par séance à partir de la 2e de la semaine, ' + XP.record + ' par record (' + XP.recordsMax + ' au plus par séance), ' + XP.block + ' par bloc de 6 semaines mené au bout. L’XP ne baisse jamais.')) + '</p></section>';
+  const bs = badges(); const tri = bs.filter(b => b.got).concat(bs.filter(b => !b.got));
+  h += '<section class="card"><h3>Tes badges <span class="muted small num">' + bs.filter(b => b.got).length + ' sur ' + bs.length + '</span></h3><div class="badges">' + tri.map(b => '<div class="badge' + (b.got ? ' got' : '') + '">' + ic(b.got ? 'check' : 'trend') + '<span class="stack prof-id"><b>' + esc(b.name) + '</b><span class="muted small">' + esc(b.got ? 'Obtenu' : b.how) + '</span></span></div>').join('') + '</div></section>';
+  return h;
+}
 const row = (v, n, m, pill) => '<button type="button" class="pick" data-act="set-open" data-v="' + v + '"><span class="stack prof-id"><span class="n">' + n + '</span><span class="m">' + esc(m) + '</span>' + (pill || '') + '</span><span aria-hidden="true">›</span></button>';
 // Écran d'une rubrique des paramètres (S.set) ; mêmes lignes et champs qu'avant, enregistrés à la sortie du champ
-const SET_TITLES = { toi:'Informations personnelles', pain:'Douleurs et limitations', sports:'Autres sports', food:'Alimentation', look:'Apparence', data:'Sauvegarde et données' };
+const SET_TITLES = { level:'Niveau et badges', toi:'Informations personnelles', pain:'Douleurs et limitations', sports:'Autres sports', food:'Alimentation', look:'Apparence', data:'Sauvegarde et données' };
 export function viewSettings(){
   const k = SET_TITLES[S.set] ? S.set : 'toi';
   let h = '<div class="row"><button type="button" class="link" data-act="profile" data-back>‹ Profil</button></div><h1>' + SET_TITLES[k] + '</h1>';
-  return h + (k === 'toi' ? settingsToi() : k === 'pain' ? settingsPain() : k === 'sports' ? settingsSports() : k === 'food' ? goalProfileCard() : k === 'look' ? settingsLook() : viewSettingsCards());
+  return h + (k === 'level' ? viewLevel() : k === 'toi' ? settingsToi() : k === 'pain' ? settingsPain() : k === 'sports' ? settingsSports() : k === 'food' ? goalProfileCard() : k === 'look' ? settingsLook() : viewSettingsCards());
 }
 function settingsToi(){
   const s = settings(); const pesees = bodyDocs().filter(b => num(b.weight) > 0); const last = pesees[pesees.length - 1]; const who = String(s.name || '').trim();

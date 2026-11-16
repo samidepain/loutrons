@@ -12,6 +12,9 @@ import { hasMovement } from './movement.js';
 import { effortChoice } from './today.js';
 import { ring } from '../ring.js';
 import { sessionKcal } from '../energy.js';
+import { levelOf, xpState } from '../levels.js';
+import { levelBar } from './profile.js';
+import { ic } from '../icons.js';
 
 // Douleurs pendant la séance : le genou après une séance jambes, les autres zones suivies si un exercice de la séance les sollicite
 function painCard(w){
@@ -88,6 +91,9 @@ export function viewEnd(){
   h += '<div class="stats"><div class="stat"><span class="v">' + (w.duration ? w.duration + '<small>min</small>' : '—') + '</span><span class="l">durée</span></div><div class="stat"><span class="v">' + (kc == null ? '—' : Math.round(kc / 10) * 10) + '<small>kcal</small></span><span class="l">dépensées</span></div><div class="stat"><span class="v">' + prs.length + '</span><span class="l">' + (prs.length > 1 ? 'records' : 'record') + '</span></div></div>';
   h += '<section class="card">' + effortChoice(w) + '</section>';
   if (prs.length) h += '<section class="card gold"><div class="ring-row"><span class="trophy" aria-hidden="true">' + TROPHY + '</span><h2>' + (prs.length > 1 ? prs.length + ' nouveaux records' : 'Nouveau record') + '</h2></div>' + prs.map(p => '<p class="small">' + esc(p) + '</p>').join('') + '</section>';
+  // XP gagnée avec cette séance et niveau ; un niveau passé grâce à elle est annoncé en titre
+  const x = xpState(); const gain = x.bySession[w.id] || 0;
+  if (gain) h += '<section class="card"><div class="ring-row">' + ic('trend') + '<div class="stack rec-t"><h2>' + (levelOf(x.total - gain) < x.level ? 'Niveau ' + x.level + ' atteint' : '+' + gain + ' XP') + '</h2>' + (levelOf(x.total - gain) < x.level ? '<span class="small">+' + gain + ' XP avec cette séance</span>' : '') + '</div></div>' + levelBar() + '</section>';
   // Émile en pied (logo), qui signe le message ; lumière douce derrière lui (réussite)
   h += '<div class="end-emile"><img class="end-logo" src="icons/logo.png" alt="" width="96" height="96"><p><span class="who">Émile</span><br>' + esc(nbsp(hey(prs.length ? 'Bien joué : ' + (prs.length > 1 ? 'de nouveaux records !' : 'un nouveau record !') : 'Séance enregistrée. Pas de record cette fois : la régularité compte plus que chaque séance.'))) + '</p></div>';
   return h + '<button type="button" class="btn primary big" data-act="close-summary">Retour à Aujourd’hui</button></div>';

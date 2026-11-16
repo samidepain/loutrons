@@ -23,6 +23,8 @@ test('sans choix, l’avatar prend le premier élément de chaque couche obligat
 
 test('un élément inconnu ou pas encore débloqué est retiré de l’avatar enregistré', () => {
   assert.deepEqual(avatarOf({ face:'rieur', hat:'couronne', top:'disparu', eyes:'' }, essai), { body:'corps', face:'rieur' });
+  // au niveau demandé, l'élément est débloqué
+  assert.deepEqual(avatarOf({ hat:'couronne' }, essai, 10), { body:'corps', face:'heureux', hat:'couronne' });
 });
 
 test('les couches se dessinent du fond vers le dessus, dans l’ordre de SLOTS', () => {
