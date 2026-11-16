@@ -29,7 +29,12 @@ export const ITEMS = [
   { id:'rieur', slot:'face', name:'Rieur' },
   { id:'clin', slot:'face', name:'Clin d’œil' },
   { id:'determine', slot:'face', name:'Déterminé' },
-  { id:'bandeau', slot:'hat', name:'Bandeau' }
+  { id:'surpris', slot:'face', name:'Surpris' },
+  { id:'bandeau', slot:'hat', name:'Bandeau' },
+  { id:'casquette', slot:'hat', name:'Casquette' },
+  { id:'bonnet', slot:'hat', name:'Bonnet', unlock:{ level:4 } },
+  { id:'lunettes-soleil', slot:'eyes', name:'Lunettes de soleil', unlock:{ level:2 } },
+  { id:'sweat-noir', slot:'top', name:'Sweat noir', unlock:{ level:5 } }
 ];
 export const fileOf = it => it.file || 'avatars/' + it.slot + '/' + it.id + '.webp';
 export const unlocked = (it, level = 0) => !it.unlock || (it.unlock.level != null && level >= it.unlock.level);
