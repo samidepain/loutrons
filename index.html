@@ -262,12 +262,13 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .prog-chg{flex:none;display:flex;align-items:center;gap:var(--s-1);font-weight:600;color:var(--accent-ink)}
 .prog-chg svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .sec-h{margin-top:var(--s-2)}
-/* Avatar en couches : images carrées de même taille, superposées. « head » cadre la tête, prévue sur la toile dans un carré de 46 % de
-   côté, à 27 % du bord gauche et 4 % du haut (voir js/avatar.js) */
+/* Avatar en couches : images carrées de même taille, superposées. « head » cadre la tête, qui tient sur la toile dans un carré de 40 % de
+   côté, à 30 % du bord gauche et 1,5 % du haut (voir js/avatar.js) */
 .av{position:relative;display:block;flex:none;aspect-ratio:1;overflow:hidden}
 .av-in{position:absolute;inset:0}
 .av img{position:absolute;inset:0;width:100%;height:100%}
-.av.head .av-in{transform:scale(2.174);transform-origin:50% 7.4%}
+.av.head .av-in{transform:scale(2.5);transform-origin:50% 2.5%}
+.me .av{position:absolute;inset:0;border-radius:50%;background:var(--well)}
 .prof-av{width:72px;border-radius:50%;background:var(--well)}
 /* Éditeur d'avatar : aperçu qui reste en haut, éléments en grille de 3 */
 .av-stage{position:sticky;top:calc(env(safe-area-inset-top) + var(--s-2));z-index:2;display:grid;place-items:center;padding:var(--s-3);border-radius:var(--r);background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh)}
@@ -279,7 +280,7 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .av-item .av{width:100%;border-radius:var(--r-sm)}
 .av-item .small{text-align:center;overflow-wrap:anywhere}
 .av-item.on{box-shadow:inset 0 0 0 2px var(--accent-ink),var(--glow-2)}
-.av-item:disabled{opacity:var(--dim)}
+.av-item:disabled{opacity:.6}
 /* Niveau : barre d'XP vers le niveau suivant ; badges en deux colonnes (obtenu : pastille orange, à gagner : estompé) */
 .lvl{display:flex;flex-direction:column;gap:var(--s-1)}
 .lvl b{font-family:var(--f-display);font-weight:800;font-size:var(--t-h3)}

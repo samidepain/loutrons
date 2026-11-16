@@ -4,9 +4,10 @@ import { S } from '../store.js';
 import { avatarOf, CATS, fileOf, ITEMS, layersOf, SLOTS, unlocked } from '../avatar.js';
 import { xpState } from '../levels.js';
 
-// Les couches empilées dans un carré ; cls « head » cadre la tête (rond du profil, vignettes)
-export function avatarImg(cfg, cls){
-  return '<span class="av' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><span class="av-in">' + layersOf(cfg, ITEMS, xpState().level).map(it => '<img src="' + esc(fileOf(it)) + '" alt="" draggable="false">').join('') + '</span></span>';
+// Les couches empilées dans un carré ; cls « head » cadre la tête (rond du profil, vignettes) ; level : niveau à appliquer (celui de la
+// personne par défaut ; plus haut pour montrer un élément pas encore débloqué)
+export function avatarImg(cfg, cls, level){
+  return '<span class="av' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><span class="av-in">' + layersOf(cfg, ITEMS, level == null ? xpState().level : level).map(it => '<img src="' + esc(fileOf(it)) + '" alt="" draggable="false">').join('') + '</span></span>';
 }
 // Une couche se choisit s'il y a de quoi choisir : au moins un élément, ou deux pour une couche obligatoire
 const choosable = s => ITEMS.filter(it => it.slot === s.id).length > (s.need ? 1 : 0);
@@ -23,8 +24,8 @@ export function viewAvatar(){
     return '<button type="button" class="av-item' + (on ? ' on' : '') + '" data-act="av-pick" data-s="' + s.id + '" data-v="' + esc(id) + '" role="radio" aria-checked="' + on + '">' + avatarImg(Object.assign({}, cfg, { [s.id]: id }), s.zoom ? 'head' : '') + '<span class="small">' + esc(name) + '</span></button>'; };
   SLOTS.filter(s => s.cat === cat && choosable(s)).forEach(s => {
     // Un élément pas encore débloqué reste visible, grisé, avec le niveau qui l'ouvre
-    const locked = it => '<button type="button" class="av-item" disabled>' + avatarImg(Object.assign({}, cfg, { [s.id]: '' }), s.zoom ? 'head' : '') + '<span class="small">' + esc(it.name) + '</span><span class="pill">' + (it.unlock.level != null ? 'Niveau ' + it.unlock.level : 'Bientôt') + '</span></button>';
-    h += '<div class="stack"><span class="label">' + s.name + '</span><div class="av-grid" role="radiogroup" aria-label="' + s.name + '">' + (s.need ? '' : item(s, '', 'Aucun')) + ITEMS.filter(it => it.slot === s.id).map(it => unlocked(it, lvl) ? item(s, it.id, it.name) : locked(it)).join('') + '</div></div>';
+    const locked = it => '<button type="button" class="av-item" disabled>' + avatarImg(Object.assign({}, cfg, { [s.id]: it.id }), s.zoom ? 'head' : '', 999) + '<span class="small">' + esc(it.name) + '</span><span class="pill">' + (it.unlock.level != null ? 'Niveau ' + it.unlock.level : 'Bientôt') + '</span></button>';
+    h += '<div class="stack"><span class="label">' + s.name + '</span><div class="av-grid" role="radiogroup" aria-label="' + s.name + '">' + (s.need ? '' : item(s, '', s.none || 'Aucun')) + ITEMS.filter(it => it.slot === s.id).map(it => unlocked(it, lvl) ? item(s, it.id, it.name) : locked(it)).join('') + '</div></div>';
   });
   return h + '<button type="button" class="btn primary big" data-act="av-save">Enregistrer mon avatar</button>';
 }

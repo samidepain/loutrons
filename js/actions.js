@@ -418,7 +418,10 @@ const A = {
   // Avatar (profil) : brouillon S.avatar, enregistré seulement par « Enregistrer » ; hist : choix précédents, pour revenir en arrière
   'av-open'(){ S.avatar = { cfg: avatarOf(settings().avatar, ITEMS, xpState().level), cat: null, hist: [] }; render(); window.scrollTo(0, 0); },
   'av-cat'(b){ S.avatar.cat = b.dataset.v; render(); },
-  'av-pick'(b){ const E = S.avatar; E.hist.push(E.cfg); E.cfg = Object.assign({}, E.cfg, { [b.dataset.s]: b.dataset.v }); render(); },
+  // Choisir un calque quand un skin complet est porté ramène à la loutre de base, seule à pouvoir le porter
+  'av-pick'(b){ const E = S.avatar; const s = b.dataset.s; const patch = { [s]: b.dataset.v }; const body = ITEMS.find(it => it.id === E.cfg.body);
+    if (s !== 'body' && body && body.solo) patch.body = (ITEMS.find(it => it.slot === 'body' && !it.solo) || {}).id;
+    E.hist.push(E.cfg); E.cfg = Object.assign({}, E.cfg, patch); render(); },
   'av-undo'(){ const E = S.avatar; if (E.hist.length) E.cfg = E.hist.pop(); render(); },
   'av-reset'(){ const E = S.avatar; E.hist.push(E.cfg); E.cfg = avatarOf(null); render(); },
   'av-cancel'(){ S.avatar = null; render(); },

@@ -1,13 +1,19 @@
 // Loutrons : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
 // Même numéro que dans js/version.js (affiché dans Réglages).
-const VERSION = '3.33';
+const VERSION = '3.34';
 const CACHE = 'loutrons-' + VERSION;
 // Photos des exercices : pas toutes téléchargées à l'installation (environ 5 Mo), mais gardées dès qu'on les a vues une fois.
 // Cache à part, conservé d'une version à l'autre.
 const PHOTOS = 'loutrons-photos-1';
 const FILES = [
   './',
+  'avatars/body/emile.webp',
+  'avatars/body/emile-tenue-noire.webp',
+  'avatars/face/rieur.webp',
+  'avatars/face/clin.webp',
+  'avatars/face/determine.webp',
+  'avatars/hat/bandeau.webp',
   'index.html',
   'js/app.js',
   'js/avatar.js',

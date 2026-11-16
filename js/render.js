@@ -19,7 +19,8 @@ import { viewActivity } from './views/activity.js';
 import { viewDay } from './views/calendar.js';
 import { viewMovement } from './views/movement.js';
 import { ICONS } from './icons.js';
-import { viewAvatar } from './views/avatar.js';
+import { avatarImg, viewAvatar } from './views/avatar.js';
+import { avatarReady } from './avatar.js';
 
 // Trophée des records (carte dorée d'Aujourd'hui)
 export const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
@@ -50,7 +51,7 @@ export function renderTabs(){
   // Rond du profil : l'initiale du prénom ou pseudo, sinon un pictogramme, avec une petite roue dentée (il mène aussi aux réglages)
   const me = $('#me'); const name = String(settings().name || '').trim();
   me.hidden = !S.loaded || !!(S.setup && S.setup.mode === 'welcome');
-  me.innerHTML = (name ? esc(name.charAt(0).toUpperCase()) : ICONS.person) + GEAR;
+  me.innerHTML = (S.loaded && settings().avatar && avatarReady() ? avatarImg(settings().avatar, 'head') : name ? esc(name.charAt(0).toUpperCase()) : ICONS.person) + GEAR;
   me.classList.toggle('on', S.view === 'profile' || S.view === 'settings');
 }
 export function render(){
