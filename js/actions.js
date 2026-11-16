@@ -588,6 +588,8 @@ const A = {
   },
   'set-undo'(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const s = st && st.sets[+b.dataset.i]; if (s) s.done = false; if (S.rirAsk === b.dataset.ex) S.rirAsk = null; S.setEdit = null; put(w.id, w); render(); },
   check(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.done = !st.done; if (st.done) forgetOpen(w); put(w.id, w); render(); if (st.done) showCurrent(); },
+  // Passer un exercice pour aujourd'hui (aucune série validée) : la séance modèle ne change pas, et on peut revenir dessus
+  skip(b){ const w = activeWorkout(); if (!w || !w.ex[b.dataset.ex]) return; w.ex[b.dataset.ex].skip = true; if (S.sessOpen === b.dataset.ex) S.sessOpen = null; put(w.id, w); render(); showCurrent(); toast('Exercice passé pour aujourd’hui.'); },
   unskip(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.skip = false; if (!st.sets.length) { const it = itemsOf(w).find(x => x.ex === b.dataset.ex); for (let i = 0; i < (it ? it.sets : 3); i++) st.sets.push({ kg:null, reps:null, done:false }); } put(w.id, w); render(); showCurrent(); },
   addset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const last = st.sets[st.sets.length - 1]; st.sets.push({ kg: last ? last.kg : null, reps:null, done:false }); put(w.id, w); render(); },
   // Retirer la dernière série : si l'exercice est alors terminé, la question des reps en réserve arrive comme après une validation

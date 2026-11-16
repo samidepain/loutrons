@@ -66,8 +66,9 @@ export function foodFromDoc(id, o){ return { key: o.code ? 'off:' + o.code : 'ow
 // Aliments affichés dans la dernière liste, pour retrouver celui qu'on touche
 export const shown = new Map();
 
-// Aujourd'hui : ce qu'il reste à manger (séances et activités comprises), puis les macros en barres seulement (une seule représentation,
-// pas d'anneau en plus) ; journal vide : l'objectif du jour, sans barres à zéro
+// Aujourd'hui : ce qu'il reste à manger (séances et activités comprises), puis les trois macros en grands chiffres, protéines d'abord
+// (une case par macro : mangé, barre fine, objectif ou plafond) ; le détail (fibres, sucres, saturés, sel, repas) est dans Alimentation.
+// Journal vide : l'objectif du jour, sans chiffres à zéro
 export function foodTodayCard(){
   const n = nutritionOf(); if (!S.loaded || !n.on) return '';
   const pl = dayPlan(today());
@@ -76,7 +77,9 @@ export function foodTodayCard(){
   let h = '<section class="card"><div class="row between"><h3>Ton alimentation</h3>' + (pl.extra ? '<span class="muted small">activités comprises</span>' : '') + '</div>';
   if (!items.length) return h + '<div class="kcal"><p><span class="v num">' + fmtInt(pl.kcal) + '</span><small>kcal</small></p><p class="muted small">ton objectif du jour · rien de noté</p></div><button type="button" class="btn" data-act="go-food">Noter un repas</button></section>';
   h += '<div class="kcal"><p><span class="v num">' + fmtInt(Math.abs(rest)) + '</span><small>kcal</small></p><p class="muted small">' + esc(nbsp((rest >= 0 ? 'restantes aujourd’hui' : 'au-dessus de ton objectif') + ' · ' + fmtInt(t.kcal) + ' mangées sur ' + fmtInt(pl.kcal))) + '</p></div>';
-  h += bar('Protéines', t.p, pl.protein[0], 'g') + bar('Glucides', t.c, pl.carbs, 'g') + bar('Lipides', t.f, pl.fat[1], 'g', true);
+  const mac = (nom, k, cible, max) => '<div class="stat"><span class="l">' + nom + '</span><span class="v num">' + (t.missing.includes(k) && !t[k] ? '—' : q1(t[k]) + '<small>g</small>') + '</span>'
+    + '<span class="bar" aria-hidden="true"><i style="width:' + Math.min(100, cible > 0 ? t[k] / cible * 100 : 0).toFixed(0) + '%' + (max && t[k] > cible ? ';background:var(--warn)' : '') + '"></i></span><span class="l">' + (max ? 'max ' : 'sur ') + q1(cible) + '&nbsp;g</span></div>';
+  h += '<div class="stats mac-stats">' + mac('Protéines', 'p', pl.protein[0]) + mac('Glucides', 'c', pl.carbs) + mac('Lipides', 'f', pl.fat[1], true) + '</div>';
   return h + '<button type="button" class="btn" data-act="go-food">Noter un repas</button></section>';
 }
 function bar(label, v, goal, unit, max){
@@ -125,8 +128,9 @@ export function viewFood(){
   if (!empty) h += '<div class="macros">' + macro('Protéines', t.p, has ? pl.protein[0] : 0, false, t.missing.includes('p')) + macro('Glucides', t.c, has ? pl.carbs : 0, false, t.missing.includes('c')) + macro('Lipides', t.f, has ? pl.fat[1] : 0, true, t.missing.includes('f')) + '</div>';
   const sfMax = has ? pl.kcal * LIMITS.sfPct / 9 : null;
   if (!empty) {
-    h += '<details class="cue"><summary>Détails : fibres, sucres, saturés, sel</summary>' + bar('Fibres', t.fib, LIMITS.fib, 'g');
-    h += '<p class="small muted">Sucres ' + qg(t.s) + ' (repère : moins de ' + LIMITS.s + ' g hors lait) · saturés ' + qg(t.sf) + '' + (sfMax ? ' (au plus ' + fmtInt(sfMax) + ' g)' : '') + ' · sel ' + qg(t.salt) + ' (moins de ' + LIMITS.salt + ' g)</p></details>';
+    // Le détail, toujours visible : fibres (au moins), sucres, saturés et sel (plafonds, barre en ambre au-delà)
+    h += '<div class="stack day-more"><span class="label">Le détail</span>' + bar('Fibres', t.fib, LIMITS.fib, 'g') + bar('Sucres', t.s, LIMITS.s, 'g', true) + bar('Saturés', t.sf, sfMax, 'g', true) + bar('Sel', t.salt, LIMITS.salt, 'g', true)
+      + '<p class="small muted">Fibres : au moins ' + LIMITS.fib + ' g. Sucres (hors lait), saturés et sel : à ne pas dépasser.</p></div>';
   }
   if (t.missing.length && !empty) h += '<p class="muted small">Valeurs inconnues pour certains aliments (' + t.missing.map(k => ({ p:'protéines', c:'glucides', s:'sucres', f:'lipides', sf:'saturés', fib:'fibres', salt:'sel' })[k]).filter(Boolean).join(', ') + ') : les totaux peuvent être un peu bas.</p>';
   h += '</section>';
@@ -134,9 +138,9 @@ export function viewFood(){
   const gm = guessMeal(new Date().getHours());
   h += '<button type="button" class="btn primary big" data-act="fd-add" data-v="' + gm + '">+ Ajouter ' + ADD_TO[gm] + '</button>';
   MEALS.forEach(([m, label]) => {
-    const its = doc.items.filter(i => i.meal === m); const kc = its.reduce((a, i) => a + (scale(i.per100, i.g).kcal || 0), 0);
+    const its = doc.items.filter(i => i.meal === m); const mt = totals(its); const kc = mt.kcal;
     // En-tête du repas : nom, kcal, et « + » rond qui ouvre l'ajout
-    h += '<section class="card meal" data-meal="' + m + '"><div class="meal-h">' + ic(MEAL_ICON[m]) + '<div class="stack meal-t"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + fmtInt(kc) + ' kcal</span>' : '') + '</div>' + plusBtn('fd-add', ' data-v="' + m + '"', 'Ajouter ' + ADD_TO[m]) + '</div>';
+    h += '<section class="card meal" data-meal="' + m + '"><div class="meal-h">' + ic(MEAL_ICON[m]) + '<div class="stack meal-t"><h3>' + label + '</h3>' + (its.length ? '<span class="muted small num">' + esc(nbsp(fmtInt(kc) + ' kcal · P ' + q1(mt.p) + ' · G ' + q1(mt.c) + ' · L ' + q1(mt.f) + ' g')) + '</span>' : '') + '</div>' + plusBtn('fd-add', ' data-v="' + m + '"', 'Ajouter ' + ADD_TO[m]) + '</div>';
     // Balayer un aliment vers la gauche découvre « Supprimer » ; le toucher ouvre sa quantité, comme avant
     h += its.map(i => swipeRow('<button type="button" class="pick" data-act="fd-edit" data-v="' + esc(i.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(i.name) + '</span><span class="m">' + (i.brand ? esc(i.brand) + ' · ' : '') + fmtKg(i.g) + ' g</span></span><span class="num">' + fmtInt(scale(i.per100, i.g).kcal || 0) + ' kcal</span></button>', 'fd-swipe-del', esc(i.id), 'Retirer ' + esc(i.name) + ' du journal', ' data-d="' + day + '"')).join('');
     // Repas vide : « Comme hier » (repas passé des 7 derniers jours) et le premier habituel ; repas noté : « Enregistrer ce repas » dès 2 aliments

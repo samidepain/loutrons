@@ -60,7 +60,7 @@ export function viewSession(){
       i = j;
     } else { h += one(it, i); i++; }
   }
-  h += '<button type="button" class="btn" data-act="pick-add">+ Ajouter un exercice à cette séance</button>';
+  h += '<button type="button" class="btn" data-act="pick-add">+ Ajouter un exercice à cette séance</button><p class="muted small sess-hint">Machine prise ou envie de changer ? « Remplacer », « Passer » et « Ajouter » ne valent que pour aujourd’hui : ta séance modèle ne change pas.</p>';
   h += painCard(w);
   h += '<section class="card"><h3>Notes</h3><textarea id="notes-' + w.id + '" data-f="notes" placeholder="Sensations, réglages de machine, ce qui a gêné…">' + esc(w.notes || '') + '</textarea></section>';
   // Une seule action orange : « Valider la série » pendant la séance, « Terminer la séance » une fois tout validé
@@ -105,7 +105,7 @@ const setText = (it, s, t, i) => { if (it.kind === 'plyo') return it.lo + ' ' + 
 function exLine(it, w){
   const st = w.ex[it.ex]; const t = w.targets[it.ex] || {};
   let m; let fin = false;
-  if (!st || st.skip) m = 'Passé cette semaine';
+  if (!st || st.skip) m = ['skip', 'opt'].indexOf(t.type) >= 0 ? 'Passé cette semaine' : 'Passé aujourd’hui';
   else if (finished(it, st)) { fin = true; m = it.kind === 'check' ? '✓ Fait' : '✓ ' + st.sets.length + '/' + st.sets.length + (prSet(w, it) ? ' · record' : ''); }
   else if (it.kind === 'check') m = 'À faire';
   else if (it.kind === 'cardio') m = it.lo + ' min';
@@ -161,7 +161,9 @@ function openCard(it, w, idx, focus){
   const pillCls = { up:'good', reps:'acc', calib:'court', back:'court', deload:'court', down:'warn', reset:'warn', hold:'warn', confirm:'court', skip:'bad', opt:'', plyo:'acc', check:'' }[t.type] || '';
   let h = '<section class="card ex open' + (st.skip ? ' skipped' : '') + (fin ? ' complete' : '') + '" data-ex="' + esc(key) + '">';
   h += '<div class="stack ex-h"><h3 class="exname">' + esc(it.name) + '</h3>' + (presc ? '<span class="presc">' + esc(presc) + '</span>' : '')
-    + '<div class="row ex-acts">' + (hasMovement(e) ? '<button type="button" class="btn sm" data-act="move-open" data-v="' + esc(key) + '">Voir le mouvement</button>' : '') + '<button type="button" class="btn sm" data-act="pick-replace" data-i="' + idx + '">Remplacer</button></div></div>';
+    + '<div class="row ex-acts">' + (hasMovement(e) ? '<button type="button" class="btn sm" data-act="move-open" data-v="' + esc(key) + '">Voir le mouvement</button>' : '') + '<button type="button" class="btn sm" data-act="pick-replace" data-i="' + idx + '">Remplacer</button>'
+    // Passer : seulement tant qu'aucune série n'est validée (machine prise, pas envie) ; la séance modèle ne change pas
+    + (!st.skip && !fin && it.kind !== 'check' && !st.sets.some(s => s.done) ? '<button type="button" class="btn sm" data-act="skip" data-ex="' + esc(key) + '">Passer</button>' : '') + '</div></div>';
   if (t.type && t.type !== 'check') {
     const kgTxt = t.kg != null && it.kind !== 'plyo' ? '<b class="num" style="font-size:18px">' + (it.kind === 'bw' ? (t.kg > 0 ? 'Lest ' + fmtKg(t.kg) + ' kg' : 'Poids du corps') : fmtKg(t.kg) + ' kg') + '</b>' + (Array.isArray(t.reps) ? ' × ' + t.reps.join(', ') : '') + '<br>' : '';
     h += '<div class="target"><span class="pill ' + pillCls + ' tl">' + esc(t.label) + '</span><p>' + kgTxt + esc(t.text || '') + '</p></div>';
@@ -186,7 +188,7 @@ function openCard(it, w, idx, focus){
     h += st.done ? '<div class="row between"><span class="pill good">Fait ✓</span><button type="button" class="btn" data-act="check" data-ex="' + esc(key) + '">Annuler</button></div>'
       : '<div class="cur-set"' + (turn === 0 && focus.cur === 'turn' ? ' id="cur"' : '') + '><button type="button" class="btn primary big" data-act="check" data-ex="' + esc(key) + '">Marquer comme fait</button></div>';
   } else if (st.skip) {
-    h += t.type === 'opt' ? '<button type="button" class="btn" data-act="unskip" data-ex="' + esc(key) + '">Je le fais cette semaine</button>' : '<p class="muted small">Passé cette semaine.</p>';
+    h += t.type === 'skip' ? '<p class="muted small">Passé cette semaine.</p>' : (t.type === 'opt' ? '' : '<p class="muted small">Passé pour aujourd’hui : ta séance modèle ne change pas.</p>') + '<button type="button" class="btn" data-act="unskip" data-ex="' + esc(key) + '">' + (t.type === 'opt' ? 'Je le fais cette semaine' : 'Je le fais finalement') + '</button>';
   } else {
     // Une série en correction prend la place de la série en cours (qui s'affiche alors comme une série à venir)
     const ed = S.setEdit && S.setEdit.ex === key && st.sets[S.setEdit.i] && st.sets[S.setEdit.i].done ? S.setEdit.i : -1;

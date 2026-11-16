@@ -15,6 +15,7 @@ export function viewDraft(){ return S.draft.kind === 'tpl' ? viewTplEditor() : v
 function viewTplEditor(){
   const D = S.draft; const t = D.data;
   let h = '<section class="card"><div class="row between"><h2>' + (D.isNew ? 'Nouvelle séance' : 'Modifier la séance') + '</h2><button type="button" class="link" data-act="draft-cancel">Annuler</button></div>';
+  if (!D.isNew) h += '<p class="muted small">Ces changements valent pour toutes tes prochaines séances. Pour aujourd’hui seulement, commence la séance : « Remplacer » ou « Passer » sur un exercice.</p>';
   h += '<div class="fields"><label class="f"><span>Nom</span><input id="d-name" data-d="name" value="' + esc(t.name || '') + '" placeholder="ex. Full body"></label><label class="f"><span>Objectif</span><input id="d-focus" data-d="focus" value="' + esc(t.focus || '') + '" placeholder="ex. Force et détente"></label></div>';
   // « Si le temps manque, couper » : seulement pour les séances qui l'avaient déjà (séances de départ), pas à la création
   if (!D.isNew && t.cut) h += '<label class="f"><span>Si le temps manque, couper</span><input id="d-cut" data-d="cut" value="' + esc(t.cut || '') + '"></label>';
