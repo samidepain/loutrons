@@ -6,7 +6,7 @@
 import { S } from './store.js';
 import { activeWorkout } from './data.js';
 
-const PTABS = ['seances', 'exercices', 'planning'], PRTABS = ['stats', 'history'];
+const PTABS = ['seances', 'planning', 'exercices'], PRTABS = ['stats', 'history'];
 const FOOD_LEVEL = { search:0, scan:1, notfound:2, portion:2, create:2, recipe:2, 'save-meal':0, meal:1 };
 // Écran affiché : clé, profondeur, onglet (écrans du premier niveau), écran d'origine (from), fenêtre (sheet),
 // rang parmi des écrans voisins (sub : sous-onglets, jours du journal)
@@ -24,12 +24,13 @@ export function screenOf(){
     if (S.fiche) return { key:'fiche-' + S.fiche, level:1, from:v };
     return { key:'prog-' + S.progTab, level:0, tab:v, sub:PTABS.indexOf(S.progTab) };
   }
-  if (v === 'progress' && S.fiche) return { key:'fiche-' + S.fiche, level:1, from:v };
+  // Progrès : page d'une statistique (niveau 1), d'où l'on peut ouvrir la fiche d'un exercice (niveau 2)
+  if (v === 'progress' && S.fiche) return { key:'fiche-' + S.fiche, level: S.stat ? 2 : 1, from:v };
+  if (v === 'progress' && S.stat) return { key:'stat-' + S.stat, level:1, from:v };
   if (v === 'progress') return { key:'progress-' + S.progressTab, level:0, tab:v, sub:PRTABS.indexOf(S.progressTab) };
   if (v === 'food' && S.food) return { key:'food-' + S.food.mode, level:FOOD_LEVEL[S.food.mode] || 0, sheet:'food' };
   if (v === 'food') return { key:'food', level:0, tab:v, sub:S.foodDay || '9999' };
   if (v === 'profile') return { key:'profile', level:1, from:S.from || 'today' };
-  if (v === 'science') return { key:'science', level:2, from:S.from || 'today' };
   if (v === 'settings') return { key:'settings-' + S.set, level:2, from:S.from || 'today' };
   if (v === 'today' && S.day) return { key:'day', level:1, from:'today' };
   return { key:'today', level:0, tab:'today' };

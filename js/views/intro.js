@@ -9,8 +9,7 @@ import { hasMeals } from '../food.js';
 const INTROS = {
   today:{ icon:'today', title:'Aujourd’hui, ton point de départ', lead:'Chaque jour, tu retrouves ici ce qui compte, et rien d’autre.', items:[
     ['training', 'Ta séance du jour', 'Lance-la d’un geste : Loutrons te propose la suivante de ta rotation.'],
-    ['food', 'Ton alimentation', 'Ce qu’il te reste à manger aujourd’hui, si tu suis ton alimentation.'],
-    ['water', 'Ton suivi du jour', 'Eau, poids, sommeil, activités et douleurs : quelques secondes pour tout noter.'],
+    ['water', 'Ton suivi du jour', 'Eau, poids et sommeil : quelques secondes pour tout noter.'],
     ['person', 'Émile', 'Ton coach te donne un conseil à la fois, quand il est utile.']] },
   training:{ icon:'training', title:'Ton entraînement', lead:'Ici, tu prépares et tu fais tes séances de musculation.', items:[
     ['training', 'Séances', 'Un programme est déjà prêt : choisis une séance et lance-la, ou crée la tienne.'],
@@ -23,9 +22,9 @@ const INTROS = {
     ['progress', 'Compare à ton objectif', 'Calories, protéines, glucides et lipides du jour, selon tes besoins.'],
     ['snack', 'Gagne du temps', 'Les repas que tu refais souvent se rajoutent d’un seul geste.']] },
   progress:{ icon:'progress', title:'Ta progression', lead:'C’est ici que tu vois ton travail s’accumuler.', items:[
-    ['training', 'Tes records', 'Chaque exercice garde ta meilleure série et ton gain de force.'],
-    ['activity', 'Ton rythme', 'Combien de séances et de séries par semaine, sur les dernières semaines.'],
-    ['body', 'Ton corps', 'Courbes de poids et de sommeil, pour suivre ce qui change vraiment.'],
+    ['training', 'Ta force', 'Chaque exercice garde ta meilleure série et tes records.'],
+    ['activity', 'Ton rythme', 'Tes séances et tes séries, semaine après semaine.'],
+    ['body', 'Ton corps', 'Poids et sommeil : touche un chiffre pour voir sa courbe en grand.'],
     ['water', 'Les bilans', 'Toutes les 6 semaines, un bilan de bloc avec des pistes pour la suite.']] }
 };
 // hasData : la rubrique contient déjà des données (rien à expliquer)

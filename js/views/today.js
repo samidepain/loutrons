@@ -1,5 +1,5 @@
-// Écran Aujourd’hui : en haut la séance du jour, la semaine et l'alimentation ; dessous un conseil d'Émile à la fois,
-// puis le suivi du jour en lignes compactes (eau, poids et sommeil, activités, genou).
+// Écran Aujourd’hui : en haut la séance du jour et la semaine ; dessous un conseil d'Émile à la fois, puis le suivi du jour en lignes
+// compactes (eau, poids et sommeil ; activités et douleurs seulement si elles sont réglées dans le profil). L'alimentation a son onglet.
 import { addDays, capFirst, greeting, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
 import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, nextWeigh, tplItems, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
@@ -9,7 +9,7 @@ import { useShare } from '../backup.js';
 import { kneeChips, TROPHY } from '../render.js';
 import { noTplCard } from './program.js';
 import { calendarCard } from './calendar.js';
-import { checkCard, foodTodayCard } from './goal.js';
+import { checkCard } from './goal.js';
 import { emile, emileQueue, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
@@ -132,7 +132,6 @@ export function viewToday(){
   h += planCard(d, plan, aw, doneToday, tpls);
   if (S.loaded && !tpls.length) h += noTplCard();
   h += calendarCard();
-  h += foodTodayCard();
   h += emileCards(d, wk, goal) + recordCard(d);
   if (!S.loaded) return h;
 

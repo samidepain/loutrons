@@ -33,6 +33,15 @@ export const TYPES = [['run', 'Course à pied'], ['bike', 'Vélo'], ['swim', 'Na
 // Les documents gardent type:'sport' et sport:'basket' : les anciennes activités restent lisibles.
 export const CHOICES = TYPES.filter(t => t[0] !== 'sport' && t[0] !== 'other').concat(Object.keys(SPORTS).map(k => ['sport:' + k, SPORTS[k].label]), [TYPES[TYPES.length - 1]]);
 export const choiceOf = a => a.type === 'sport' ? (a.sport ? 'sport:' + a.sport : 'sport') : a.type;
+// Activités pratiquées en plus de la musculation (settings.sports : choix du formulaire, 'run', 'sport:basket'…), réglées dans le profil.
+// Sans ce réglage : celles déjà notées et le sport à jours fixes, pour que rien ne disparaisse chez qui s'en servait déjà ; sinon aucune
+// (l'appli reste centrée sur la musculation).
+export function mySports(){
+  const all = CHOICES.map(c => c[0]); const s = settings().sports; if (Array.isArray(s)) return all.filter(k => s.indexOf(k) >= 0);
+  const used = new Set(); S.docs.forEach((o, id) => { if (id.indexOf('a_') === 0) used.add(choiceOf(o)); });
+  if (sportOn() && sportOf(sportInfo().name)) used.add('sport:' + sportOf(sportInfo().name));
+  return all.filter(k => used.has(k));
+}
 export const RUN_KCAL = 1; // course : environ 1 kcal par kg et par km, quelle que soit la vitesse (dépense nette ; Margaria et al., 1963)
 // Eau à boire par jour : apport total conseillé par l'EFSA (2010), 2,5 L pour un homme et 2,0 L pour une femme, dont environ 20 %
 // apportés par les aliments ; plus environ 0,5 L par heure de sport (repère de l'appli)

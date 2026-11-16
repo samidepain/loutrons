@@ -94,7 +94,7 @@ test('charge trop lourde : nouvelle charge d’après la force estimée', () => 
   assert.deepEqual(t.reps, [5, 5, 5]);
 });
 
-test('stagnation sur 3 séances à la même charge : −10 %, présenté comme règle de terrain', () => {
+test('stagnation sur 3 séances à la même charge : −10 %, sans citer d’étude (règle de terrain)', () => {
   jour('2026-09-23');
   donnees(docs(reglages(),
     seance('2026-09-14', { la_hack: { kg: 100, reps: [7, 7, 7], rir: 1 } }),
@@ -103,7 +103,7 @@ test('stagnation sur 3 séances à la même charge : −10 %, présenté comme r
   const t = objectif('la_hack');
   assert.equal(t.type, 'reset');
   assert.equal(t.kg, 90);
-  assert.match(t.text, /règle de terrain, pas un résultat d’étude/);
+  assert.doesNotMatch(t.text, /étude|et al\./);
 });
 
 test('reps en plus : +1 sans réserve notée, +2 avec 3 en réserve, 0 à l’échec', () => {

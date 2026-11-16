@@ -84,7 +84,7 @@ function split(out){
   out.carbs = Math.max(0, Math.round((out.kcal - out.protein[0] * 4 - out.fat[0] * 9) / 4 / 5) * 5);
   return out;
 }
-// Point toutes les 2 semaines : règles de l'appli (voir La science). days : écart entre deux points ; weighins, span : pesées
+// Point toutes les 2 semaines : règles de l'appli. days : écart entre deux points ; weighins, span : pesées
 // nécessaires (une toutes les 2 semaines) et jours qu'elles doivent couvrir ; noise : variation du poids d'un jour à l'autre (kg, eau, sel,
 // repas), hypothèse de l'appli qui donne la marge d'incertitude de la tendance ; tolerance : écart ignoré au minimum (kg par semaine) ; share : part de l'écart corrigée ;
 // step : correction maximale à chaque point (kcal par jour) ; total : correction cumulée maximale (part des besoins estimés) ;

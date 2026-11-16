@@ -18,7 +18,7 @@ import { copyEntries, dayDoc, freshFood, fromOff, habitualFoods, mealLabel, MEAL
 import { convText, foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
 import { ownRecipe } from './recipes.js';
 import { gramsOf, measuresFor } from './measures.js';
-import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, sportOf, WATER_RANGE, waterOf } from './energy.js';
+import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, mySports, sportOf, WATER_RANGE, waterOf } from './energy.js';
 import { actDoc, actPreview, liters } from './views/activity.js';
 
 // Supprime une séance perso (jamais une séance de base) et la retire de la rotation et du planning ; faux si elle n'existe pas ou est de base
@@ -220,9 +220,11 @@ async function lookupBarcode(raw){
 document.addEventListener('barcode', e => { if (S.food && S.food.mode === 'scan') lookupBarcode(e.detail); });
 // Un choix du formulaire d'activité ('run', 'sport:basket', 'other'…) en type, sport et niveau ; un sport commence en « entraînement ou loisir »
 function choice(v){ const p = String(v).split(':'); return p[0] === 'sport' && p[1] ? { type:'sport', sport:p[1], level:'train' } : { type:p[0] === 'sport' ? 'run' : p[0] }; }
+// Activité proposée à l'ouverture du formulaire : la dernière ajoutée si elle fait encore partie des sports pratiqués, sinon le premier d'entre eux
+function firstChoice(){ const mine = mySports(); const last = settings().lastAct; return mine.indexOf(last) >= 0 || !mine.length ? last || 'run' : mine[0]; }
 const A = {
   // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
-  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.day = null; S.fiche = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
+  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.day = null; S.fiche = null; S.stat = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
     render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
   // Aujourd'hui : ouvrir ou fermer une ligne compacte, afficher les autres conseils d'Émile, liens vers Séances et Alimentation
   'today-open'(b){ S.todayOpen = S.todayOpen === b.dataset.v ? null : b.dataset.v; render(); },
@@ -393,13 +395,13 @@ const A = {
   'set-open'(b){ S.set = b.dataset.v; S.todayOpen = null; S.view = 'settings'; render(); window.scrollTo(0, 0); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
-  profile(b){ if (!['profile', 'science', 'settings'].includes(S.view)) S.from = S.view; S.view = b && b.dataset && b.dataset.v === 'settings' ? 'settings' : 'profile'; S.act = null; S.move = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
-  science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
+  profile(b){ if (!['profile', 'settings'].includes(S.view)) S.from = S.view; S.view = b && b.dataset && b.dataset.v === 'settings' ? 'settings' : 'profile'; S.act = null; S.move = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
-  // Période des courbes et mesure du rythme (Progrès › Résumé) : états d'affichage, non enregistrés
+  // Progrès : page d'une statistique (écran poussé) et période de ses courbes ; états d'affichage, non enregistrés
+  'stat-open'(b){ S.stat = b.dataset.v; S.confirm = null; render(); window.scrollTo(0, 0); },
+  'stat-close'(){ S.stat = null; S.confirm = null; render(); },
   prrange(b){ S.prRange = b.dataset.v; render(); },
-  prmetric(b){ S.prMetric = b.dataset.v; render(); },
   // Calendrier : toucher un jour ouvre son mois et affiche ce jour ; flèches ou glissement pour changer de mois
   'cal-month'(){ S.calMonth = (S.calDay || today()).slice(0, 7); render(); },
   'cal-week'(){ S.calMonth = null; S.calDay = null; render(); },
@@ -408,12 +410,14 @@ const A = {
   // Toucher un jour ouvre son écran ; le mois (ou la semaine) et le jour choisi sont gardés pour le retour
   'cal-day'(b){ const d = b.dataset.v; if (S.calMonth) S.calMonth = d.slice(0, 7); S.calDay = d; S.day = d; S.confirm = null; render(); window.scrollTo(0, 0); },
   'day-close'(){ S.day = null; S.confirm = null; render(); },
-  'cal-hist'(b){ S.day = null; S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
+  'cal-hist'(b){ S.day = null; S.stat = null; S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
   'set-sex'(b){ putSettings({ sex: settings().sex === b.dataset.v ? null : b.dataset.v }); render(); },
   theme(b){ putSettings({ theme: b.dataset.v }); applyTheme(b.dataset.v); render(); },
   'prog-rename'(){ S.renaming = true; render(); const i = $('#prog-name'); if (i) i.focus(); },
   'prog-rename-save'(){ const v = String(($('#prog-name') || {}).value || '').trim(); if (!v) { toast('Donne un nom à ton programme.'); return; } putSettings({ program: Object.assign({}, programOf(), { name:v }) }); S.renaming = false; render(); toast('Programme renommé.'); },
   'go-new-tpl'(){ S.view = 'training'; S.progTab = 'seances'; A['new-tpl'](); },
+  // Autres sports pratiqués (Profil › Paramètres) : la liste déduite est figée au premier choix
+  'sport-pick'(b){ putSettings({ sports: toggleIn(mySports().slice(), b.dataset.v) }); render(); },
   mod(b){ const m = Object.assign({}, mods()); m[b.dataset.v] = b.checked; putSettings({ modules:m }); render(); toast(b.checked ? 'Option activée.' : 'Option désactivée.'); },
   'sport-day'(b){ const sp = Object.assign({ name:'', train:[], match:[] }, settings().sport); const k = b.dataset.k; const o = k === 'train' ? 'match' : 'train'; const wd = +b.dataset.v; sp[k] = toggleIn(sp[k], wd); sp[o] = (sp[o] || []).filter(x => x !== wd); putSettings({ sport:sp }); render(); },
   'ex-hide'(b){ const id = b.dataset.v; const ex = excluded().filter(x => x !== id); if (b.checked) ex.push(id); putSettings({ excluded:ex }); toast(b.checked ? 'Exercice masqué.' : 'Exercice affiché à nouveau.'); },
@@ -457,7 +461,7 @@ const A = {
   // Activités : ajout (éventuellement le sport prévu aujourd'hui), modification, suppression
   'act-add'(b){
     const v = b.dataset.v; const date = b.dataset.d || today(); const planned = b.dataset.p === '1' ? { planned:true } : {};
-    S.act = v ? { type:'sport', sport: sportOf(sportInfo().name), level:v, min:90, date } : Object.assign({ date }, planned, choice(settings().lastAct || 'run'));
+    S.act = v ? { type:'sport', sport: sportOf(sportInfo().name), level:v, min:90, date } : Object.assign({ date }, planned, choice(firstChoice()));
     S.confirm = null; render(); window.scrollTo(0, 0);
   },
   'act-cancel'(){ S.act = null; S.confirm = null; render(); },
@@ -674,9 +678,7 @@ const A = {
   'reset-ex'(){ del('x_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-ex'(){ S.confirm = 'del-ex'; render(); },
   'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; S.fiche = null; render(); toast('Exercice supprimé.'); },
-  // Rotation : ordre, séances mises de côté, objectif, jours prévus. La rotation déduite est d'abord figée (ordre et mises de côté)
-  'rot-up'(b){ moveRot(b.dataset.v, -1); },
-  'rot-down'(b){ moveRot(b.dataset.v, 1); },
+  // Rotation : séances mises de côté, objectif, jours prévus (l'ordre se change en glissant une ligne, voir plus bas). La rotation déduite est d'abord figée
   'rot-toggle'(b){
     const f = frozenRot(); const id = b.dataset.v;
     if (f.rotation.indexOf(id) >= 0) { f.rotation = f.rotation.filter(x => x !== id); f.rotOff.push(id); } else { f.rotOff = f.rotOff.filter(x => x !== id); f.rotation.push(id); }
@@ -815,3 +817,65 @@ const turnEnd = e => {
   if (t.moved) turnTo(t.box, Math.round(t.ry / 180) * 180); else if (e.type === 'pointerup') turnTo(t.box, t.ry0 + 180);
 };
 document.addEventListener('pointerup', turnEnd); document.addEventListener('pointercancel', turnEnd);
+
+// Rotation (Planning) : glisser une séance pour la déplacer. Au doigt, un appui maintenu de 300 ms sur la ligne (sinon la page défile),
+// ou tout de suite depuis la poignée ; à la souris, dès que le pointeur bouge. Les autres lignes s'écartent pendant le déplacement,
+// qui reste entre la première et la dernière ; l'ordre est enregistré au lâcher. Au clavier : flèches haut et bas sur la poignée.
+// shortcut: pas de défilement automatique près des bords (la rotation tient à l'écran) ; à prévoir si elle dépasse une dizaine de séances
+let drag = null;
+function dragStart(x, y, target, touch){
+  dragEnd(false);
+  const row = target.closest && !target.closest('.rot-in') && target.closest('.rot-row[data-rot]'); if (!row) return;
+  drag = { row, x0:x, y0:y, on:false, hold: touch && !target.closest('.rot-grip'), touch };
+  if (drag.hold) drag.timer = setTimeout(dragLift, 300);
+}
+function dragLift(){
+  const d = drag; if (!d || d.on) return; const list = d.row.parentElement;
+  d.rows = Array.from(list.querySelectorAll('.rot-row[data-rot]')); d.from = d.to = d.rows.indexOf(d.row);
+  d.tops = d.rows.map(r => r.offsetTop); d.hs = d.rows.map(r => r.offsetHeight);
+  d.on = true; list.classList.add('sorting'); d.row.classList.add('lift');
+}
+function dragMove(x, y, e){
+  const d = drag; if (!d) return;
+  if (!d.on) {
+    if (Math.abs(y - d.y0) < 6 && Math.abs(x - d.x0) < 6) return;
+    // le doigt a bougé avant la fin de l'appui : c'est un défilement de la page
+    if (d.hold) { dragEnd(false); return; }
+    dragLift();
+  }
+  if (e.cancelable) e.preventDefault();
+  const n = d.rows.length - 1; const f = d.from; const pitch = d.hs[f] + (n ? d.tops[1] - d.tops[0] - d.hs[0] : 0);
+  const dy = Math.max(d.tops[0] - d.tops[f], Math.min(d.tops[n] + d.hs[n] - d.hs[f] - d.tops[f], y - d.y0));
+  const mid = d.tops[f] + dy + d.hs[f] / 2;
+  // nouvelle place : le nombre de lignes dont le milieu est au-dessus de celui de la ligne tenue
+  d.to = d.rows.filter((r, i) => i !== f && d.tops[i] + d.hs[i] / 2 < mid).length;
+  d.row.style.transform = 'translateY(' + dy + 'px) scale(1.02)';
+  d.rows.forEach((r, i) => { if (i !== f) r.style.transform = i > f && i <= d.to ? 'translateY(' + -pitch + 'px)' : i < f && i >= d.to ? 'translateY(' + pitch + 'px)' : ''; });
+}
+function dragEnd(commit){
+  const d = drag; drag = null; if (!d) return; clearTimeout(d.timer); if (!d.on) return;
+  const list = d.row.parentElement; const moved = commit && d.to !== d.from; d.row.classList.remove('lift');
+  if (moved) {
+    const f = frozenRot(); f.rotation.splice(d.to, 0, f.rotation.splice(d.from, 1)[0]); putSettings(f);
+    // la ligne rejoint sa place, puis l'écran est redessiné dans le nouvel ordre
+    d.row.style.transform = 'translateY(' + (d.to > d.from ? d.tops[d.to] + d.hs[d.to] - d.hs[d.from] - d.tops[d.from] : d.tops[d.to] - d.tops[d.from]) + 'px)';
+  } else d.rows.forEach(r => { r.style.transform = ''; });
+  setTimeout(() => {
+    if (moved) { if (drag) { clearTimeout(drag.timer); drag = null; } render(); }
+    else if (!drag) list.classList.remove('sorting');
+  }, lessMotion() ? 0 : 220);
+}
+document.addEventListener('touchstart', e => { if (e.touches.length === 1) dragStart(e.touches[0].clientX, e.touches[0].clientY, e.target, true); else dragEnd(false); }, { passive:true });
+document.addEventListener('touchmove', e => { if (drag) dragMove(e.touches[0].clientX, e.touches[0].clientY, e); }, { passive:false });
+document.addEventListener('touchend', () => dragEnd(true)); document.addEventListener('touchcancel', () => dragEnd(false));
+document.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch' && e.button === 0) dragStart(e.clientX, e.clientY, e.target, false); });
+document.addEventListener('pointermove', e => { if (drag && !drag.touch) dragMove(e.clientX, e.clientY, e); });
+document.addEventListener('pointerup', e => { if (drag && !drag.touch) dragEnd(true); });
+document.addEventListener('pointercancel', e => { if (drag && !drag.touch) dragEnd(false); });
+// un appui long ne doit pas ouvrir le menu du navigateur pendant qu'on tient une ligne
+document.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
+document.addEventListener('keydown', e => {
+  const g = e.target.closest && e.target.closest('.rot-grip'); const dir = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0; if (!g || !dir) return;
+  e.preventDefault(); const id = g.dataset.v; moveRot(id, dir);
+  const again = Array.from(document.querySelectorAll('.rot-grip')).find(x => x.dataset.v === id); if (again) again.focus();
+});

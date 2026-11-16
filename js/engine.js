@@ -43,7 +43,7 @@ export function computeTarget(e, wk, excludeId){
     const reps = []; for (let i = 0; i < nSets; i++) reps.push(clamp((top[i] || last).reps, lo, hi));
     let nk = kg;
     if (pause && gap > 28 && kg > 0) { nk = Math.floor((kg * 0.9) / step) * step; if (nk >= kg) nk = kg - step; nk = Math.max(0, roundTo(nk, 0.25)); }
-    if (nk < kg) return { type:'back', label:'Reprise −10 %', sets:nSets, kg:nk, reps, rir:tr, text:'Pas fait depuis ' + gap + ' jours : repars à ' + fmtKg(nk) + ' kg (−10 %), puis remonte. C’est une règle de terrain.' };
+    if (nk < kg) return { type:'back', label:'Reprise −10 %', sets:nSets, kg:nk, reps, rir:tr, text:'Pas fait depuis ' + gap + ' jours : repars à ' + fmtKg(nk) + ' kg (−10 %), puis remonte.' };
     return { type:'back', label:'Reprise', sets:nSets, kg, reps, rir:tr, text:'Pas fait depuis ' + gap + ' jours : reprends à ' + (e.kind === 'bw' && !kg ? 'ton poids du corps' : fmtKg(kg) + ' kg') + ', sans chercher à monter cette fois.' };
   }
   if (wk.deload) return { type:'deload', label:'Décharge', sets:nSets, kg, reps:fill(lo), rir:3,
@@ -84,7 +84,7 @@ export function computeTarget(e, wk, excludeId){
     if (h3.every(h => maxKg(h) === kg) && best(h3[0]) <= best(h3[2])) {
       let nk = Math.floor((kg * 0.9) / step) * step; if (nk >= kg) nk = kg - step; nk = Math.max(0, roundTo(nk, 0.25));
       return { type:'reset', label:'Relance −10 %', sets:nSets, kg:nk, reps:fill(lo), rir:tr,
-        text:'Pas de progrès depuis 3 séances à ' + fmtKg(kg) + ' kg : repars à ' + fmtKg(nk) + ' kg et remonte. C’est une règle de terrain, pas un résultat d’étude.' };
+        text:'Pas de progrès depuis 3 séances à ' + fmtKg(kg) + ' kg : repars à ' + fmtKg(nk) + ' kg et remonte.' };
     }
   }
   if (knee) {
@@ -190,6 +190,11 @@ export function weeklyRhythm(from, to){
 }
 // Début d'une période d'affichage (courbes, rythme) : date AAAA-MM-JJ, ou null pour « tout l'historique »
 export const PERIODS = [['w8', '8 semaines', 56], ['m6', '6 mois', 182], ['all', 'Tout', null]];
+// Période d'avant, de même durée, pour comparer ({ from, to }) ; « Tout » n'en a pas
+export function prevPeriod(key){
+  const p = PERIODS.find(x => x[0] === key) || PERIODS[1]; if (p[2] == null) return null;
+  const from = periodStart(key); return { from: addDays(from, -p[2]), to: addDays(from, -1) };
+}
 export function periodStart(key){
   const p = PERIODS.find(x => x[0] === key) || PERIODS[1];
   return p[2] == null ? null : addDays(today(), 1 - p[2]);
@@ -318,10 +323,10 @@ export function blockReport(block){
     const nu = settings().nutrition || {}; const goal = nu.on ? (nu.goal || 'keep') : 'gain';
     if (goal === 'lose') tips.push(p <= -1.1 ? ['warn', 'Baisse rapide (' + pc + ' % par semaine) : au-delà de 1 %, tu risques de perdre aussi de la masse musculaire.']
       : p <= -0.4 ? ['good', 'Poids en baisse de ' + pc + ' % par semaine : dans la cible de 0,5 à 1 % pour perdre de la masse grasse en préservant ta masse musculaire.']
-      : ['info', 'Poids ' + (p < 0 ? 'en légère baisse' : 'stable ou en hausse') + ' (' + kgTxt + '). Pour perdre de la masse grasse en préservant ta masse musculaire, la cible courante est une baisse de 0,5 à 1 % du poids par semaine (Helms et al., 2014).']);
+      : ['info', 'Poids ' + (p < 0 ? 'en légère baisse' : 'stable ou en hausse') + ' (' + kgTxt + '). Pour perdre de la masse grasse en préservant ta masse musculaire, la cible courante est une baisse de 0,5 à 1 % du poids par semaine.']);
     else if (goal === 'keep') tips.push(Math.abs(p) < 0.25 ? ['good', 'Poids stable (' + kgTxt + ') : conforme à ton objectif.']
       : ['info', 'Ton poids ' + (p > 0 ? 'monte' : 'baisse') + ' de ' + pc + ' % par semaine (' + kgTxt + ') alors que tu vises à le garder : ajuste un peu ce que tu manges.']);
-    else tips.push(p < 0.1 ? ['info', 'Poids stable (' + kgTxt + '). Pour prendre de la masse musculaire, la cible courante est une hausse de 0,25 à 0,5 % du poids par semaine (Iraki et al., 2019).']
+    else tips.push(p < 0.1 ? ['info', 'Poids stable (' + kgTxt + '). Pour prendre de la masse musculaire, la cible courante est une hausse de 0,25 à 0,5 % du poids par semaine.']
       : p > 0.6 ? ['warn', 'Hausse rapide (' + pc + ' % par semaine) : au-dessus de 0,5 %, une plus grande part risque d’être de la masse grasse.']
       : ['good', 'Poids en hausse de ' + pc + ' % par semaine : dans la cible de 0,25 à 0,5 % pour prendre de la masse musculaire.']);
   }

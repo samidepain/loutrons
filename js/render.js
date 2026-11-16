@@ -6,9 +6,9 @@ import { ensureTick } from './timers.js';
 import { viewToday } from './views/today.js';
 import { viewEnd, viewSession } from './views/session.js';
 import { viewPicker } from './views/picker.js';
-import { viewBilan, viewProgressPage } from './views/progress.js';
+import { viewBilan, viewProgressPage, viewStat } from './views/progress.js';
 import { viewProgram } from './views/program.js';
-import { viewProfile, viewSciencePage, viewSettings } from './views/profile.js';
+import { viewProfile, viewSettings } from './views/profile.js';
 import { newSetup, viewSetup } from './views/setup.js';
 import { viewDraft } from './views/editors.js';
 import { viewFiche } from './views/fiche.js';
@@ -50,7 +50,7 @@ export function renderTabs(){
   const me = $('#me'); const name = String(settings().name || '').trim();
   me.hidden = !S.loaded || !!(S.setup && S.setup.mode === 'welcome');
   me.innerHTML = (name ? esc(name.charAt(0).toUpperCase()) : ICONS.person) + GEAR;
-  me.classList.toggle('on', S.view === 'profile' || S.view === 'science' || S.view === 'settings');
+  me.classList.toggle('on', S.view === 'profile' || S.view === 'settings');
 }
 export function render(){
   if (needsSetup() && !S.setup) S.setup = newSetup('welcome');
@@ -64,9 +64,9 @@ function paint(){
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
   $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity()
-    : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : viewProgressPage())
+    : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : S.stat ? viewStat() : viewProgressPage())
     : v === 'food' && nutritionOf().on ? viewFood()
-    : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : v === 'settings' ? viewSettings() : S.day ? viewDay() : viewToday();
+    : v === 'profile' ? viewProfile() : v === 'settings' ? viewSettings() : S.day ? viewDay() : viewToday();
   if (v === 'training' && aw) ensureTick();
   foodAfterRender();
 }

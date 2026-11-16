@@ -4,12 +4,13 @@ import { DAY_SHORT } from '../library.js';
 import { S } from '../store.js';
 import { activityFamily, bodyweight, countSets, dayFamilies, daySummary, perWeekOf, plannedDates, sportInfo, tplDef, tplEst, wName, workouts } from '../data.js';
 import { workoutLines } from './history.js';
-import { activityKcal, activityName, sessionKcal } from '../energy.js';
+import { activityKcal, activityName, mySports, sessionKcal } from '../energy.js';
 import { actDetail } from './activity.js';
 import { ring } from '../ring.js';
 import { ICONS } from '../icons.js';
 
 const INITIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const FAM_NAMES = [['salle', 'Salle'], ['cardio', 'Cardio'], ['collectif', 'Sports collectifs'], ['individuel', 'Sports individuels'], ['autre', 'Autre']];
 // Points d'une case : un par famille présente ce jour-là (couleur : famille ; forme : état)
 const dot = f => '<i class="mk fam-' + f.fam + ' ' + f.state + '" aria-hidden="true"></i>';
 // Sport prévu ce jour-là (module sport) : « Match » les jours de match, sinon le nom du sport
@@ -58,9 +59,11 @@ export function viewDay(){
   h += '</div></section>';
   // Activités : ajouter (jours passés et aujourd'hui), modifier, supprimer avec confirmation
   const all = s.acts.concat(s.plannedActs);
+  // Sans autre sport choisi dans le profil ni activité ce jour-là, le bloc n'apparaît pas
+  if (!all.length && !mySports().length) return h;
   h += '<section class="card"><h2>Activités</h2>' + (all.length ? all.map(a => actRow(a, kg)).join('') : '<p class="muted">' + (day > t ? 'Aucune activité prévue.' : 'Aucune activité notée.') + '</p>');
   // Jours passés et aujourd'hui : noter ce qui a été fait ; aujourd'hui et jours à venir : prévoir à l'avance
-  h += '<div class="row">' + (day <= t ? '<button type="button" class="btn" data-act="act-add" data-d="' + day + '">+ Ajouter une activité</button>' : '') + (day >= t ? '<button type="button" class="btn" data-act="act-add" data-p="1" data-d="' + day + '">+ Prévoir une activité</button>' : '') + '</div>';
+  if (mySports().length) h += '<div class="row">' + (day <= t ? '<button type="button" class="btn" data-act="act-add" data-d="' + day + '">+ Ajouter une activité</button>' : '') + (day >= t ? '<button type="button" class="btn" data-act="act-add" data-p="1" data-d="' + day + '">+ Prévoir une activité</button>' : '') + '</div>';
   return h + '</section>';
 }
 export function calendarCard(){
@@ -75,6 +78,8 @@ export function calendarCard(){
   const ym = S.calMonth;
   let h = '<section class="card cal"><div class="row between"><button type="button" class="btn sm" data-act="cal-prev" aria-label="Mois précédent">‹</button><h3 class="cal-title" aria-live="polite">' + esc(capFirst(fmtMonth(ym))) + '</h3><button type="button" class="btn sm" data-act="cal-next" aria-label="Mois suivant">›</button></div>';
   h += '<div class="cal-month">' + INITIALES.map(x => '<span class="cal-h" aria-hidden="true">' + x + '</span>').join('') + monthDays(ym).map(d => d ? cell(d, true) : '<span></span>').join('') + '</div>';
-  h += '<div class="stack"><span class="legend"><span><i class="mk fam-salle done"></i>Salle</span><span><i class="mk fam-cardio done"></i>Cardio</span><span><i class="mk fam-collectif done"></i>Sports collectifs</span><span><i class="mk fam-individuel done"></i>Sports individuels</span><span><i class="mk fam-autre done"></i>Autre</span></span><span class="legend"><span><i class="mk fam-autre done"></i>fait</span><span><i class="mk fam-autre planned"></i>prévu</span></span></div><div class="row"><button type="button" class="link" data-act="cal-week">Revenir à la semaine</button></div>';
+  // Légende : la salle, et seulement les autres familles présentes ce mois-ci
+  const seen = new Set(['salle']); monthDays(ym).forEach(d => { if (d) dayFamilies(d).forEach(f => seen.add(f.fam)); });
+  h += '<div class="stack"><span class="legend">' + FAM_NAMES.filter(f => seen.has(f[0])).map(f => '<span><i class="mk fam-' + f[0] + ' done"></i>' + f[1] + '</span>').join('') + '</span><span class="legend"><span><i class="mk fam-autre done"></i>fait</span><span><i class="mk fam-autre planned"></i>prévu</span></span></div><div class="row"><button type="button" class="link" data-act="cal-week">Revenir à la semaine</button></div>';
   return h + '</section>';
 }

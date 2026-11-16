@@ -3,7 +3,7 @@ import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtInt, fmtKg, lowFirst, 
 import { S } from '../store.js';
 import { bodyweight, pendingActivities, plannedActivities, settings, sportInfo } from '../data.js';
 import { ICONS } from '../icons.js';
-import { activityKcal, activityName, CHOICES, choiceOf, dayEnergy, EFFORT, glassOf, LEVELS, SPORTS, sportPlanned, waterAuto, waterBase, waterChosen, waterGoal, waterOf, WATER } from '../energy.js';
+import { activityKcal, activityName, CHOICES, choiceOf, dayEnergy, EFFORT, glassOf, LEVELS, mySports, sportPlanned, waterAuto, waterBase, waterChosen, waterGoal, waterOf, WATER } from '../energy.js';
 import { ring } from '../ring.js';
 import { ic, LINE_ICON } from '../icons.js';
 
@@ -32,10 +32,11 @@ export function lineCard(key, name, value, quick, body, mark){
 export function activitiesLine(){
   if (!S.loaded) return '';
   const d = today(); const e = dayEnergy(d); const acts = e.items.filter(i => i.kind === 'activity'); const last = acts[acts.length - 1];
-  const plan = plannedActivities(d);
+  const plan = plannedActivities(d); const late = pendingActivities(d); const sp = sportPlanned(d);
+  // Sans autre sport choisi dans le profil ni activité à montrer aujourd'hui, la ligne n'existe pas : l'appli reste centrée sur la musculation
+  if (!mySports().length && !acts.length && !plan.length && !late.length && !sp) return '';
   const value = last ? last.name + (num(last.a.min) ? ' · ' + num(last.a.min) + ' min' : '') + (acts.length > 1 ? ' · +' + (acts.length - 1) : '') : plan.length ? 'Prévue : ' + activityName(plan[0]) + (plan.length > 1 ? ' · +' + (plan.length - 1) : '') : 'Aucune';
   let h = e.kcal ? '<p class="muted small num">Dépense du jour : ' + kcalText(e.kcal) + '</p>' : '';
-  if (!e.items.length && !plan.length && !pendingActivities(d).length) h += '<p class="muted small">Note ici tes autres sports pour estimer ta dépense du jour : ta séance de muscu s’ajoute toute seule.</p>';
   e.items.forEach(i => {
     const det = i.kind === 'session' ? i.min + ' min · séance ' + EFFORT[i.effort].label.toLowerCase()
       : i.kind === 'planned' ? (i.active ? 'en cours' : 'prévue') + ' · environ ' + i.min + ' min' : actDetail(i.a);
@@ -46,11 +47,9 @@ export function activitiesLine(){
   plan.forEach(a => { h += '<div class="quick"><button type="button" class="pick planned" data-act="act-edit" data-v="' + esc(a.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(activityName(a)) + '</span><span class="m">' + esc('prévue · ' + actDetail(a)) + '</span></span></button>'
     + '<button type="button" class="plus ok" data-act="act-done" data-v="' + esc(a.id) + '" aria-label="' + esc('Marquer ' + lowFirst(activityName(a)) + ' comme faite') + '">' + ICONS.check + '</button></div>'; });
   // Activités prévues les jours précédents et jamais notées : la coche les note à leur date, toucher la ligne permet de les retirer
-  const late = pendingActivities(d);
   late.forEach(a => { h += '<div class="quick"><button type="button" class="pick planned" data-act="act-edit" data-v="' + esc(a.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(activityName(a)) + '</span><span class="m">' + esc('prévue le ' + fmtDate(a.date) + ' · pas notée') + '</span></span></button>'
     + '<button type="button" class="plus ok" data-act="act-done" data-v="' + esc(a.id) + '" aria-label="' + esc('Marquer ' + lowFirst(activityName(a)) + ' du ' + fmtDate(a.date) + ' comme faite') + '">' + ICONS.check + '</button></div>'; });
   // Sport collectif prévu aujourd'hui et pas encore noté : un geste pour l'ajouter
-  const sp = sportPlanned(d);
   if (sp && !e.items.some(i => i.kind === 'activity' && i.a.type === 'sport')) h += '<button type="button" class="btn" data-act="act-add" data-v="' + sp + '">+ ' + esc(sp === 'match' ? 'Le match prévu aujourd’hui' : capFirst(sportInfo().name) + ' prévu aujourd’hui') + '</button>';
   if (!bodyweight() && e.items.some(i => i.kcal == null)) h += '<p class="muted small">Indique ton poids dans « Poids et sommeil » pour estimer les calories.</p>';
   h += '<button type="button" class="btn" data-act="act-add" data-p="1">+ Prévoir une activité</button>';
@@ -67,9 +66,8 @@ export function waterLine(){
   // Objectif du jour : choisi par la personne (réglage waterGoal), sinon le repère de l'appli ; les quantités déjà bues ne changent pas
   h += '<div class="stack water-goal"><span class="label">Objectif par jour</span><div class="row"><label class="fld"><input class="n" id="water-goal" inputmode="decimal" value="' + esc(liters(goal)) + '" aria-label="Objectif d’eau par jour, en litres"><span>L</span></label>'
     + (chosen ? '<button type="button" class="btn ghost" data-act="water-auto">Revenir au repère (' + liters(auto) + ' L)</button>' : '') + '</div>'
-    + '<p class="muted small">' + (chosen ? 'Objectif choisi par toi.' : 'Repère de l’appli : ' + liters(auto) + ' L (boissons' + (auto > waterBase(settings().sex) ? ', sport compris' : '') + ').') + ' Il s’applique à la jauge du jour ; tes quantités déjà bues ne changent pas.</p></div>';
-  h += '<details class="cue"><summary>Quel objectif choisir ?</summary><p class="small">Repère général : l’EFSA estime qu’une femme adulte a besoin d’environ 2,0 L d’eau par jour et un homme adulte de 2,5 L, tous apports compris. Les aliments en fournissent environ 20 % : cela fait à peu près 1,6 L et 2,0 L de boissons, par temps tempéré et avec une activité modérée.</p>'
-    + '<p class="small">Les besoins varient d’une personne à l’autre : la chaleur, le sport, la grossesse ou l’allaitement les augmentent. Ce n’est pas un conseil médical : si un professionnel de santé t’a donné une consigne (cœur, reins, traitement), suis la sienne.</p><p class="muted small">Source : EFSA, 2010 (valeurs de référence pour l’eau).</p></details>';
+    + '<p class="muted small">' + (chosen ? 'Objectif choisi par toi.' : 'Repère de l’appli : ' + liters(auto) + ' L (boissons' + (auto > waterBase(settings().sex) ? ', sport compris' : '') + ').') + '</p></div>';
+  h += '<p class="muted small">Si un professionnel de santé t’a donné une consigne, suis la sienne.</p>';
   return lineCard('eau', 'Eau', liters(ml) + ' / ' + liters(goal) + ' L', '<button type="button" class="btn" data-act="water" data-v="1">+ 1 verre</button>', h, ring(ml / goal, { cls:'xxs' }));
 }
 
@@ -85,10 +83,9 @@ export function viewActivity(){
   let h = '<div class="row between"><button type="button" class="link" data-act="act-cancel">Annuler</button><span class="label">' + esc(dayLabel(A.date)) + '</span></div><h1>' + (pl ? (A.edit ? 'Modifier l’activité prévue' : 'Prévoir une activité') : A.edit ? 'Modifier l’activité' : 'Ajouter une activité') + '</h1>';
   // Les choix sont rangés par groupe : endurance, sports collectifs, sports individuels, puis « Autre »
   const chip = t => '<button type="button" class="chip txt' + (choiceOf(A) === t[0] ? ' on' : '') + '" data-act="act-type" data-v="' + t[0] + '" role="radio" aria-checked="' + (choiceOf(A) === t[0]) + '">' + t[1] + '</button>';
-  const grp = (title, list) => '<div class="stack"><span class="label">' + title + '</span><div class="chips">' + list.map(chip).join('') + '</div></div>';
-  const sports = g => CHOICES.filter(c => c[0].indexOf('sport:') === 0 && SPORTS[c[0].slice(6)].group === g);
-  h += '<div class="stack" role="radiogroup" aria-label="Activité">' + grp('Endurance', CHOICES.filter(c => ['run', 'bike', 'swim', 'walk'].indexOf(c[0]) >= 0)) + grp('Sports collectifs', sports('collectif')) + grp('Sports individuels', sports('individuel'))
-    + '<div class="chips">' + CHOICES.filter(c => c[0] === 'other').map(chip).join('') + '</div></div>';
+  // Seulement les sports choisis dans le profil, plus celui de l'activité ouverte ; aucun choisi (activité ancienne, sport à jours fixes sans nom connu) : tous
+  const mine = mySports().concat([choiceOf(A)]); const list = CHOICES.filter(c => mine.indexOf(c[0]) >= 0); const shown = list.length ? list : CHOICES;
+  h += '<div class="chips" role="radiogroup" aria-label="Activité">' + shown.map(chip).join('') + '</div>';
   const pick = (act, v, on, title, desc) => '<button type="button" class="pick' + (on ? ' on' : '') + '" data-act="' + act + '" data-v="' + v + '" role="radio" aria-checked="' + on + '"><span class="stack" style="gap:2px"><span class="n">' + esc(title) + '</span>' + (desc ? '<span class="m">' + esc(desc) + '</span>' : '') + '</span><span aria-hidden="true">' + (on ? '✓' : '') + '</span></button>';
   if (LEVELS[A.type]) h += '<div class="stack" style="gap:6px" role="radiogroup" aria-label="Allure"><span class="label">Allure</span>' + LEVELS[A.type].map(l => pick('act-level', l[0], A.level === l[0], l[1], l[2])).join('') + '</div>';
   if (A.type === 'sport') {

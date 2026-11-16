@@ -1,6 +1,6 @@
 // Douleurs suivies (genou et autres zones) : zones, exercices concernés, alertes. Calculs seuls, sans affichage.
 // Le genou garde ses documents d'origine (k_<date> et w.knee). Les autres zones : d_<date> ({ date, z:{ zone:{ v, flags } } }) et w.pain.
-// Sources (détail dans « La science ») : modèle de suivi de la douleur (Thomeé 1997 ; Silbernagel et al. 2007 : jusqu'à 5/10 pendant l'effort,
+// Sources (elles ne sont plus affichées dans l'appli depuis la version 3.30) : modèle de suivi de la douleur (Thomeé 1997 ; Silbernagel et al. 2007 : jusqu'à 5/10 pendant l'effort,
 // retour au niveau de départ le lendemain matin) ; Smith et al. 2017 (s'entraîner avec une douleur n'est pas un obstacle). Le seuil de 3/10 sur
 // 10 jours est PLUS PRUDENT que ce modèle et ne bloque pas l'entraînement : il fige seulement la hausse des charges. 7/10 est un choix de l'appli.
 // Rien ici n'est un diagnostic.
@@ -14,8 +14,8 @@ const mus = (e, l) => { const m = e.muscles || {}; return (m.p || []).some(x => 
 // what : ce que cela recouvre, dit à la personne ; ask : la situation à noter
 export const ZONES = {
   knee:     { label:'Genou', ask:'Douleur en montant les escaliers', what:'le genou', hits: e => !!e.knee },
-  shoulder: { label:'Épaule', ask:'Douleur en levant le bras ou en poussant', what:'les épaules ou les pectoraux (d’après les muscles travaillés)', hits: e => mus(e, ['Épaules']) || ((e.muscles || {}).p || []).indexOf('Pectoraux') >= 0 },
-  elbow:    { label:'Coude', ask:'Douleur en serrant, en tirant ou en poussant', what:'les biceps ou les triceps (d’après les muscles travaillés)', hits: e => mus(e, ['Biceps', 'Triceps']) },
+  shoulder: { label:'Épaule', ask:'Douleur en levant le bras ou en poussant', what:'les épaules ou les pectoraux', hits: e => mus(e, ['Épaules']) || ((e.muscles || {}).p || []).indexOf('Pectoraux') >= 0 },
+  elbow:    { label:'Coude', ask:'Douleur en serrant, en tirant ou en poussant', what:'les biceps ou les triceps', hits: e => mus(e, ['Biceps', 'Triceps']) },
   lowback:  { label:'Bas du dos', ask:'Douleur en te penchant en avant ou en te redressant', what:'le bas du dos (soulevés de terre, charnières de hanche, rowings penchés, squats à la barre)', hits: e => !!e.back },
   wrist:    { label:'Poignet', ask:'Douleur en appui sur la main ou en serrant', hits: null },
   hip:      { label:'Hanche', ask:'Douleur en marchant ou en montant des marches', hits: null },
@@ -66,8 +66,8 @@ export function painAdvice(z, held){
   const r = painRecent(z); if (!r.length) return null; const Z = ZONES[z];
   const max = Math.max.apply(null, r.map(k => k.v));
   const lines = [Z.label + ' : jusqu’à ' + max + '/10 ces ' + PAIN_DAYS + ' derniers jours (seuil de prudence : ' + PAIN_LIMIT + '/10).'];
-  lines.push(Z.hits ? 'Je ne monte pas la charge des exercices qui sollicitent ' + Z.what + ' : c’est une règle de prudence de l’appli. Choisis une amplitude confortable, ou remplace un mouvement qui déclenche la douleur.'
-    : 'Je consigne cette douleur sans modifier ton programme : je ne peux pas relier cette zone à tes exercices de façon fiable, donc tes charges restent calculées comme d’habitude. À toi d’adapter les mouvements qui la déclenchent.');
+  lines.push(Z.hits ? 'Je ne monte pas la charge des exercices qui sollicitent ' + Z.what + '. Choisis une amplitude confortable, ou remplace un mouvement qui déclenche la douleur.'
+    : 'Je note cette douleur sans modifier ton programme : à toi d’adapter les mouvements qui la déclenchent.');
   if (held && held.length) lines.push('Dans ta prochaine séance, charge maintenue sur : ' + held.join(', ') + '.');
   const fl = []; r.forEach(k => k.flags.forEach(f => { if (fl.indexOf(f) < 0 && FLAG_LABEL[f]) fl.push(f); }));
   if (fl.indexOf('saddle') >= 0) lines.splice(1, lines.length, 'Engourdissement de l’entrejambe ou troubles urinaires ou intestinaux avec une douleur au dos : c’est une urgence médicale, consulte sans attendre.');

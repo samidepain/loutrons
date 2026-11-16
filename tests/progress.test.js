@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { donnees, docs, jour, reglages, seance } from './aide.js';
-import { exerciseGains, periodStart, recordLog, weeklyRhythm } from '../js/engine.js';
+import { exerciseGains, periodStart, prevPeriod, recordLog, weeklyRhythm } from '../js/engine.js';
 
 test('gains : première et meilleure force estimée par exercice, avec le nombre de séances', () => {
   jour('2026-11-04');
@@ -41,4 +41,10 @@ test('période : 8 semaines = 56 jours dont aujourd’hui, « Tout » = pas de d
   assert.equal(periodStart('w8'), '2026-09-16');
   assert.equal(periodStart('all'), null);
   assert.equal(periodStart('xyz'), periodStart('m6'));
+});
+
+test('période d’avant : même durée, juste avant la période affichée ; « Tout » n’en a pas', () => {
+  jour('2026-11-10');
+  assert.deepEqual(prevPeriod('w8'), { from: '2026-07-22', to: '2026-09-15' });
+  assert.equal(prevPeriod('all'), null);
 });

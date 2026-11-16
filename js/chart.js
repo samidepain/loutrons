@@ -68,3 +68,10 @@ export function bars(items, o){
   const desc = (o.label || 'Barres par semaine') + ' : ' + items.map(i => 'semaine du ' + fmtDate(i.label) + ', ' + fmtKg(i.v) + (i.open ? ' (en cours)' : '')).join(' ; ');
   return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(desc) + '">' + g + '</svg>';
 }
+// Mini-courbe d'une case de synthèse (décorative : la valeur est écrite à côté) ; rien sous 2 valeurs, pour ne pas dessiner une tendance qui n'existe pas
+export function spark(vals){
+  if (vals.length < 2) return '';
+  const lo = Math.min(...vals), hi = Math.max(...vals), W = 120, H = 28;
+  const pts = vals.map((v, i) => (i / (vals.length - 1) * W).toFixed(1) + ',' + (hi === lo ? H / 2 : 3 + (1 - (v - lo) / (hi - lo)) * (H - 6)).toFixed(1)).join(' ');
+  return '<svg class="spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true"><polyline points="' + pts + '"/></svg>';
+}

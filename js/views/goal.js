@@ -1,6 +1,5 @@
 // Objectif de poids et besoins du jour : formulaire (accueil et profil), avis d'Émile, carte d'Aujourd'hui.
-import { addDays, daysBetween, esc, fmtDate, fmtDateYear, fmtInt, fmtKg, nbsp, num, today, withDot } from '../util.js';
-import { ring } from '../ring.js';
+import { addDays, daysBetween, esc, fmtDate, fmtDateYear, fmtInt, fmtKg, num, today, withDot } from '../util.js';
 import { S } from '../store.js';
 import { bodyDocs, bodyweight, settings } from '../data.js';
 import { ACTIVITY, adjustFor, CHECK, GAIN, LOSS, planFor, weightTrend, withExtra } from '../nutrition.js';
@@ -130,7 +129,7 @@ export function needs(pl, compact){
   let h = (compact ? '' : '<span class="label">Tes besoins par jour</span>') + '<div class="stats needs">' + st(fmtInt(pl.kcal) + ' <small>kcal</small>', pl.extra ? 'calories aujourd’hui, séances et activités comprises' : 'calories, sans compter tes séances', true)
     + st(pl.protein[0] + '-' + pl.protein[1] + ' <small>g</small>', 'protéines') + st(pl.fat[0] + '-' + pl.fat[1] + ' <small>g</small>', 'lipides')
     + st('≈ ' + pl.carbs + ' <small>g</small>', 'glucides (le reste)') + st(pl.fibre + ' <small>g</small>', 'fibres') + '</div>';
-  if (!compact) h += '<p class="muted small">Ce total ne compte pas tes séances ni tes activités : chaque jour, j’ajoute leur dépense (voir « Tes activités » dans Aujourd’hui).' + (pl.adjust ? ' Il comprend la correction de ' + signedKcal(pl.adjust) + ' issue de nos derniers points.' : '') + (pl.goal !== 'keep' ? ' Calcul approximatif : environ 7 700 kcal par kilo, et le poids varie aussi d’un jour à l’autre avec l’eau.' : '') + ' Détails dans « La science ».</p>';
+  if (!compact) h += '<p class="muted small">Ce total ne compte pas tes séances ni tes activités : chaque jour, j’ajoute leur dépense .' + (pl.adjust ? ' Il comprend la correction de ' + signedKcal(pl.adjust) + ' issue de nos derniers points.' : '') + (pl.goal !== 'keep' ? ' Calcul approximatif : environ 7 700 kcal par kilo, et le poids varie aussi d’un jour à l’autre avec l’eau.' : '') + ' Détails dans « La science ».</p>';
   return h;
 }
 // Formulaire : activité, objectif, poids et date visés, puis avis d'Émile et besoins. n : { activity, goal, target, by }
@@ -173,22 +172,6 @@ function checkSummary(n){
   h += '</p>' + done.map(c => '<p class="small muted">' + esc(fmtDate(c.date)) + ' : ' + (c.actual != null ? perWeek(c.actual) + ' kg par semaine' + (c.planned ? ' pour ' + perWeek(c.planned) + ' prévu' : '') + ', ' : '') + esc(c.applied ? signedKcal(c.change) + ' par jour' : CHECK_DONE[c.status] || '') + '</p>').join('');
   if (n.adjust) h += '<button type="button" class="link" data-act="adj-reset" style="align-self:flex-start">Annuler les corrections</button>';
   return h + '</div>';
-}
-// Aujourd'hui : ce qu'il reste à manger aujourd'hui (séances et activités comprises), en un coup d'œil
-export function foodTodayCard(){
-  const n = nutritionOf(); if (!S.loaded || !n.on) return '';
-  const pl = dayPlan(today());
-  if (pl.status === 'missing' || !(pl.kcal > 0)) return '<section class="card food-today"><h3>Ton alimentation</h3><button type="button" class="link" data-act="goal-edit">Complète ton profil pour calculer tes besoins ›</button></section>';
-  const t = totals(dayDoc(today()).items); const rest = pl.kcal - t.kcal;
-  const prot = (pl.protein ? pl.protein[0] : 0) - t.p;
-  const sub = (rest > 0 ? 'à manger sur ' + fmtInt(pl.kcal) : 'mangées : objectif du jour atteint') + (prot > 0 ? ' · encore ' + fmtInt(prot) + ' g de protéines' : '');
-  // Aperçu des macros : protéines (borne basse), glucides, lipides (plafond, comme dans Alimentation), un trait fin chacun
-  const mac = (nom, v, cible) => '<span class="m"><span class="muted">' + nom + '</span><b class="num">' + fmtInt(v) + ' / ' + fmtInt(cible) + '&nbsp;g</b><span class="bar"><i style="width:' + Math.min(100, cible > 0 ? v / cible * 100 : 0).toFixed(0) + '%"></i></span></span>';
-  const pct = Math.round(t.kcal / pl.kcal * 100);
-  return '<section class="card food-today"><h3>Ton alimentation</h3><div class="ring-row">' + ring(t.kcal / pl.kcal, { cls:'sm', label:fmtInt(t.kcal) + ' kcal mangées sur ' + fmtInt(pl.kcal), html:'<b class="num">' + pct + '&nbsp;%</b>' })
-    + '<div class="kcal"><p><span class="v num">' + fmtInt(rest > 0 ? rest : t.kcal) + '</span><small>kcal</small></p><p class="muted small">' + esc(nbsp(sub)) + '</p></div></div>'
-    + '<div class="mini-macros">' + mac('Protéines', t.p, (pl.protein || [])[0] || 0) + mac('Glucides', t.c, pl.carbs || 0) + mac('Lipides', t.f, (pl.fat || [])[1] || 0) + '</div>'
-    + '<button type="button" class="btn" data-act="go-food">Noter un repas</button></section>';
 }
 // Carte d'Aujourd'hui : objectif, rythme et besoins du jour
 export function goalTodayCard(){

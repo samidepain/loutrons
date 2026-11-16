@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { activities, activityFamily, dayFamilies, daySummary, pendingActivities, plannedActivities } from '../js/data.js';
-import { dayEnergy, SPORTS } from '../js/energy.js';
+import { dayEnergy, mySports, SPORTS } from '../js/energy.js';
 import { donnees, docs, jour, reglages } from './aide.js';
 
 const pesee = ['b_2026-11-01', { date: '2026-11-01', weight: 80 }];
@@ -60,4 +60,17 @@ test('prochaine pesée : 14 jours après la dernière, due le jour venu, rien sa
   donnees(docs(reglages(), { 'b_2026-11-01': { date: '2026-11-01', weight: 80 } }));
   assert.deepEqual(nextWeigh('2026-11-10'), { date: '2026-11-15', last: '2026-11-01', due: false });
   assert.equal(nextWeigh('2026-11-15').due, true);
+});
+
+test('autres sports : aucun par défaut ; sans réglage, ceux déjà notés et le sport à jours fixes ; le réglage du profil l’emporte', () => {
+  jour('2026-11-10');
+  donnees(docs(reglages()));
+  assert.deepEqual(mySports(), []);
+  const course = ['a_2026-11-03_x', { date: '2026-11-03', type: 'run', min: 30, km: 5 }];
+  donnees(docs(reglages({ modules: { knee: false, jumps: false, sport: true }, sport: { name: 'Basket', train: [1], match: [6] } }), course));
+  assert.deepEqual(mySports(), ['run', 'sport:basket']);
+  donnees(docs(reglages({ sports: ['swim', 'inconnu'] }), course));
+  assert.deepEqual(mySports(), ['swim']);
+  donnees(docs(reglages({ sports: [] }), course));
+  assert.deepEqual(mySports(), []);
 });
