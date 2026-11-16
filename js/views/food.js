@@ -4,7 +4,7 @@ import { S } from '../store.js';
 import { dayDoc, freshFood, guessMeal, habitualFoods, LIMITS, loadCiqual, mealLabel, MEALS, myFoods, pastMeals, recentFoods, savedMeals, scale, searchFoods, totals } from '../food.js';
 import { startScanner } from '../scanner.js';
 import { emile, hey } from '../emile.js';
-import { dayPlan } from './goal.js';
+import { dayPlan, nutritionOf } from './goal.js';
 import { ownRecipe, recipeFoods } from '../recipes.js';
 import { ring } from '../ring.js';
 import { gramsOf, measuresFor } from '../measures.js';
@@ -66,6 +66,19 @@ export function foodFromDoc(id, o){ return { key: o.code ? 'off:' + o.code : 'ow
 // Aliments affichés dans la dernière liste, pour retrouver celui qu'on touche
 export const shown = new Map();
 
+// Aujourd'hui : ce qu'il reste à manger (séances et activités comprises), puis les macros en barres seulement (une seule représentation,
+// pas d'anneau en plus) ; journal vide : l'objectif du jour, sans barres à zéro
+export function foodTodayCard(){
+  const n = nutritionOf(); if (!S.loaded || !n.on) return '';
+  const pl = dayPlan(today());
+  if (pl.status === 'missing' || !(pl.kcal > 0)) return '<section class="card"><h3>Ton alimentation</h3><button type="button" class="link" data-act="goal-edit">Complète ton profil pour calculer tes besoins ›</button></section>';
+  const items = dayDoc(today()).items; const t = totals(items); const rest = pl.kcal - t.kcal;
+  let h = '<section class="card"><div class="row between"><h3>Ton alimentation</h3>' + (pl.extra ? '<span class="muted small">activités comprises</span>' : '') + '</div>';
+  if (!items.length) return h + '<div class="kcal"><p><span class="v num">' + fmtInt(pl.kcal) + '</span><small>kcal</small></p><p class="muted small">ton objectif du jour · rien de noté</p></div><button type="button" class="btn" data-act="go-food">Noter un repas</button></section>';
+  h += '<div class="kcal"><p><span class="v num">' + fmtInt(Math.abs(rest)) + '</span><small>kcal</small></p><p class="muted small">' + esc(nbsp((rest >= 0 ? 'restantes aujourd’hui' : 'au-dessus de ton objectif') + ' · ' + fmtInt(t.kcal) + ' mangées sur ' + fmtInt(pl.kcal))) + '</p></div>';
+  h += bar('Protéines', t.p, pl.protein[0], 'g') + bar('Glucides', t.c, pl.carbs, 'g') + bar('Lipides', t.f, pl.fat[1], 'g', true);
+  return h + '<button type="button" class="btn" data-act="go-food">Noter un repas</button></section>';
+}
 function bar(label, v, goal, unit, max){
   const pct = goal ? Math.min(100, v / goal * 100) : 0;
   return '<div class="mrow fd"><span>' + label + '</span><span class="mbar"><i style="width:' + pct.toFixed(1) + '%' + (max && v > goal ? ';background:var(--warn)' : '') + '"></i></span><span class="v num">' + q1(v) + (goal ? ' / ' + q1(goal) : '') + ' ' + unit + '</span></div>';

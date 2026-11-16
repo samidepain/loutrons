@@ -8,6 +8,7 @@ import { activityKcal, activityName, mySports, sessionKcal } from '../energy.js'
 import { actDetail } from './activity.js';
 import { ring } from '../ring.js';
 import { ICONS } from '../icons.js';
+import { planLink } from './program.js';
 
 const INITIALES = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const FAM_NAMES = [['salle', 'Salle'], ['cardio', 'Cardio'], ['collectif', 'Sports collectifs'], ['individuel', 'Sports individuels'], ['autre', 'Autre']];
@@ -73,7 +74,7 @@ export function calendarCard(){
     const pw = perWeekOf();
     let h = '<section class="card cal"><div class="row between"><div class="ring-row">' + ring(n / pw, { cls:'xs', html:'<b class="num">' + n + '/' + pw + '</b>' }) + '<div class="stack" style="gap:2px"><h3>Ta semaine</h3><span class="muted small">' + n + ' séance' + (n > 1 ? 's' : '') + ' sur ' + pw + '</span>' + '</div></div><button type="button" class="link" data-act="cal-month">Voir le mois</button></div><div class="cal-week">';
     for (let i = 0; i < 7; i++) h += cell(addDays(mon, i), false);
-    return h + '</div></section>';
+    return h + '</div>' + planLink() + '</section>';
   }
   const ym = S.calMonth;
   let h = '<section class="card cal"><div class="row between"><button type="button" class="btn sm" data-act="cal-prev" aria-label="Mois précédent">‹</button><h3 class="cal-title" aria-live="polite">' + esc(capFirst(fmtMonth(ym))) + '</h3><button type="button" class="btn sm" data-act="cal-next" aria-label="Mois suivant">›</button></div>';

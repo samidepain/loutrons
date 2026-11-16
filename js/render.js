@@ -7,7 +7,7 @@ import { viewToday } from './views/today.js';
 import { viewEnd, viewSession } from './views/session.js';
 import { viewPicker } from './views/picker.js';
 import { viewBilan, viewProgressPage, viewStat } from './views/progress.js';
-import { viewProgram } from './views/program.js';
+import { viewPlan, viewProgram } from './views/program.js';
 import { viewProfile, viewSettings } from './views/profile.js';
 import { newSetup, viewSetup } from './views/setup.js';
 import { viewDraft } from './views/editors.js';
@@ -19,6 +19,7 @@ import { viewActivity } from './views/activity.js';
 import { viewDay } from './views/calendar.js';
 import { viewMovement } from './views/movement.js';
 import { ICONS } from './icons.js';
+import { viewAvatar } from './views/avatar.js';
 
 // Trophée des records (carte dorée d'Aujourd'hui)
 export const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
@@ -63,7 +64,7 @@ function paint(){
   const sc = screenOf(); document.body.classList.toggle('brandless', !(sc.key === 'today' || (S.setup && S.setup.mode === 'welcome'))); document.body.classList.toggle('in-sheet', !!sc.sheet);
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
-  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity()
+  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.avatar ? viewAvatar() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity() : S.plan ? viewPlan()
     : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : S.stat ? viewStat() : viewProgressPage())
     : v === 'food' && nutritionOf().on ? viewFood()
     : v === 'profile' ? viewProfile() : v === 'settings' ? viewSettings() : S.day ? viewDay() : viewToday();

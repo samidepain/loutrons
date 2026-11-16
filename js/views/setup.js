@@ -2,11 +2,12 @@
 import { esc, today } from '../util.js';
 import { DAY_ORDER, DAY_SHORT, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
-import { settings } from '../data.js';
+import { programOf, settings } from '../data.js';
 import { sexChips } from './profile.js';
 import { goalForm, setupData } from './goal.js';
 import { planFor } from '../nutrition.js';
 import { emile } from '../emile.js';
+import { programCard } from './program.js';
 
 export function newSetup(mode){ return { mode, step:1, name: settings().name || '', sex:null, birth:'', height:'', weight:'', prog:null, progName:'', days:[], perWeek:null, restart:true,
   n:{ on:false, activity:null, goal:'keep', target:'', by:'' }, ask:[] }; }
@@ -29,10 +30,11 @@ export function viewSetup(){
   if (first) {
     h += '<div class="row between"><button type="button" class="link" data-act="setup-back" data-back>‹ Retour</button><span class="label">Étape 2 sur 3</span></div><h1>Ton entraînement</h1>';
   } else {
-    h += '<div class="row between"><h1>Changer de programme</h1><button type="button" class="link" data-act="setup-cancel">Annuler</button></div><p class="muted small">Ton historique et les séances que tu as créées sont gardés. Le planning est remplacé.</p>';
+    h += '<div class="row between"><h1>Ton programme</h1><button type="button" class="link" data-act="setup-cancel">Fermer</button></div>' + programCard();
   }
-  const opt = (k, title, desc) => '<button type="button" class="pick' + (U.prog === k ? ' on' : '') + '" data-act="setup-prog" data-v="' + k + '" aria-pressed="' + (U.prog === k) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(title) + '</span><span class="m">' + esc(desc) + '</span></span><span aria-hidden="true">' + (U.prog === k ? '✓' : '') + '</span></button>';
-  h += '<section class="card"><h3>' + (first ? 'Ton programme de départ' : 'Nouveau programme') + '</h3>';
+  const actif = first ? null : (programOf() || {}).base;
+  const opt = (k, title, desc) => '<button type="button" class="pick' + (U.prog === k ? ' on' : '') + '" data-act="setup-prog" data-v="' + k + '" aria-pressed="' + (U.prog === k) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(title) + (actif === k ? ' <span class="pill acc">Actif</span>' : '') + '</span><span class="m">' + esc(desc) + '</span></span><span aria-hidden="true">' + (U.prog === k ? '✓' : '') + '</span></button>';
+  h += '<section class="card"><h3>' + (first ? 'Ton programme de départ' : 'Changer de programme') + '</h3>' + (first ? '' : '<p class="muted small">Ton historique et les séances que tu as créées sont gardés. Le planning est remplacé.</p>');
   Object.keys(PROGRAMS).forEach(k => { h += opt(k, PROGRAMS[k].name, PROGRAMS[k].desc); });
   h += opt('custom', 'Créer mon programme', 'Tu le nommes, tu crées tes séances et tu choisis tes exercices.');
   if (U.prog === 'custom') h += '<label class="f"><span>Nom de ton programme</span><input id="setup-pname" data-u="progName" value="' + esc(U.progName) + '" placeholder="ex. Prise de masse"></label><p class="muted small">Tu régleras ta rotation dans Entraînement › Planning, une fois tes séances créées.</p>';

@@ -185,6 +185,9 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .rec-t span{overflow-wrap:anywhere}
 .line-h.e-fold img{width:32px;height:32px;border-radius:50%;flex:none;border:2px solid var(--accent);background:#000000}
 .line-h.e-fold .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Message de la semaine replié : pictogramme de progression en orange, gardé même sur petit écran (la ligne n'a pas de valeur à loger) */
+.line-h.e-fold .ic{display:grid;margin-right:0}
+.line-h.e-fold .ic svg{color:var(--accent-ink)}
 /* Bande de semaine : nom court sur une ligne (le nom complet est dans le détail du jour) */
 .cal-week .cday .s{min-height:0;-webkit-line-clamp:1;white-space:nowrap;font-size:13px}
 .alert{border-radius:var(--r);padding:12px 14px;background:var(--bad-soft);color:var(--bad);font-weight:600}
@@ -252,10 +255,41 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 /* pendant le déplacement : la ligne tenue flotte (ombre, contour orange), les autres s'écartent en douceur */
 .rot-list.sorting .rot-row{transition:transform var(--dur-state) var(--ease)}
 .rot-list.sorting .rot-row.lift{z-index:2;transition:none;cursor:grabbing;box-shadow:0 10px 24px var(--shade),inset 0 0 0 2px var(--accent-ink)}
-/* Prévoir tes séances : jour et date dans la puce */
-.plan-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.15;min-height:48px}
-.plan-chip .num{font-weight:700}
-.plan-chip:disabled{opacity:.4}
+/* Programme actif : sélecteur à part au-dessus des séances (pas une carte) ; titre d'un groupe de séances */
+.prog-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);width:100%;min-height:60px;padding:var(--s-2) var(--s-4);border:none;border-radius:var(--r-md);text-align:left;color:var(--ink);background:var(--accent-soft);transition:transform var(--dur-tap) var(--ease)}
+.prog-bar:active{transform:scale(var(--press))}
+.prog-bar .n{font-family:var(--f-display);font-weight:800;font-size:var(--t-h3);overflow-wrap:anywhere}
+.prog-chg{flex:none;display:flex;align-items:center;gap:var(--s-1);font-weight:600;color:var(--accent-ink)}
+.prog-chg svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sec-h{margin-top:var(--s-2)}
+/* Avatar en couches : images carrées de même taille, superposées. « head » cadre la tête, prévue sur la toile dans un carré de 46 % de
+   côté, à 27 % du bord gauche et 4 % du haut (voir js/avatar.js) */
+.av{position:relative;display:block;flex:none;aspect-ratio:1;overflow:hidden}
+.av-in{position:absolute;inset:0}
+.av img{position:absolute;inset:0;width:100%;height:100%}
+.av.head .av-in{transform:scale(2.174);transform-origin:50% 7.4%}
+.prof-av{width:72px;border-radius:50%;background:var(--well)}
+/* Éditeur d'avatar : aperçu qui reste en haut, éléments en grille de 3 */
+.av-stage{position:sticky;top:calc(env(safe-area-inset-top) + var(--s-2));z-index:2;display:grid;place-items:center;padding:var(--s-3);border-radius:var(--r);background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh)}
+.av.big{width:min(100%,220px)}
+@media (max-height:700px){.av.big{width:150px}}
+.av-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-2)}
+.av-item{display:flex;flex-direction:column;align-items:center;gap:var(--s-1);min-width:0;padding:var(--s-2);border:none;border-radius:var(--r-md);background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh);color:var(--ink);transition:transform var(--dur-tap) var(--ease)}
+.av-item:active{transform:scale(var(--press))}
+.av-item .av{width:100%;border-radius:var(--r-sm)}
+.av-item .small{text-align:center;overflow-wrap:anywhere}
+.av-item.on{box-shadow:inset 0 0 0 2px var(--accent-ink),var(--glow-2)}
+/* Écran de planification : un jour par ligne (jour et date, séance, coche ou « + ») */
+.pdays{gap:var(--s-2)}
+.pday{justify-content:flex-start}
+.pday .ql{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.pd-d{flex:none;width:44px;display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.pd-d b{font-size:var(--t-h3)}
+.pd-t,.pd-ok{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:22px;font-weight:600;line-height:1;background:var(--well);color:var(--accent-ink)}
+.pday.on .pd-t{background:var(--grad-fire);color:var(--on-accent)}
+.pd-ok{background:var(--good-soft);color:var(--good)}
+.pd-t svg,.pd-ok svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.pday.past{opacity:var(--dim)}
 .chip.on{background:var(--grad-fire);color:var(--on-accent);box-shadow:var(--glow-2)}
 .chip.on.hi{background:var(--bad);color:#fff;box-shadow:none}
 .chip.sec.on{background:var(--court);color:var(--bg);box-shadow:none}

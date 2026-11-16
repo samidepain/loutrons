@@ -12,6 +12,8 @@ import { VERSION } from '../version.js';
 import { emile } from '../emile.js';
 import { GOALS, goalProfileCard, nutritionOf } from './goal.js';
 import { painZones, ZONE_IDS, ZONES } from '../pain.js';
+import { avatarReady } from '../avatar.js';
+import { avatarImg } from './avatar.js';
 
 // « Tu es un loutron ou une loutronne ? » : facultatif, un second appui sur le choix l'annule
 export function sexChips(act, val){
@@ -25,9 +27,10 @@ export function viewProfile(){
   let h = '<div class="row"><button type="button" class="link" data-act="profile-back" data-back>‹ ' + (FROM[S.from] || FROM.today) + '</button></div>';
   // En-tête en carte vedette : initiale, prénom, ancienneté, puis séances, semaines et records ; sans séance, Émile dit quand les chiffres arrivent (jamais de « 0 »)
   const ws = workouts().filter(w => w.status === 'terminée'); const since = s.created || (ws[0] && ws[0].date) || startDate(); const who = String(s.name || '').trim(); const wk = new Set(ws.map(w => mondayOf(w.date))).size; const recs = recordLog().length;
-  h += '<section class="card hero prof-card"><div class="prof-head"><span class="prof-ini" aria-hidden="true">' + esc((who[0] || '?').toUpperCase()) + '</span><div class="prof-id"><h1>' + esc(who || 'Profil') + '</h1><span class="muted">' + esc((s.sex === 'f' ? 'Loutronne' : s.sex === 'm' ? 'Loutron' : 'Sur Loutrons') + ' depuis ' + fmtMonth(since.slice(0, 7))) + '</span></div></div>';
+  h += '<section class="card hero prof-card"><div class="prof-head">' + (avatarReady() ? avatarImg(s.avatar, 'head prof-av') : '<span class="prof-ini" aria-hidden="true">' + esc((who[0] || '?').toUpperCase()) + '</span>') + '<div class="prof-id"><h1>' + esc(who || 'Profil') + '</h1><span class="muted">' + esc((s.sex === 'f' ? 'Loutronne' : s.sex === 'm' ? 'Loutron' : 'Sur Loutrons') + ' depuis ' + fmtMonth(since.slice(0, 7))) + '</span></div></div>';
   h += ws.length ? '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">' + (ws.length > 1 ? 'séances' : 'séance') + '</span></div><div class="stat"><span class="v num">' + wk + '</span><span class="l">' + (wk > 1 ? 'semaines actives' : 'semaine active') + '</span></div><div class="stat"><span class="v num">' + (recs || '—') + '</span><span class="l">' + (recs > 1 ? 'records' : 'record') + '</span></div></div>'
     : emile('<p>' + esc(nbsp('Dès ta première séance, tes chiffres et tes records apparaissent ici.')) + '</p>');
+  if (avatarReady()) h += '<button type="button" class="btn" data-act="av-open">Personnaliser mon avatar</button>';
   h += '</section>';
   // Raccourci vers Progrès : dernière séance et records, sans répéter les courbes
   if (ws.length) { const lastDay = ws.map(w => w.date).sort().pop(); h += '<button type="button" class="pick" data-act="tab" data-v="progress"><span class="stack prof-id"><span class="n">Tes progrès</span><span class="m">' + esc(withDot('Dernière séance : ' + fmtDate(lastDay))) + '</span></span><span aria-hidden="true">›</span></button>'; }

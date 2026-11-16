@@ -1,5 +1,6 @@
 // Écran Aujourd’hui : en haut la séance du jour et la semaine ; dessous un conseil d'Émile à la fois, puis le suivi du jour en lignes
-// compactes (eau, poids et sommeil ; activités et douleurs seulement si elles sont réglées dans le profil). L'alimentation a son onglet.
+// compactes (eau, poids et sommeil ; activités et douleurs seulement si elles sont réglées dans le profil). Sous la semaine : l'accès à la
+// planification et, si le suivi est activé, l'alimentation du jour.
 import { addDays, capFirst, greeting, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
 import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, nextWeigh, tplItems, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
@@ -14,6 +15,8 @@ import { emile, emileQueue, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
 import { introCard } from './intro.js';
+import { ic } from '../icons.js';
+import { foodTodayCard } from './food.js';
 
 // Choix de l'effort d'une séance terminée (il règle sa dépense) ; aussi sur l'écran de fin de séance
 export function effortChoice(sw){
@@ -57,11 +60,12 @@ function recordCard(d){
 
 // Conseil replié par défaut (avatar, titre, chevron) pour laisser la place aux suivis du jour ; les alertes (rang 2 : retour après une pause,
 // fatigue, genou) restent ouvertes car elles touchent la séance. Le titre est repris du <h3> de la bulle (déjà échappé).
+// Le message de la semaine (rang 5 : Progression, Décharge…) porte une flèche qui monte ; les autres conseils, le visage d'Émile.
 function foldEmile(html, top){
   if (!html || top === 2) return html;
   if (S.emileOpen) return html + '<button type="button" class="link emile-more" data-act="emile-open" aria-expanded="true">Réduire le conseil</button>';
   const t = (html.match(/<h3>(.*?)<\/h3>/) || [])[1] || 'Conseil d’Émile';
-  return '<section class="card line"><div class="line-row"><button type="button" class="line-h e-fold" data-act="emile-open" aria-expanded="false"><img src="icons/emile.png" alt="" width="32" height="32"><span class="n">' + t + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></section>';
+  return '<section class="card line"><div class="line-row"><button type="button" class="line-h e-fold" data-act="emile-open" aria-expanded="false">' + (top === 5 ? ic('trend') : '<img src="icons/emile.png" alt="" width="32" height="32">') + '<span class="n">' + t + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></section>';
 }
 
 // Exercices de la prochaine séance dont la charge est maintenue à cause de cette zone (au plus 4)
@@ -132,6 +136,7 @@ export function viewToday(){
   h += planCard(d, plan, aw, doneToday, tpls);
   if (S.loaded && !tpls.length) h += noTplCard();
   h += calendarCard();
+  h += foodTodayCard();
   h += emileCards(d, wk, goal) + recordCard(d);
   if (!S.loaded) return h;
 

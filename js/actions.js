@@ -20,6 +20,7 @@ import { ownRecipe } from './recipes.js';
 import { gramsOf, measuresFor } from './measures.js';
 import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, mySports, sportOf, WATER_RANGE, waterOf } from './energy.js';
 import { actDoc, actPreview, liters } from './views/activity.js';
+import { avatarOf } from './avatar.js';
 
 // Supprime une séance perso (jamais une séance de base) et la retire de la rotation et du planning ; faux si elle n'existe pas ou est de base
 function deleteTpl(id){
@@ -224,7 +225,7 @@ function choice(v){ const p = String(v).split(':'); return p[0] === 'sport' && p
 function firstChoice(){ const mine = mySports(); const last = settings().lastAct; return mine.indexOf(last) >= 0 || !mine.length ? last || 'run' : mine[0]; }
 const A = {
   // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
-  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.day = null; S.fiche = null; S.stat = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
+  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.day = null; S.plan = null; S.avatar = null; S.fiche = null; S.stat = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
     render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
   // Aujourd'hui : ouvrir ou fermer une ligne compacte, afficher les autres conseils d'Émile, liens vers Séances et Alimentation
   'today-open'(b){ S.todayOpen = S.todayOpen === b.dataset.v ? null : b.dataset.v; render(); },
@@ -239,7 +240,7 @@ const A = {
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
   'setup-per-week'(b){ S.setup.perWeek = +b.dataset.v; render(); },
   'setup-restart'(b){ S.setup.restart = b.checked; },
-  'setup-cancel'(){ S.setup = null; render(); },
+  'setup-cancel'(){ S.setup = null; S.renaming = false; render(); },
   'setup-next'(){
     const U = S.setup;
     if (U.step === 2) {
@@ -395,7 +396,7 @@ const A = {
   'set-open'(b){ S.set = b.dataset.v; S.todayOpen = null; S.view = 'settings'; render(); window.scrollTo(0, 0); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
-  profile(b){ if (!['profile', 'settings'].includes(S.view)) S.from = S.view; S.view = b && b.dataset && b.dataset.v === 'settings' ? 'settings' : 'profile'; S.act = null; S.move = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  profile(b){ if (!['profile', 'settings'].includes(S.view)) S.from = S.view; S.view = b && b.dataset && b.dataset.v === 'settings' ? 'settings' : 'profile'; S.act = null; S.move = null; S.plan = null; S.avatar = null; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   'profile-back'(){ S.view = S.from || 'today'; render(); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
   // Progrès : page d'une statistique (écran poussé) et période de ses courbes ; états d'affichage, non enregistrés
@@ -410,6 +411,17 @@ const A = {
   // Toucher un jour ouvre son écran ; le mois (ou la semaine) et le jour choisi sont gardés pour le retour
   'cal-day'(b){ const d = b.dataset.v; if (S.calMonth) S.calMonth = d.slice(0, 7); S.calDay = d; S.day = d; S.confirm = null; render(); window.scrollTo(0, 0); },
   'day-close'(){ S.day = null; S.confirm = null; render(); },
+  // Écran de planification : rien à enregistrer en sortant, chaque jour touché l'est déjà (plan-day)
+  'plan-open'(){ S.plan = true; S.confirm = null; render(); window.scrollTo(0, 0); },
+  'plan-close'(){ S.plan = null; render(); },
+  // Avatar (profil) : brouillon S.avatar, enregistré seulement par « Enregistrer » ; hist : choix précédents, pour revenir en arrière
+  'av-open'(){ S.avatar = { cfg: avatarOf(settings().avatar), cat: null, hist: [] }; render(); window.scrollTo(0, 0); },
+  'av-cat'(b){ S.avatar.cat = b.dataset.v; render(); },
+  'av-pick'(b){ const E = S.avatar; E.hist.push(E.cfg); E.cfg = Object.assign({}, E.cfg, { [b.dataset.s]: b.dataset.v }); render(); },
+  'av-undo'(){ const E = S.avatar; if (E.hist.length) E.cfg = E.hist.pop(); render(); },
+  'av-reset'(){ const E = S.avatar; E.hist.push(E.cfg); E.cfg = avatarOf(null); render(); },
+  'av-cancel'(){ S.avatar = null; render(); },
+  'av-save'(){ putSettings({ avatar: avatarOf(S.avatar.cfg) }); S.avatar = null; render(); toast('Avatar enregistré.'); },
   'cal-hist'(b){ S.day = null; S.stat = null; S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
   'set-sex'(b){ putSettings({ sex: settings().sex === b.dataset.v ? null : b.dataset.v }); render(); },
   theme(b){ putSettings({ theme: b.dataset.v }); applyTheme(b.dataset.v); render(); },
