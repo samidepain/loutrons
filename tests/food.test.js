@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { norm } from '../js/util.js';
-import { fromCiqual, fromOff, fullDay, guessMeal, recentFoods, scale, searchFoods, totals, validBarcode } from '../js/food.js';
+import { fromCiqual, fromOff, offPartial, fullDay, guessMeal, recentFoods, scale, searchFoods, totals, validBarcode } from '../js/food.js';
 import { donnees, reglages, docs } from './aide.js';
 
 // Réponse d'Open Food Facts (extrait de /api/v2/product/3017620422003.json)
@@ -134,4 +134,17 @@ test('recherche dans la table Ciqual : « œuf » écrit par le clavier de l’i
 
 test('repas proposé selon l’heure', () => {
   assert.deepEqual([6, 9, 10, 12, 14, 15, 17, 18, 21, 23, 2].map(guessMeal), ['breakfast', 'breakfast', 'lunch', 'lunch', 'lunch', 'snack', 'snack', 'dinner', 'dinner', 'snack', 'snack']);
+});
+
+test('produit Open Food Facts sans calories : nom, marque et valeurs connues reprises pour la création, rien d’inventé', () => {
+  const d = offPartial({ status: 1, product: { product_name_fr: 'Skyr nature', brands: 'Siggi, Autre', nutriments: { proteins_100g: 10.53, fat_100g: 0.2, sugars_100g: '3,5' } } });
+  assert.deepEqual(d, { name: 'Skyr nature', brand: 'Siggi', p: '10,5', f: '0,2', s: '3,5' });
+  assert.equal(offPartial({ status: 0 }), null);
+});
+
+test('recherche par nom : autres écritures (yogourt, cacahouète, hoummous) trouvent le mot de la table', () => {
+  const list = [{ key: 'a', name: 'Yaourt nature', brand: '' }, { key: 'b', name: 'Beurre de cacahuète', brand: '' }, { key: 'c', name: 'Houmous', brand: '' }];
+  assert.deepEqual(searchFoods([list], 'yogourt').map(f => f.key), ['a']);
+  assert.deepEqual(searchFoods([list], 'beurre cacahouète').map(f => f.key), ['b']);
+  assert.deepEqual(searchFoods([list], 'hoummous').map(f => f.key), ['c']);
 });

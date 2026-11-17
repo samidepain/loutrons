@@ -2,7 +2,7 @@
 import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, nbsp, num, rid, stepValue, toast, today, toggleIn, undoToast, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
-import { activeWorkout, allTpl, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, normSS, planOf, programOf, programRotation, putSettings, rotationOf, rotationWith, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, toggleLink, upgradeLegacy, upNext, weekInfo } from './data.js';
+import { activeWorkout, allTpl, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, normSS, planOf, programOf, programRotation, progId, putSettings, rotationOf, rotationWith, saveTpl, sessionFocus, settings, snapItem, sportInfo, switchProgram, tplDef, tplEst, tplItems, tplLower, toggleLink, upgradeLegacy, upNext, weekInfo } from './data.js';
 import { findPRs, initItem, prSet } from './engine.js';
 import { downloadFile, exportFile, importable, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
@@ -14,7 +14,7 @@ import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
 import { checkDue, nutritionOf, profileData, setupData } from './views/goal.js';
 import { planFor } from './nutrition.js';
-import { copyEntries, dayDoc, freshFood, fromOff, habitualFoods, mealLabel, MEALS, recentFoods, validBarcode } from './food.js';
+import { copyEntries, dayDoc, freshFood, fromOff, habitualFoods, mealLabel, MEALS, offPartial, recentFoods, validBarcode } from './food.js';
 import { convText, foodFromDoc, foodList, preview, recList, recPreview, recShown, shown } from './views/food.js';
 import { ownRecipe } from './recipes.js';
 import { gramsOf, measuresFor } from './measures.js';
@@ -196,6 +196,8 @@ function pickFood(f){
   Object.assign(S.food, { mode:'portion', sel:f, g: last ? last.g : f.serving || 100, unit:null, n:null, msg:null }); S.confirm = null;
   render(); window.scrollTo(0, 0);
 }
+// Produit d'Open Food Facts gardé sur le téléphone (f_<code>) : reconnu ensuite sans connexion, au scan comme à la recherche
+function keepOff(f){ if (!S.docs.get('f_' + f.code)) put('f_' + f.code, Object.assign({ src:'off', code:f.code, name:f.name, brand:f.brand, per100:f.per100, serving:f.serving, fetched: today() }, f.fixed ? { fixed:f.fixed } : {})); }
 // Code-barres lu ou tapé : produit déjà gardé sur le téléphone, sinon Open Food Facts
 const OFF_FIELDS = 'code,product_name,product_name_fr,brands,serving_quantity,nutriments';
 async function lookupBarcode(raw){
@@ -205,6 +207,7 @@ async function lookupBarcode(raw){
   if (!validBarcode(code)) { msg('Code-barres incomplet ou mal lu : réessaie, ou tape les chiffres.'); return; }
   const kept = S.docs.get('f_' + code);
   if (kept) { pickFood(foodFromDoc('f_' + code, kept)); return; }
+  F.partial = null;
   const notFound = why => { Object.assign(S.food, { mode:'notfound', why, code, msg:null }); render(); window.scrollTo(0, 0); };
   if (!navigator.onLine) { notFound('offline'); return; }
   msg('Recherche du produit ' + code + '…');
@@ -215,9 +218,8 @@ async function lookupBarcode(raw){
     if (S.food !== F) return; // écran quitté entre-temps
     const j = r.status === 404 ? { status: 0 } : await r.json();
     const f = fromOff(j, code);
-    if (!f) { notFound(j && j.status === 1 ? 'incomplete' : 'unknown'); return; }
-    put('f_' + code, Object.assign({ src:'off', code, name:f.name, brand:f.brand, per100:f.per100, serving:f.serving, fetched: today() }, f.fixed ? { fixed:f.fixed } : {}));
-    pickFood(f);
+    if (!f) { F.partial = j && j.status === 1 ? offPartial(j) : null; notFound(F.partial ? 'incomplete' : 'unknown'); return; }
+    keepOff(f); pickFood(f);
   } catch (e) { if (S.food === F) notFound(navigator.onLine ? 'error' : 'offline'); }
 }
 document.addEventListener('barcode', e => { if (S.food && S.food.mode === 'scan') lookupBarcode(e.detail); });
@@ -264,11 +266,11 @@ const A = {
     }
     const pe = progError(U);
     if (pe) { if (first) U.step = 2; render(); toast(pe[0]); const i = pe[1] && $(pe[1]); if (i) i.focus(); return; }
-    const name = custom ? String(U.progName || '').trim() : PROGRAMS[U.prog].name;
     if (first && U.n.on && planFor(setupData(U), U.n, today()).status === 'missing') { toast('Complète ce qu’il manque pour le calcul, ou choisis « Pas maintenant ».'); return; }
-    // Rotation (version 2.13) : un objectif de séances par semaine, plus de jours fixes ; la rotation repart de l'ordre du nouveau programme
-    const program = { base: custom ? null : U.prog, name, days: [] };
-    const patch = Object.assign({ program, perWeek: U.perWeek || 3 }, programRotation(program.base));
+    // Le programme quitté est rangé avec ses séances, sa rotation et son objectif (switchProgram) ; un programme déjà enregistré revient tel quel
+    const saved = String(U.prog).indexOf('saved:') === 0;
+    const g = switchProgram(saved ? { id: U.prog.slice(6) } : custom ? { name: String(U.progName || '').trim() } : { base: U.prog }, U.perWeek || 3);
+    const patch = {};
     if (first) {
       patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; patch.created = today();
       if (U.sex) patch.sex = U.sex;
@@ -282,7 +284,7 @@ const A = {
     S.setup = null; S.renaming = false; S.progTab = 'seances';
     S.view = custom || !first ? 'training' : 'today'; if (first) S.navHint = 'fade';
     render(); window.scrollTo(0, 0);
-    toast(custom ? 'Programme créé : ajoute ta première séance.' : first ? 'C’est parti !' : 'Programme changé.');
+    toast(custom ? 'Programme créé : ajoute ta première séance.' : first ? 'C’est parti !' : nbsp('« ' + g.name + ' » est ton programme actif. L’ancien est gardé dans « Tes programmes ».'));
   },
   'setup-sex'(b){ S.setup.sex = S.setup.sex === b.dataset.v ? null : b.dataset.v; render(); },
   'setup-n-on'(b){ S.setup.n.on = b.dataset.v === '1'; render(); },
@@ -336,7 +338,19 @@ const A = {
   },
   'fd-back'(){ if (S.food.edit) { S.food = null; } else { S.food.mode = 'search'; S.food.msg = null; } render(); },
   'fd-meal'(b){ S.food.meal = b.dataset.v; render(); },
-  'fd-pick'(b){ const f = shown.get(b.dataset.v); if (f) pickFood(f); },
+  // Aliment choisi dans la liste. Après un scan sans résultat (F.link), il est enregistré avec ce code-barres : reconnu au prochain scan
+  'fd-pick'(b){
+    const F = S.food; let f = shown.get(b.dataset.v); if (!f) return;
+    if (F.link && !S.docs.get('f_' + F.link)) {
+      const doc = { src:'own', code:F.link, name:f.name, brand:f.brand || '', per100: Object.assign({}, f.per100), serving: f.serving || null, created: today() };
+      put('f_' + F.link, doc); f = foodFromDoc('f_' + F.link, doc); toast('Code-barres associé : il sera reconnu au prochain scan.');
+    }
+    F.link = null; pickFood(f);
+  },
+  // Après un scan sans résultat : chercher l'aliment par son nom (le code lui sera associé), ou relancer la recherche du code
+  'fd-link'(){ const F = S.food; Object.assign(F, { mode:'search', link:F.code, msg:null }); render(); window.scrollTo(0, 0); const i = $('#fd-q'); if (i) i.focus(); },
+  'fd-unlink'(){ S.food.link = null; render(); },
+  'fd-retry'(){ const F = S.food; const code = F.code; Object.assign(F, { mode:'scan', msg:'Recherche du produit ' + code + '…' }); render(); lookupBarcode(code); },
   'fd-gset'(b){ S.food.g = +b.dataset.v; render(); },
   // Mesure usuelle : le journal garde des grammes (F.g), calculés d'après le nombre saisi (F.n) ; revenir aux grammes garde ce poids
   'fd-unit'(b){ const F = S.food; const fam = measuresFor(F.sel); const u = fam && fam.units.find(x => x.id === b.dataset.v); if (u) { F.unit = u.id; setN(String(u.start)); } else { F.unit = null; F.n = null; } render(); },
@@ -360,8 +374,10 @@ const A = {
   'fd-del'(){ S.confirm = 'fd-del'; render(); },
   'fd-del-yes'(){ const F = S.food; const d = dayDoc(F.day); put('m_' + F.day, Object.assign({}, d, { items: d.items.filter(i => i.id !== F.edit) })); S.food = null; S.confirm = null; render(); toast('Retiré du journal.'); },
   'fd-scan'(){ Object.assign(S.food, { mode:'scan', msg:null }); render(); window.scrollTo(0, 0); },
-  'fd-code'(){ const i = $('#scan-code'); lookupBarcode(i ? i.value : ''); },
-  'fd-create'(){ const F = S.food; F.draft = { name: F.mode === 'search' ? capFirst(String(F.q || '').trim()) : '' }; if (F.mode !== 'notfound') F.code = null; F.mode = 'create'; render(); window.scrollTo(0, 0); },
+  // Chiffres tapés sous la caméra, ou code-barres tapé dans la recherche (data-v)
+  'fd-code'(b){ const i = $('#scan-code'); if (b.dataset.v) { b.disabled = true; b.textContent = 'Recherche du produit…'; } lookupBarcode(b.dataset.v || (i ? i.value : '')); },
+  // Créer un aliment : après un scan, avec son code-barres et ce qu'Open Food Facts connaît déjà du produit (nom, marque, valeurs présentes)
+  'fd-create'(){ const F = S.food; const nf = F.mode === 'notfound'; F.draft = nf && F.partial ? Object.assign({}, F.partial) : { name: F.mode === 'search' ? capFirst(String(F.q || '').trim()) : '' }; if (!nf) F.code = F.link || null; F.link = null; F.mode = 'create'; render(); window.scrollTo(0, 0); },
   // Recettes : créer (ingrédients et quantités pour toute la recette), modifier, enregistrer comme un aliment (portion)
   'rec-new'(){ const F = S.food; F.rec = { name: capFirst(String(F.q || '').trim()), servings:'4', cooked:'', items:[], q:'' }; F.mode = 'recipe'; render(); window.scrollTo(0, 0); },
   'rec-edit'(b){ const o = S.docs.get(b.dataset.v); if (!o) return; S.food.rec = { id:b.dataset.v, name:o.name, servings:String(o.servings || 1), cooked: o.cooked ? String(o.cooked) : '', items: clone(o.items || []), q:'' }; S.food.mode = 'recipe'; render(); window.scrollTo(0, 0); },
@@ -420,7 +436,7 @@ const A = {
   'av-open'(){ S.avatar = { cfg: avatarOf(settings().avatar, ITEMS, xpState().level), cat: null, hist: [] }; render(); window.scrollTo(0, 0); },
   'av-cat'(b){ S.avatar.cat = b.dataset.v; render(); },
   // Choisir un calque quand un skin complet est porté ramène à la loutre de base, seule à pouvoir le porter
-  'av-pick'(b){ const E = S.avatar; const s = b.dataset.s; const patch = { [s]: b.dataset.v }; const body = ITEMS.find(it => it.id === E.cfg.body);
+  'av-pick'(b){ const E = S.avatar; E.react = true; const s = b.dataset.s; const patch = { [s]: b.dataset.v }; const body = ITEMS.find(it => it.id === E.cfg.body);
     if (s !== 'body' && body && body.solo) patch.body = (ITEMS.find(it => it.slot === 'body' && !it.solo) || {}).id;
     E.hist.push(E.cfg); E.cfg = Object.assign({}, E.cfg, patch); render(); },
   'av-undo'(){ const E = S.avatar; if (E.hist.length) E.cfg = E.hist.pop(); render(); },
@@ -713,7 +729,7 @@ const A = {
     if (f.rotation.indexOf(id) >= 0) { f.rotation = f.rotation.filter(x => x !== id); f.rotOff.push(id); } else { f.rotOff = f.rotOff.filter(x => x !== id); f.rotation.push(id); }
     putSettings(f); render();
   },
-  'reset-rotation'(){ putSettings(programRotation((programOf() || {}).base)); render(); toast('Ordre du programme rétabli.'); },
+  'reset-rotation'(){ putSettings(programRotation((programOf() || {}).base, progId(programOf()))); render(); toast('Ordre du programme rétabli.'); },
   'per-week'(b){ putSettings({ perWeek: +b.dataset.v }); render(); },
   'plan-day'(b){
     const d = b.dataset.v; const lim = addDays(today(), -14); const cur = (settings().planned || []).filter(x => typeof x === 'string' && x >= lim);

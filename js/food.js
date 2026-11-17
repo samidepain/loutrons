@@ -28,6 +28,14 @@ export function fromOff(json, code){
   if (fixed) out.fixed = fixed;
   return out;
 }
+// Produit d'Open Food Facts sans calories : ce qui est connu (nom, marque, valeurs présentes), pour préremplir « Créer un aliment ».
+// Rien n'est inventé : une valeur absente reste une case vide.
+export function offPartial(json){
+  const p = json && json.product; if (!p) return null; const n = p.nutriments || {};
+  const d = { name: String(p.product_name_fr || p.product_name || '').trim(), brand: String(p.brands || '').split(',')[0].trim() };
+  [['p', 'proteins'], ['c', 'carbohydrates'], ['s', 'sugars'], ['f', 'fat'], ['sf', 'saturated-fat'], ['fib', 'fiber'], ['salt', 'salt']].forEach(([k, o]) => { const v = numOrNull(n[o + '_100g']); if (v != null && v <= 100) d[k] = String(Math.round(v * 10) / 10).replace('.', ','); });
+  return d;
+}
 // Open Food Facts est rempli par des bénévoles : des kJ sont parfois notés à la place des kcal (4,184 fois trop).
 // Repères : 900 kcal pour 100 g au plus (lipides purs) ; calories recalculées depuis les nutriments (règlement UE 1169/2011 :
 // 4 kcal par g de protéines et de glucides, 9 de lipides, 2 de fibres), à 20 % ou 20 kcal près. L'alcool (7 kcal par g)
@@ -118,15 +126,19 @@ export function recentFoods(limit){
 // Recherche tolérante (accents, majuscules, pluriels) : chaque mot doit commencer un mot du nom, de la marque ou d'un autre nom (alt).
 // Les aliments déjà notés ou créés passent avant tout, puis la 2e liste (les recettes) ; puis les noms qui commencent par la recherche,
 // les mots écrits tels quels (« pâtes » avant « pâte sablée ») et les noms qui commencent par le premier mot.
+// Autres façons d'écrire ou de nommer un aliment (mots sans accents) : la recherche essaie aussi le mot utilisé par la table Ciqual
+export const SYN = { yogourt:'yaourt', yoghourt:'yaourt', yogurt:'yaourt', cacahouete:'cacahuete', peanut:'cacahuete', steack:'steak', hoummous:'houmous', hummus:'houmous', houmos:'houmous', coca:'cola', soda:'cola', granola:'muesli' };
 export function searchFoods(lists, q, limit){
   const typed = norm(q).split(' ').filter(Boolean);
   const words = typed.map(w => w.length > 3 && w.slice(-1) === 's' ? w.slice(0, -1) : w);
   if (!words.length) return [];
+  // l'autre nom est cherché sur le mot tel qu'il est tapé (avant le retrait du « s » final)
+  const alt = typed.map(w => SYN[w] || SYN[w.slice(0, -1)] || null);
   const qn = words.join(' '); const out = []; const seen = new Set();
   lists.forEach((list, li) => list.forEach(f => {
     if (seen.has(f.key)) return;
     const n = f.n || norm(f.name); const nw = n.split(' '); const all = nw.concat(norm(f.brand).split(' '), f.alt ? f.alt.split(' ') : []);
-    if (!words.every(w => all.some(x => x.indexOf(w) === 0))) return;
+    if (!words.every((w, i) => all.some(x => x.indexOf(w) === 0 || (alt[i] && x.indexOf(alt[i]) === 0)))) return;
     seen.add(f.key);
     out.push({ f, r: (n.indexOf(qn) === 0 ? 4 : 0) + (words.every(w => nw.some(x => x.indexOf(w) === 0)) ? 2 : 0) + typed.filter(w => nw.indexOf(w) >= 0).length
       + (nw[0].indexOf(words[0]) === 0 ? 1 : 0) + ([10, 1][li] || 0), len: n.length });

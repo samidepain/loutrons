@@ -2,7 +2,7 @@
 import { esc, today } from '../util.js';
 import { DAY_ORDER, DAY_SHORT, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
-import { programOf, settings } from '../data.js';
+import { progId, programOf, savedPrograms, savedTplCount, settings } from '../data.js';
 import { sexChips } from './profile.js';
 import { goalForm, setupData } from './goal.js';
 import { planFor } from '../nutrition.js';
@@ -32,21 +32,25 @@ export function viewSetup(){
   } else {
     h += '<div class="row between"><h1>Ton programme</h1><button type="button" class="link" data-act="setup-cancel">Fermer</button></div>' + programCard();
   }
-  const actif = first ? null : (programOf() || {}).base;
-  const opt = (k, title, desc) => '<button type="button" class="pick' + (U.prog === k ? ' on' : '') + '" data-act="setup-prog" data-v="' + k + '" aria-pressed="' + (U.prog === k) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(title) + (actif === k ? ' <span class="pill acc">Actif</span>' : '') + '</span><span class="m">' + esc(desc) + '</span></span><span aria-hidden="true">' + (U.prog === k ? '✓' : '') + '</span></button>';
-  h += '<section class="card"><h3>' + (first ? 'Ton programme de départ' : 'Changer de programme') + '</h3>' + (first ? '' : '<p class="muted small">Ton historique et les séances que tu as créées sont gardés. Le planning est remplacé.</p>');
-  Object.keys(PROGRAMS).forEach(k => { h += opt(k, PROGRAMS[k].name, PROGRAMS[k].desc); });
+  const opt = (k, title, desc) => '<button type="button" class="pick' + (U.prog === k ? ' on' : '') + '" data-act="setup-prog" data-v="' + esc(k) + '" aria-pressed="' + (U.prog === k) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(title) + '</span><span class="m">' + esc(desc) + '</span></span><span aria-hidden="true">' + (U.prog === k ? '✓' : '') + '</span></button>';
+  // Changement de programme : d'abord les programmes déjà enregistrés (créés ou déjà suivis), puis ceux qu'on peut commencer
+  const saved = first ? [] : savedPrograms(); const pris = saved.map(p => p.id).concat(first ? [] : [progId(programOf())]);
+  if (saved.length) h += '<section class="card"><h3>Tes programmes</h3><p class="muted small">Chacun garde ses séances, sa rotation et son nombre de séances par semaine.</p>'
+    + saved.map(p => { const n = savedTplCount(p); return opt('saved:' + p.id, p.name || 'Mon programme', n + (n > 1 ? ' séances' : ' séance') + (p.perWeek ? ' · ' + p.perWeek + ' par semaine' : '')); }).join('') + '</section>';
+  h += '<section class="card"><h3>' + (first ? 'Ton programme de départ' : 'Commencer un autre programme') + '</h3>' + (first ? '' : '<p class="muted small">Ton programme actuel est gardé avec ses séances : tu le retrouveras dans « Tes programmes ». Ton historique ne change pas.</p>');
+  Object.keys(PROGRAMS).filter(k => pris.indexOf(k) < 0).forEach(k => { h += opt(k, PROGRAMS[k].name, PROGRAMS[k].desc); });
   h += opt('custom', 'Créer mon programme', 'Tu le nommes, tu crées tes séances et tu choisis tes exercices.');
   if (U.prog === 'custom') h += '<label class="f"><span>Nom de ton programme</span><input id="setup-pname" data-u="progName" value="' + esc(U.progName) + '" placeholder="ex. Prise de masse"></label><p class="muted small">Tu régleras ta rotation dans Entraînement › Planning, une fois tes séances créées.</p>';
   h += '</section>';
-  if (U.prog) {
+  const reprise = String(U.prog || '').indexOf('saved:') === 0;
+  if (U.prog && !reprise) {
     const per = U.perWeek || 3;
     h += '<section class="card"><h3>Combien de séances par semaine ?</h3><p class="muted small">Tes séances reviennent dans l’ordre, quel que soit le jour : l’appli te propose la suivante. Tu pourras aussi prévoir tes jours à l’avance.</p><div class="chips" role="group" aria-label="Séances par semaine">'
       + [2, 3, 4, 5, 6].map(n => '<button type="button" class="chip' + (per === n ? ' on' : '') + '" data-act="setup-per-week" data-v="' + n + '" aria-pressed="' + (per === n) + '">' + n + '</button>').join('') + '</div></section>';
   }
   if (!first) h += '<section class="card"><label class="toggle"><input type="checkbox" id="setup-restart" data-act="setup-restart"' + (U.restart ? ' checked' : '') + '><span><b>Recommencer en semaine 1</b><br><span class="muted small">Nouveau bloc de 6 semaines, en commençant par une semaine de calibration.</span></span></label></section>';
   else h += '<p class="muted small">Douleurs à suivre, autres sports : tu pourras les ajouter plus tard dans ton profil.</p>';
-  h += first ? '<button type="button" class="btn primary big" data-act="setup-next">Continuer</button>' : '<button type="button" class="btn primary big" data-act="setup-done">Changer de programme</button>';
+  h += first ? '<button type="button" class="btn primary big" data-act="setup-next">Continuer</button>' : '<button type="button" class="btn primary big" data-act="setup-done">' + (reprise ? 'Reprendre ce programme' : U.prog === 'custom' ? 'Créer ce programme' : 'Passer à ce programme') + '</button>';
   return h;
 }
 // Écran 3 de l'accueil : suivre son alimentation ou non. U.ask : données de l'écran 1 encore manquantes, demandées ici.

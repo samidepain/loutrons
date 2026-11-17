@@ -3,6 +3,10 @@
 import { capFirst, esc, lowFirst } from './util.js';
 import { settings } from './data.js';
 
+// Émile compagnon (version 3.38) : ses apparitions animées se jouent une seule fois par contexte (clé) tant que l'appli reste ouverte.
+// Sans cela, chaque nouvel affichage de l'écran (un toucher suffit) relancerait l'animation. Rien n'est enregistré.
+const played = new Set();
+export const firstTime = key => !played.has(key) && !!played.add(key);
 export function callName(){ const s = settings(); return s.sex === 'm' ? 'loutron' : s.sex === 'f' ? 'loutronne' : String(s.name || '').trim(); }
 // « Loutron, ta dernière sauvegarde… » : la phrase adressée à la personne
 // Conseil du retour après une pause de plus de 14 jours (règles de la reprise : engine.js, computeTarget)

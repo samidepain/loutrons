@@ -3,7 +3,7 @@
 // planification et, si le suivi est activé, l'alimentation du jour.
 import { addDays, capFirst, greeting, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nbsp, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { S } from '../store.js';
-import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, nextWeigh, tplItems, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, tplEst, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
+import { activeWorkout, activities, allTpl, backupDue, exDef, kneeEntries, lastWeighIn, nextWeigh, tplItems, weighDue, bodyweight, countSets, jumpsOn, kneeAlert, lastSessionGap, nextSession, tplLower, planDay, plannedDates, plannedSessions, settings, sportInfo, testForBlock, tplDef, weekGoal, weekInfo, weekProgress, wName, workouts } from '../data.js';
 import { fatigueCheck, recentRecord } from '../engine.js';
 import { FLAG_LABEL, PAIN_LIMIT, painAdvice, painZones, ZONES } from '../pain.js';
 import { useShare } from '../backup.js';
@@ -11,7 +11,7 @@ import { kneeChips, TROPHY } from '../render.js';
 import { noTplCard } from './program.js';
 import { calendarCard } from './calendar.js';
 import { checkCard } from './goal.js';
-import { emile, emileQueue, hey, returnTip } from '../emile.js';
+import { emile, emileQueue, firstTime, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
 import { introCard } from './intro.js';
@@ -44,12 +44,10 @@ function planCard(d, plan, aw, doneToday, tpls){
   const mt = sportPlanned(d) === 'match' ? 'ce soir' : sportPlanned(addDays(d, 1)) === 'match' ? 'demain' : null;
   const caution = (mt && tplLower(t) ? '<p class="small">' + esc(nbsp('Match ' + mt + ' : garde des jambes fraîches, préfère une séance du haut du corps (« Voir toutes mes séances »).')) + '</p>' : '') + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
   const count = p.done + ' séance' + (p.done > 1 ? 's' : '') + ' sur ' + p.target + ' cette semaine';
-  // Dernière séance terminée : un repère de régularité (le décompte de la semaine est dans « Ta semaine »)
-  const last = workouts().filter(w => w.status === 'terminée').reduce((m, w) => !m || w.date > m.date || (w.date === m.date && (w.startedAt || 0) > (m.startedAt || 0)) ? w : m, null);
-  const lastLine = last ? '<p class="muted small last">' + esc(nbsp('Dernière : ' + wName(last) + ' · ' + fmtDate(last.date) + ' · ' + (last.duration ? last.duration + ' min' : 'durée non notée'))) + '</p>' : '';
+  // Bloc compact (version 3.38) : le nom, ce qu'on y travaille et le bouton ; ni durée ni dernière séance (aucun chiffre de temps ici)
   return '<section class="card plan"><span class="label">' + (prevu ? 'Prévue aujourd’hui' : 'Ta prochaine séance') + '</span><div class="name">' + esc(t.name) + '</div>'
-    + '<p>' + esc(nbsp((t.focus ? t.focus + ' · ' : '') + 'environ ' + tplEst(t) + ' min')) + '</p>' + (reached ? '<div class="plan-rest"><img src="icons/emile.png" alt="" width="44" height="44"><p class="small">' + esc(nbsp(count + ' : objectif atteint, tu peux te reposer.')) + '</p></div>' : '') + caution
-    + '<button type="button" class="btn' + (reached ? '' : ' primary') + ' big" data-act="start" data-v="' + esc(id) + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>' + noterBtn + autre + lastLine + '</section>';
+    + (t.focus ? '<p class="muted small">' + esc(t.focus) + '</p>' : '') + (reached ? '<div class="plan-rest"><img' + (firstTime('rest:' + d) ? ' class="e-hop"' : '') + ' src="icons/emile.png" alt="" width="44" height="44"><p class="small">' + esc(nbsp(count + ' : objectif atteint, tu peux te reposer.')) + '</p></div>' : '') + caution
+    + '<button type="button" class="btn' + (reached ? '' : ' primary') + ' big" data-act="start" data-v="' + esc(id) + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>' + noterBtn + autre + '</section>';
 }
 
 // Record des 7 derniers jours (force estimée, calculé sur l'historique) : carte dorée, seulement quand il y en a un
@@ -130,7 +128,8 @@ export function viewToday(){
   const doneToday = workouts().filter(w => w.date === d && w.status === 'terminée');
   const who = String(settings().name || '').trim(); 
   const hi = greeting(new Date().getHours()) + (who ? ', ' + who : '');
-  let h = '<div class="greet"><span class="g-hi">' + esc(hi) + '</span><span class="hero-date">' + esc(capFirst(fmtDateLong(d))) + ' · bloc ' + wk.block + ', semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<div class="row"><span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span></div>' : '') + '</div>';
+  // Émile accueille la personne à côté du salut : il arrive une fois par jour et par ouverture de l'appli, puis reste immobile
+  let h = '<div class="greet-row"><div class="greet"><span class="g-hi">' + esc(hi) + '</span><span class="hero-date">' + esc(capFirst(fmtDateLong(d))) + ' · bloc ' + wk.block + ', semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<div class="row"><span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span></div>' : '') + '</div><img class="greet-emile' + (S.loaded && firstTime('hello:' + d) ? ' e-arrive' : '') + '" src="icons/emile.png" alt="" width="48" height="48"></div>';
   // Premier lancement, rien de fait : Aujourd'hui s'explique d'abord
   const intro = introCard('today'); if (intro) return h + intro;
   h += planCard(d, plan, aw, doneToday, tpls);

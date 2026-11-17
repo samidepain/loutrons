@@ -7,7 +7,7 @@ import { allEx, blockRange, bodyDocs, canon, countSets, jumpsOn, kneeOn, nextSes
 import { blockReport, exerciseGains, exerciseProgress, fatigueCheck, muscleDone, musclePlanned, PERIODS, periodStart, prevPeriod, recordLog, setScore, weeklyRhythm } from '../engine.js';
 import { bars, chart, spark } from '../chart.js';
 import { viewHistory } from './history.js';
-import { emile } from '../emile.js';
+import { emile, firstTime } from '../emile.js';
 import { myPlan, nutritionOf, weightReading } from './goal.js';
 import { introCard } from './intro.js';
 import { subNav } from './program.js';
@@ -42,7 +42,7 @@ function viewProgress(){
   if (!ws.length) {
     // Rien à comparer : Émile (logo, lumière douce) dit ce qu'il faut, plutôt que des cases à zéro
     const nx = nextSession(); const tp = nx && tplDef(nx);
-    h += '<section class="card empty-state"><img class="end-logo" src="icons/logo.png" alt="" width="96" height="96"><h2>Ta progression commence ici</h2><p class="muted">Après ta première séance, tu verras ici ton rythme, ta force et tes records.</p>'
+    h += '<section class="card empty-state"><img class="end-logo' + (firstTime('progress-empty') ? ' e-arrive' : '') + '" src="icons/logo.png" alt="" width="96" height="96"><h2>Ta progression commence ici</h2><p class="muted">Après ta première séance, tu verras ici ton rythme, ta force et tes records.</p>'
       + (tp ? '<button type="button" class="btn primary big" data-act="start" data-v="' + esc(nx) + '">Commencer ' + esc(tp.name) + '</button>' : '') + '</section>';
   } else {
     const fat = fatigueCheck();

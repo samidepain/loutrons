@@ -9,7 +9,7 @@ import { recordLog } from '../engine.js';
 import { lineCard } from './activity.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
-import { emile } from '../emile.js';
+import { emile, firstTime } from '../emile.js';
 import { GOALS, goalProfileCard, nutritionOf } from './goal.js';
 import { painZones, ZONE_IDS, ZONES } from '../pain.js';
 import { avatarReady } from '../avatar.js';
@@ -29,7 +29,7 @@ export function viewProfile(){
   let h = '<div class="row"><button type="button" class="link" data-act="profile-back" data-back>‹ ' + (FROM[S.from] || FROM.today) + '</button></div>';
   // En-tête en carte vedette : initiale, prénom, ancienneté, puis séances, semaines et records ; sans séance, Émile dit quand les chiffres arrivent (jamais de « 0 »)
   const ws = workouts().filter(w => w.status === 'terminée'); const since = s.created || (ws[0] && ws[0].date) || startDate(); const who = String(s.name || '').trim(); const wk = new Set(ws.map(w => mondayOf(w.date))).size; const recs = recordLog().length;
-  h += '<section class="card hero prof-card"><div class="prof-head">' + (avatarReady() ? avatarImg(s.avatar, 'head prof-av') : '<span class="prof-ini" aria-hidden="true">' + esc((who[0] || '?').toUpperCase()) + '</span>') + '<div class="prof-id"><h1>' + esc(who || 'Profil') + '</h1><span class="muted">' + esc((s.sex === 'f' ? 'Loutronne' : s.sex === 'm' ? 'Loutron' : 'Sur Loutrons') + ' depuis ' + fmtMonth(since.slice(0, 7))) + '</span></div></div>';
+  h += '<section class="card hero prof-card"><div class="prof-head">' + (avatarReady() ? avatarImg(s.avatar, 'head prof-av' + (firstTime('profile') ? ' e-hop' : '')) : '<span class="prof-ini" aria-hidden="true">' + esc((who[0] || '?').toUpperCase()) + '</span>') + '<div class="prof-id"><h1>' + esc(who || 'Profil') + '</h1><span class="muted">' + esc((s.sex === 'f' ? 'Loutronne' : s.sex === 'm' ? 'Loutron' : 'Sur Loutrons') + ' depuis ' + fmtMonth(since.slice(0, 7))) + '</span></div></div>';
   if (ws.length) h += levelBar();
   h += ws.length ? '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">' + (ws.length > 1 ? 'séances' : 'séance') + '</span></div><div class="stat"><span class="v num">' + wk + '</span><span class="l">' + (wk > 1 ? 'semaines actives' : 'semaine active') + '</span></div><div class="stat"><span class="v num">' + (recs || '—') + '</span><span class="l">' + (recs > 1 ? 'records' : 'record') + '</span></div></div>'
     : emile('<p>' + esc(nbsp('Dès ta première séance, tes chiffres et tes records apparaissent ici.')) + '</p>');

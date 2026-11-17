@@ -1,5 +1,5 @@
 // Accès aux données : réglages, exercices, séances modèles, planning, historique.
-import { addDays, capFirst, clone, daysBetween, e1rm, lowFirst, mondayOf, norm, num, parseIso, today } from './util.js';
+import { addDays, capFirst, clone, daysBetween, e1rm, lowFirst, mondayOf, norm, num, parseIso, rid, today } from './util.js';
 import { ALIAS, BASE_EX, BASE_TPL, DAY_NOTES, DAY_ORDER, M, PROGRAMS } from './library.js';
 import { put, S } from './store.js';
 
@@ -81,10 +81,41 @@ export function tplDef(id){
   delete t.focusNoJump; delete t.cutNoJump;
   return t;
 }
-// Séances du programme actif, puis séances créées par la personne
+// Programmes enregistrés (version 3.38). Le programme actif reste dans settings.program ; ceux qu'on a quittés attendent dans
+// settings.programs : [{ id, base, name, days, rotation, rotOff, perWeek }]. Une séance créée appartient au programme actif tant qu'elle
+// n'est pas marquée ; en quittant un programme, ses séances créées reçoivent son identifiant (champ prog) : elles ne sont plus affichées
+// ailleurs, et jamais supprimées.
+export const progId = g => g ? g.id || g.base || null : null;
+export function savedPrograms(){ const l = settings().programs; return Array.isArray(l) ? l.filter(p => p && p.id && p.id !== progId(programOf())) : []; }
+// Séances créées (hors séances de base) du programme pid ; mine : avec celles qui ne sont pas encore marquées
+function ownTplIds(pid, mine){
+  const out = []; S.docs.forEach((o, id) => { const k = id.slice(2); if (id.indexOf('p_') === 0 && !BASE_TPL[k] && o && (o.prog ? o.prog === pid : mine)) out.push(k); });
+  return out;
+}
+// Nombre de séances d'un programme enregistré (liste « Tes programmes »)
+export const savedTplCount = p => (PROGRAMS[p.base] ? PROGRAMS[p.base].tpls : []).concat(ownTplIds(p.id, false)).map(tplDef).filter(t => t && !t.deleted).length;
+// Changer de programme actif. next : { id } (programme enregistré), { base } (programme type) ou { name } (nouveau programme créé) ;
+// perWeek : objectif d'un nouveau programme. Le programme quitté est rangé avec sa rotation et son objectif. Renvoie le programme actif.
+export function switchProgram(next, perWeek){
+  const s = settings(); const cur = programOf(); let list = Array.isArray(s.programs) ? s.programs.filter(p => p && p.id) : [];
+  if (cur) {
+    // la rotation est lue avant de marquer les séances : après, elles ne sont plus celles du programme actif
+    const id = progId(cur) || 'g' + rid(); const rot = rotationOf(); const keep = { id, base: cur.base || null, name: cur.name, days: cur.days || [], rotation: rot, rotOff: allTpl().map(t => t.id).filter(x => rot.indexOf(x) < 0), perWeek: perWeekOf() };
+    if (next.id === id || (next.base && next.base === id)) return cur;
+    ownTplIds(id, true).forEach(k => { const o = S.docs.get('p_' + k); if (!o.prog) put('p_' + k, Object.assign({}, o, { prog: id })); });
+    list = list.filter(p => p.id !== id).concat([keep]);
+  }
+  const old = list.find(p => p.id === (next.id || next.base));
+  const program = old ? { id: old.id, base: old.base || null, name: old.name, days: old.days || [] }
+    : next.base ? { id: next.base, base: next.base, name: PROGRAMS[next.base].name, days: [] } : { id: 'g' + rid(), base: null, name: next.name, days: [] };
+  const patch = old ? { rotation: old.rotation || [], rotOff: old.rotOff || [], perWeek: old.perWeek } : Object.assign({ perWeek: perWeek || 3 }, programRotation(program.base));
+  putSettings(Object.assign({ program, programs: list.filter(p => p.id !== program.id) }, patch));
+  return program;
+}
+// Séances du programme actif, puis séances créées par la personne dans ce programme
 export function allTpl(){
   const g = programOf(); const ids = g && PROGRAMS[g.base] ? PROGRAMS[g.base].tpls.slice() : [];
-  S.docs.forEach((o, id) => { const k = id.slice(2); if (id.indexOf('p_') === 0 && !BASE_TPL[k] && ids.indexOf(k) < 0) ids.push(k); });
+  ownTplIds(progId(g), true).forEach(k => { if (ids.indexOf(k) < 0) ids.push(k); });
   return ids.map(tplDef).filter(t => t && !t.deleted);
 }
 // Exercices réellement faits : sans les sauts si le module détente est désactivé
@@ -151,11 +182,11 @@ export function rotationOf(){
   else { const fromPlan = planSessions(); order = fromPlan.length ? fromPlan : all; }
   return order.filter((id, i) => order.indexOf(id) === i && off.indexOf(id) < 0);
 }
-// Rotation d'un programme qu'on vient de choisir : ses séances dans l'ordre ; les séances créées restent de côté (programme créé : toutes)
-export function programRotation(base){
+// Rotation d'un programme qu'on vient de choisir : ses séances dans l'ordre ; les séances créées restent de côté (programme créé : toutes).
+// pid : identifiant du programme dont on prend les séances créées (null : celles qui ne sont pas encore rangées dans un programme)
+export function programRotation(base, pid = null){
   const prog = PROGRAMS[base] ? PROGRAMS[base].tpls.filter(id => { const t = tplDef(id); return t && !t.deleted; }) : [];
-  const all = new Set(); Object.keys(PROGRAMS).forEach(k => PROGRAMS[k].tpls.forEach(id => all.add(id)));
-  const own = []; S.docs.forEach((o, id) => { const k = id.slice(2); if (id.indexOf('p_') === 0 && !BASE_TPL[k] && !all.has(k) && !(o && o.deleted)) own.push(k); });
+  const own = ownTplIds(pid, true).filter(k => !S.docs.get('p_' + k).deleted);
   return base && PROGRAMS[base] ? { rotation: prog, rotOff: own } : { rotation: own, rotOff: [] };
 }
 // Séance créée : à la fin de la rotation ; si la rotation est encore déduite du planning d'avant, elle est d'abord figée (null : rien à écrire)

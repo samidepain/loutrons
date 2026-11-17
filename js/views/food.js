@@ -1,7 +1,7 @@
 // Écran Alimentation : journal du jour par repas, et ajout d'un aliment (recherche, code-barres, quantité, création).
 import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtInt, fmtKg, nbsp, num, today } from '../util.js';
 import { S } from '../store.js';
-import { dayDoc, freshFood, guessMeal, habitualFoods, LIMITS, loadCiqual, mealLabel, MEALS, myFoods, pastMeals, recentFoods, savedMeals, scale, searchFoods, totals } from '../food.js';
+import { dayDoc, freshFood, guessMeal, habitualFoods, LIMITS, loadCiqual, mealLabel, MEALS, myFoods, pastMeals, recentFoods, savedMeals, scale, searchFoods, totals, validBarcode } from '../food.js';
 import { startScanner } from '../scanner.js';
 import { emile, hey } from '../emile.js';
 import { dayPlan, nutritionOf } from './goal.js';
@@ -163,12 +163,16 @@ function viewFoodAdd(){
   if (F.mode === 'scan') {
     return head('Scanner', 'fd-back') + '<div class="scan"><video id="scan-video" playsinline muted autoplay></video><i class="aim" aria-hidden="true"></i></div><p id="scan-msg" class="muted small" aria-live="polite">' + esc(F.msg || 'Vise le code-barres du produit, bien à plat et éclairé.') + '</p>'
       + '<div class="row"><input class="plain" id="scan-code" inputmode="numeric" autocomplete="off" placeholder="ou tape les chiffres du code" aria-label="Chiffres du code-barres" style="flex:1;width:auto;min-width:0"><button type="button" class="btn" data-act="fd-code">Chercher</button></div>'
-      + '<p class="muted small">Les produits sont cherchés dans Open Food Facts, une base libre et collaborative, puis gardés sur ton téléphone.</p>';
+      + '<p class="muted small">Les produits sont cherchés dans Open Food Facts, une base libre et collaborative, puis gardés sur ton téléphone : un produit déjà scanné est reconnu sans connexion.</p>';
   }
   if (F.mode === 'notfound') {
-    const why = { offline:'Pas de connexion, et ce produit n’a jamais été scanné sur ce téléphone.', unknown:'Je ne trouve pas ce produit dans Open Food Facts.', incomplete:'Ce produit est dans Open Food Facts, mais sans ses valeurs nutritionnelles.', error:'Open Food Facts ne répond pas pour l’instant.' }[F.why] || '';
-    return head('Produit introuvable', 'fd-back') + emile('<p>' + esc(why) + ' Tu peux le créer avec les valeurs de l’emballage : il sera reconnu au prochain scan.</p><p class="muted small">Code ' + esc(F.code) + '</p>', { tone:'warn', key:'notfound:' + F.code })
-      + '<button type="button" class="btn primary" data-act="fd-create">Créer cet aliment</button><button type="button" class="btn" data-act="fd-scan">Scanner à nouveau</button>';
+    // Le code a bien été lu : c'est le produit qui manque (ou le réseau). Trois sorties, aucune impasse : le créer, le chercher par son nom, rescanner
+    const net = F.why === 'offline' || F.why === 'error'; const part = F.why === 'incomplete' && F.partial;
+    const why = { offline:'Pas de connexion, et ce produit n’a jamais été scanné sur ce téléphone.', unknown:'Le code-barres est bien lu, mais ce produit n’est pas encore dans Open Food Facts.', incomplete:'Ce produit est dans Open Food Facts, mais sans ses calories.', error:'Open Food Facts ne répond pas pour l’instant.' }[F.why] || '';
+    const quoi = part ? ' J’ai repris son nom et les valeurs connues : complète le reste avec l’emballage.' : ' Crée-le avec les valeurs de l’emballage, ou cherche-le par son nom : dans les deux cas, il sera reconnu au prochain scan.';
+    return head(part ? 'Produit incomplet' : net ? 'Produit pas encore trouvé' : 'Produit inconnu', 'fd-back') + emile('<p>' + esc(why + quoi) + '</p><p class="muted small">Code ' + esc(F.code) + (part && F.partial.name ? ' · ' + esc(F.partial.name) : '') + '</p>', { tone:'warn' })
+      + (net ? '<button type="button" class="btn primary big" data-act="fd-retry">Réessayer</button>' : '')
+      + '<button type="button" class="btn' + (net ? '' : ' primary') + ' big" data-act="fd-create">' + (part ? 'Compléter ce produit' : 'Créer cet aliment') + '</button><button type="button" class="btn big" data-act="fd-link">Chercher par nom</button><button type="button" class="btn ghost" data-act="fd-scan">Scanner à nouveau</button>';
   }
   if (F.mode === 'create') {
     const d = F.draft; const fld = (k, l, ph) => '<label class="f"><span>' + l + '</span><input class="n" id="fc-' + k + '" data-fc="' + k + '" inputmode="decimal" value="' + esc(d[k] == null ? '' : d[k]) + '" placeholder="' + ph + '"></label>';
@@ -235,6 +239,7 @@ function viewFoodAdd(){
   }
   // Recherche
   let h = head('Ajouter un aliment') + mealChips;
+  if (F.link) h += '<p class="alert info">' + esc(nbsp('Code-barres ' + F.link + ' : choisis l’aliment qui correspond, il sera reconnu au prochain scan.')) + ' <button type="button" class="link" data-act="fd-unlink">Ne pas associer</button></p>';
   // Recherche en grand, scanner en carré orange à côté (l'action rapide la plus forte), créations en dessous
   h += '<div class="fd-search"><input class="plain" type="search" id="fd-q" data-fq="1" placeholder="Rechercher : pomme, riz, bolognaise…" aria-label="Rechercher un aliment" value="' + esc(F.q || '') + '" autocomplete="off" enterkeyhint="search"><button type="button" class="btn primary scan-btn" data-act="fd-scan" aria-label="Scanner un code-barres">' + BARCODE + '</button></div>';
   h += '<div class="row"><button type="button" class="btn sm" data-act="fd-create">Créer un aliment</button><button type="button" class="btn sm" data-act="rec-new">Créer une recette</button></div>';
@@ -265,7 +270,7 @@ export function preview(f, g){
   return '<div class="stats">' + st(fmtInt(v.kcal), 'kcal') + st(q1(v.p) + ' <small>g</small>', 'protéines') + st(q1(v.c) + ' <small>g</small>', 'glucides') + '</div>'
     + '<p class="small muted">Lipides ' + qg(v.f) + ' (saturés ' + qg(v.sf) + ') · sucres ' + qg(v.s) + ' · fibres ' + qg(v.fib) + ' · sel ' + qg(v.salt) + '</p>';
 }
-const row = f => { shown.set(f.key, f); return '<button type="button" class="pick" data-act="fd-pick" data-v="' + esc(f.key) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(f.name) + '</span><span class="m">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + fmtInt(f.per100.kcal) + ' kcal/100 g' + (f.g ? ' · dernière fois ' + fmtKg(f.g) + ' g' : '') + '</span></span><span aria-hidden="true">›</span></button>'; };
+const row = f => { shown.set(f.key, f); return '<button type="button" class="pick" data-act="fd-pick" data-v="' + esc(f.key) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(f.name) + '</span><span class="m">' + (f.brand ? esc(f.brand) + ' · ' : '') + SRC[f.src] + ' · ' + nbsp(fmtInt(f.per100.kcal) + ' kcal' + (f.per100.p == null ? '' : ' · ' + q1(f.per100.p) + ' g de protéines') + ' pour 100 g') + (f.g ? ' · dernière fois ' + fmtKg(f.g) + ' g' : '') + '</span></span><span aria-hidden="true">›</span></button>'; };
 let ciq = null, recs = null; // table Ciqual, une fois chargée, et recettes types calculées avec elle
 const recipeByKey = key => (recs || []).find(r => r.key === key);
 function needCiqual(after){
@@ -276,8 +281,10 @@ export function foodList(){
   if (!q) return quickGroups(F.meal, F.day) || '<p class="empty">Cherche un aliment par son nom, ou scanne un code-barres.</p>';
   const mine = recentFoods(200); const own = myFoods().map(o => foodFromDoc(o.id, o)).filter(f => !mine.some(m => m.key === f.key));
   needCiqual(() => { if (S.food && S.food.mode === 'search') { const l = document.getElementById('fd-list'); if (l) l.innerHTML = foodList(); } });
+  // Une suite de chiffres qui forme un code-barres valide : on propose de le chercher, comme après un scan
+  const code = q.replace(/\s/g, ''); const asCode = !/\D/.test(code) && validBarcode(code) ? '<button type="button" class="btn primary" data-act="fd-code" data-v="' + code + '">Chercher le code-barres ' + code + '</button>' : '';
   const res = searchFoods([mine.concat(own), recs || [], ciq || []], q, 40);
-  let h = res.length ? res.map(row).join('') : ciq ? '<p class="empty">Aucun aliment trouvé. Essaie un autre mot, scanne le produit ou crée-le.</p>' : '';
+  let h = asCode + (res.length ? res.map(row).join('') : ciq && !asCode ? '<p class="empty">Aucun aliment trouvé. Essaie un autre mot, scanne le produit ou crée-le.</p>' : '');
   if (!ciq) h += '<p class="loading">Chargement de la table Ciqual…</p>';
   else if (!ciq.length) h += '<p class="muted small">La table Ciqual n’est pas disponible pour l’instant.</p>';
   return h;
@@ -289,7 +296,7 @@ export function foodAfterRender(){
   if (scan && scan.video !== v) { scan.stop(); scan = null; }
   if (!v || scan) return;
   const cur = { video: v, stop: () => { cur.dead = true; } }; scan = cur;
-  startScanner(v, code => document.dispatchEvent(new CustomEvent('barcode', { detail: code })))
+  startScanner(v, code => document.dispatchEvent(new CustomEvent('barcode', { detail: code })), validBarcode)
     .then(stop => { if (cur.dead) stop(); else cur.stop = () => { cur.dead = true; stop(); }; })
     .catch(e => { const m = document.getElementById('scan-msg'); if (m && !cur.dead) m.textContent = e && e.name === 'NotAllowedError' ? 'Accès à la caméra refusé : autorise-le dans les réglages du téléphone, ou tape les chiffres du code.' : 'Caméra indisponible : tape les chiffres du code.'; });
 }
