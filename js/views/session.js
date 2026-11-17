@@ -96,7 +96,8 @@ export function viewEnd(){
   if (gain) h += '<section class="card"><div class="ring-row">' + ic('trend') + '<div class="stack rec-t"><h2>' + (levelOf(x.total - gain) < x.level ? 'Niveau ' + x.level + ' atteint' : '+' + gain + ' XP') + '</h2>' + (levelOf(x.total - gain) < x.level ? '<span class="small">+' + gain + ' XP avec cette séance</span>' : '') + '</div></div>' + levelBar() + '</section>';
   // Émile en pied (logo), qui signe le message ; lumière douce derrière lui (réussite)
   h += '<div class="end-emile"><img class="end-logo" src="icons/logo.png" alt="" width="96" height="96"><p><span class="who">Émile</span><br>' + esc(nbsp(hey(prs.length ? 'Bien joué : ' + (prs.length > 1 ? 'de nouveaux records !' : 'un nouveau record !') : 'Séance enregistrée. Pas de record cette fois : la régularité compte plus que chaque séance.'))) + '</p></div>';
-  return h + '<button type="button" class="btn primary big" data-act="close-summary">Retour à Aujourd’hui</button></div>';
+  // Partager reste un choix : un bouton gris sous l'action principale, jamais automatique
+  return h + '<button type="button" class="btn primary big" data-act="close-summary">Retour à Aujourd’hui</button><button type="button" class="btn big" data-act="share-open">Partager ma séance</button></div>';
 }
 const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 

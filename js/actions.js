@@ -1,5 +1,5 @@
 // Actions de l’interface : clics, saisies et changements.
-import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, nbsp, num, rid, stepValue, toast, today, toggleIn, withDot } from './util.js';
+import { $, addDays, addMonths, capFirst, clone, fmtDate, fmtInt, fmtKg, mondayOf, nbsp, num, rid, stepValue, toast, today, toggleIn, undoToast, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
 import { activeWorkout, allTpl, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, normSS, planOf, programOf, programRotation, putSettings, rotationOf, rotationWith, saveTpl, sessionFocus, settings, snapItem, sportInfo, tplDef, tplEst, tplItems, tplLower, toggleLink, upgradeLegacy, upNext, weekInfo } from './data.js';
@@ -22,6 +22,7 @@ import { activityKcal, choiceOf, computeSessionKcal, EFFORT, glassOf, LEVELS, my
 import { actDoc, actPreview, liters } from './views/activity.js';
 import { avatarOf, ITEMS } from './avatar.js';
 import { xpState } from './levels.js';
+import { drawShare, sendShare } from './views/social.js';
 
 // Supprime une séance perso (jamais une séance de base) et la retire de la rotation et du planning ; faux si elle n'existe pas ou est de base
 function deleteTpl(id){
@@ -226,7 +227,7 @@ function choice(v){ const p = String(v).split(':'); return p[0] === 'sport' && p
 function firstChoice(){ const mine = mySports(); const last = settings().lastAct; return mine.indexOf(last) >= 0 || !mine.length ? last || 'run' : mine[0]; }
 const A = {
   // Chaque onglet retrouve sa position ; toucher l'onglet affiché remonte en haut
-  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.day = null; S.plan = null; S.avatar = null; S.fiche = null; S.stat = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
+  tab(b){ const before = screenOf().key; const was = S.view; S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.day = null; S.plan = null; S.avatar = null; S.fiche = null; S.stat = null; S.move = null; S.exQ = ''; S.food = null; S.act = null; S.share = null; if (S.setup && S.setup.mode === 'change') S.setup = null;
     render(); if (was === b.dataset.v && before === screenOf().key) window.scrollTo({ top:0, behavior:'smooth' }); },
   // Aujourd'hui : ouvrir ou fermer une ligne compacte, afficher les autres conseils d'Émile, liens vers Séances et Alimentation
   'today-open'(b){ S.todayOpen = S.todayOpen === b.dataset.v ? null : b.dataset.v; render(); },
@@ -459,6 +460,11 @@ const A = {
   abandon(){ S.confirm = 'abandon'; render(); },
   'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; resetSession(); stopRest(); S.view = 'today'; S.navHint = 'down'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
   'close-summary'(){ S.summary = null; render(); },
+  // Partage d'une séance (fin de séance ou onglet Social) : rien ne part sans « Partager » ; fermer revient à l'écran d'avant
+  'share-open'(b){ const id = b.dataset.v || (S.summary && S.summary.id); if (!S.docs.get(id)) return; S.share = { id, msg:'', off:{} }; render(); window.scrollTo(0, 0); },
+  'share-stat'(b){ const o = S.share.off; o[b.dataset.v] = !o[b.dataset.v]; render(); },
+  'share-cancel'(){ S.share = null; render(); },
+  'share-send'(){ sendShare(msg => { S.share = null; render(); toast(msg); }); },
   // Conseil d'Émile fermé : il ne revient que quand sa clé change ; on oublie les clés de plus de 4 mois
   'emile-x'(b){
     const lim = addDays(today(), -120); const d = {}; const old = settings().dismissed || {};
@@ -645,9 +651,14 @@ const A = {
   'new-tpl'(){ S.draft = { kind:'tpl', isNew:true, id:'s' + rid(), data:{ name:'', focus:'', cut:'', items:[] } }; render(); window.scrollTo(0, 0); },
   'edit-tpl'(b){ const t = tplDef(b.dataset.v); if (!t) return; S.draft = { kind:'tpl', isNew:false, id:t.id, data:{ name:t.name, focus:t.focus || '', cut:t.cut || '', items: normSS(clone(t.items)) } }; render(); window.scrollTo(0, 0); },
   // Déplacer ou retirer un exercice peut défaire un superset : les repères sont renumérotés à chaque fois
-  'it-up'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i > 0) { const x = a[i]; a[i] = a[i - 1]; a[i - 1] = x; } normSS(a); render(); },
-  'it-down'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i < a.length - 1) { const x = a[i]; a[i] = a[i + 1]; a[i + 1] = x; } normSS(a); render(); },
-  'it-rm'(b){ S.draft.data.items.splice(+b.dataset.i, 1); normSS(S.draft.data.items); render(); },
+  'it-open'(b){ const D = S.draft; const it = D.data.items[+b.dataset.i]; D.open = D.open === it ? null : it; render(); },
+  // Retirer un exercice : annulable quelques secondes (« Annuler » dans le message), supersets remis comme avant
+  'it-rm'(b){
+    const D = S.draft; const a = D.data.items; const i = +b.dataset.i; if (!a[i]) return;
+    const marks = a.map(x => [x, x.ss]); const it = a.splice(i, 1)[0]; normSS(a); render();
+    toast('Exercice retiré.', () => { if (S.draft !== D) return; a.splice(Math.min(i, a.length), 0, it); marks.forEach(m => { m[0].ss = m[1]; }); normSS(a); render(); });
+  },
+  'toast-undo'(){ undoToast(); },
   'it-link'(b){ toggleLink(S.draft.data.items, +b.dataset.i); render(); },
   'save-tpl'(){
     const D = S.draft; const t = D.data;
@@ -749,6 +760,7 @@ document.addEventListener('input', e => {
   if (t.matches('[data-rq]') && S.food && S.food.rec) { S.food.rec.q = t.value; const l = $('#rec-list'); if (l) l.innerHTML = recList(); return; }
   if (t.matches('[data-ac]') && S.act) { S.act[t.dataset.ac] = t.value; const pv = $('#act-prev'); if (pv) pv.innerHTML = actPreview(); return; }
   if (t.matches('[data-d]') && S.draft) { S.draft.data[t.dataset.d] = t.value; return; }
+  if (t.matches('[data-share]') && S.share) { S.share.msg = t.value; drawShare(); return; }
   if (t.matches('[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; return; }
   if (t.matches('[data-e]') && S.draft) { S.draft.data[t.dataset.e] = t.value; return; }
   if (t.matches('[data-b]')) {
@@ -836,45 +848,59 @@ const turnEnd = e => {
 };
 document.addEventListener('pointerup', turnEnd); document.addEventListener('pointercancel', turnEnd);
 
-// Rotation (Planning) : glisser une séance pour la déplacer. Au doigt, un appui maintenu de 300 ms sur la ligne (sinon la page défile),
-// ou tout de suite depuis la poignée ; à la souris, dès que le pointeur bouge. Les autres lignes s'écartent pendant le déplacement,
-// qui reste entre la première et la dernière ; l'ordre est enregistré au lâcher. Au clavier : flèches haut et bas sur la poignée.
-// shortcut: pas de défilement automatique près des bords (la rotation tient à l'écran) ; à prévoir si elle dépasse une dizaine de séances
-let drag = null;
+// Glisser une ligne pour la déplacer : séances de la rotation (Planning) et exercices de l'éditeur de séance. Au doigt, un appui maintenu
+// de 300 ms sur la ligne (sinon la page défile), ou tout de suite depuis la poignée ; à la souris, dès que le pointeur bouge (sur une ligne
+// balayable, un geste horizontal reste un balayage). Les autres lignes s'écartent pendant le déplacement, qui reste entre la première et
+// la dernière ; près du haut ou du bas de l'écran la page défile toute seule ; l'ordre est gardé au lâcher. Clavier : flèches sur la poignée.
+const DRAG_ROWS = '.rot-row[data-rot], .it-row';
+let drag = null; let dragMute = 0;
 function dragStart(x, y, target, touch){
   dragEnd(false);
-  const row = target.closest && !target.closest('.rot-in') && target.closest('.rot-row[data-rot]'); if (!row) return;
-  drag = { row, x0:x, y0:y, on:false, hold: touch && !target.closest('.rot-grip'), touch };
+  const row = target.closest && !target.closest('.rot-in, .it-body, .sw-del') && target.closest(DRAG_ROWS); if (!row) return;
+  const grip = !!target.closest('.rot-grip');
+  drag = { row, x0:x, y0:y, y, on:false, grip, hold: touch && !grip, touch };
   if (drag.hold) drag.timer = setTimeout(dragLift, 300);
 }
 function dragLift(){
   const d = drag; if (!d || d.on) return; const list = d.row.parentElement;
-  d.rows = Array.from(list.querySelectorAll('.rot-row[data-rot]')); d.from = d.to = d.rows.indexOf(d.row);
-  d.tops = d.rows.map(r => r.offsetTop); d.hs = d.rows.map(r => r.offsetHeight);
-  d.on = true; list.classList.add('sorting'); d.row.classList.add('lift');
+  d.rows = Array.from(list.querySelectorAll(DRAG_ROWS)); d.from = d.to = d.rows.indexOf(d.row);
+  d.tops = d.rows.map(r => r.offsetTop); d.hs = d.rows.map(r => r.offsetHeight); d.sy = window.scrollY;
+  d.on = true; list.classList.add('sorting'); d.row.classList.remove('open'); d.row.classList.add('lift'); requestAnimationFrame(dragAuto);
 }
 function dragMove(x, y, e){
   const d = drag; if (!d) return;
   if (!d.on) {
     if (Math.abs(y - d.y0) < 6 && Math.abs(x - d.x0) < 6) return;
-    // le doigt a bougé avant la fin de l'appui : c'est un défilement de la page
-    if (d.hold) { dragEnd(false); return; }
+    // le doigt a bougé avant la fin de l'appui : c'est un défilement de la page ; à la souris, un geste horizontal sur une ligne balayable : un balayage
+    if (d.hold || (!d.grip && d.row.matches('.sw') && Math.abs(x - d.x0) > Math.abs(y - d.y0))) { dragEnd(false); return; }
     dragLift();
   }
   if (e.cancelable) e.preventDefault();
-  const n = d.rows.length - 1; const f = d.from; const pitch = d.hs[f] + (n ? d.tops[1] - d.tops[0] - d.hs[0] : 0);
-  const dy = Math.max(d.tops[0] - d.tops[f], Math.min(d.tops[n] + d.hs[n] - d.hs[f] - d.tops[f], y - d.y0));
+  d.y = y; dragPlace();
+}
+function dragPlace(){
+  const d = drag; const n = d.rows.length - 1; const f = d.from; const pitch = d.hs[f] + (n ? d.tops[1] - d.tops[0] - d.hs[0] : 0);
+  const dy = Math.max(d.tops[0] - d.tops[f], Math.min(d.tops[n] + d.hs[n] - d.hs[f] - d.tops[f], d.y - d.y0 + window.scrollY - d.sy));
   const mid = d.tops[f] + dy + d.hs[f] / 2;
   // nouvelle place : le nombre de lignes dont le milieu est au-dessus de celui de la ligne tenue
   d.to = d.rows.filter((r, i) => i !== f && d.tops[i] + d.hs[i] / 2 < mid).length;
   d.row.style.transform = 'translateY(' + dy + 'px) scale(1.02)';
   d.rows.forEach((r, i) => { if (i !== f) r.style.transform = i > f && i <= d.to ? 'translateY(' + -pitch + 'px)' : i < f && i >= d.to ? 'translateY(' + pitch + 'px)' : ''; });
 }
+// Ligne tenue près du haut ou du bas de l'écran : la page défile, la ligne reste sous le doigt
+function dragAuto(){
+  const d = drag; if (!d || !d.on) return;
+  const v = d.y < 96 ? -9 : d.y > window.innerHeight - 150 ? 9 : 0;
+  if (v) { const y0 = window.scrollY; window.scrollBy(0, v); if (window.scrollY !== y0) dragPlace(); }
+  requestAnimationFrame(dragAuto);
+}
 function dragEnd(commit){
   const d = drag; drag = null; if (!d) return; clearTimeout(d.timer); if (!d.on) return;
-  const list = d.row.parentElement; const moved = commit && d.to !== d.from; d.row.classList.remove('lift');
+  const list = d.row.parentElement; const moved = commit && d.to !== d.from; d.row.classList.remove('lift'); dragMute = Date.now() + 350;
   if (moved) {
-    const f = frozenRot(); f.rotation.splice(d.to, 0, f.rotation.splice(d.from, 1)[0]); putSettings(f);
+    // Éditeur de séance : l'ordre change dans le brouillon (enregistré avec la séance) ; rotation : enregistrée tout de suite
+    if (d.row.matches('.it-row')) { const a = S.draft.data.items; a.splice(d.to, 0, a.splice(d.from, 1)[0]); normSS(a); }
+    else { const f = frozenRot(); f.rotation.splice(d.to, 0, f.rotation.splice(d.from, 1)[0]); putSettings(f); }
     // la ligne rejoint sa place, puis l'écran est redessiné dans le nouvel ordre
     d.row.style.transform = 'translateY(' + (d.to > d.from ? d.tops[d.to] + d.hs[d.to] - d.hs[d.from] - d.tops[d.from] : d.tops[d.to] - d.tops[d.from]) + 'px)';
   } else d.rows.forEach(r => { r.style.transform = ''; });
@@ -883,6 +909,8 @@ function dragEnd(commit){
     else if (!drag) list.classList.remove('sorting');
   }, lessMotion() ? 0 : 220);
 }
+// Le clic qui suit un déplacement ne doit pas ouvrir la ligne lâchée
+document.addEventListener('click', e => { if (Date.now() < dragMute && e.target.closest && e.target.closest('.it-row')) { e.stopPropagation(); e.preventDefault(); } }, true);
 document.addEventListener('touchstart', e => { if (e.touches.length === 1) dragStart(e.touches[0].clientX, e.touches[0].clientY, e.target, true); else dragEnd(false); }, { passive:true });
 document.addEventListener('touchmove', e => { if (drag) dragMove(e.touches[0].clientX, e.touches[0].clientY, e); }, { passive:false });
 document.addEventListener('touchend', () => dragEnd(true)); document.addEventListener('touchcancel', () => dragEnd(false));
@@ -894,6 +922,11 @@ document.addEventListener('pointercancel', e => { if (drag && !drag.touch) dragE
 document.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
 document.addEventListener('keydown', e => {
   const g = e.target.closest && e.target.closest('.rot-grip'); const dir = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0; if (!g || !dir) return;
-  e.preventDefault(); const id = g.dataset.v; moveRot(id, dir);
+  e.preventDefault();
+  if (g.closest('.it-row')) {
+    const a = S.draft.data.items; const i = +g.dataset.i; const j = i + dir; if (j < 0 || j >= a.length) return;
+    a.splice(j, 0, a.splice(i, 1)[0]); normSS(a); render(); const at = document.querySelector('.it-row .rot-grip[data-i="' + j + '"]'); if (at) at.focus(); return;
+  }
+  const id = g.dataset.v; moveRot(id, dir);
   const again = Array.from(document.querySelectorAll('.rot-grip')).find(x => x.dataset.v === id); if (again) again.focus();
 });

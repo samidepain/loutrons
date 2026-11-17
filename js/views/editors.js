@@ -4,6 +4,8 @@ import { CATS, KINDS, M, MUSCLES } from '../library.js';
 import { S } from '../store.js';
 import { excluded, exDef, jumpsOn, kneeOn, tplDef, tplEst } from '../data.js';
 import { painZones } from '../pain.js';
+import { swipeRow } from '../swipe.js';
+import { GRIP } from './program.js';
 
 // Liste des temps de repos (« 1 min 30 »…), avec la valeur actuelle si elle n'y est pas
 export function restSelect(id, attrs, value){
@@ -17,33 +19,42 @@ function viewTplEditor(){
   let h = '<section class="card"><div class="row between"><h2>' + (D.isNew ? 'Nouvelle séance' : 'Modifier la séance') + '</h2><button type="button" class="link" data-act="draft-cancel">Annuler</button></div>';
   if (!D.isNew) h += '<p class="muted small">Ces changements valent pour toutes tes prochaines séances. Pour aujourd’hui seulement, commence la séance : « Remplacer » ou « Passer » sur un exercice.</p>';
   h += '<div class="fields"><label class="f"><span>Nom</span><input id="d-name" data-d="name" value="' + esc(t.name || '') + '" placeholder="ex. Full body"></label><label class="f"><span>Objectif</span><input id="d-focus" data-d="focus" value="' + esc(t.focus || '') + '" placeholder="ex. Force et détente"></label></div>';
-  // « Si le temps manque, couper » : seulement pour les séances qui l'avaient déjà (séances de départ), pas à la création
-  if (!D.isNew && t.cut) h += '<label class="f"><span>Si le temps manque, couper</span><input id="d-cut" data-d="cut" value="' + esc(t.cut || '') + '"></label>';
   h += '<span class="label">Exercices (' + t.items.length + ') · environ ' + tplEst(t) + ' min</span>';
-  // Supersets : exercices voisins liés, encadrés et numérotés dans l'ordre de cette séance (« Superset 1 », « Superset 2 »…)
+  // Une ligne compacte par exercice : la toucher l'ouvre (séries, reps, repos, superset), la maintenir la déplace, la balayer vers la
+  // gauche la retire. Supersets : exercices voisins liés, repérés par un trait orange et numérotés dans l'ordre (« Superset 1 »…)
   const defOf = it => exDef(it.ex) || { name:'Exercice supprimé', kind:'load' };
   const linkable = it => { const k = defOf(it).kind; return k !== 'cardio' && k !== 'check'; };
   let nSS = 0;
+  h += '<div class="rot-list it-list">';
   t.items.forEach((it, i) => {
-    const e = defOf(it);
+    const e = defOf(it); const nm = esc(e.name); const open = D.open === it;
     const prev = t.items[i - 1]; const next = t.items[i + 1];
-    const starts = it.ss && !(prev && prev.ss === it.ss); const linked = !!(it.ss && next && next.ss === it.ss);
-    if (starts) h += '<div class="group"><span class="gh">Superset ' + (++nSS) + ' : alterne sans repos</span>';
+    const linked = !!(it.ss && next && next.ss === it.ss);
+    if (it.ss && !(prev && prev.ss === it.ss)) nSS++;
     const isSet = e.kind === 'load' || e.kind === 'bw';
-    h += '<div class="item"><div class="row between"><span class="t">' + (i + 1) + '. ' + esc(e.name) + '</span><span class="row" style="gap:4px"><button type="button" class="btn sm" data-act="it-up" data-i="' + i + '" aria-label="Monter"' + (i ? '' : ' disabled') + '>↑</button><button type="button" class="btn sm" data-act="it-down" data-i="' + i + '" aria-label="Descendre"' + (i < t.items.length - 1 ? '' : ' disabled') + '>↓</button><button type="button" class="btn sm danger" data-act="it-rm" data-i="' + i + '" aria-label="Retirer">✕</button></span></div>';
-    if (e.kind === 'cardio') h += '<div class="fields"><label class="f"><span>Durée (min)</span><input id="it-' + i + '-lo" data-it="' + i + '" data-k="lo" inputmode="numeric" value="' + esc(it.lo || e.lo || '') + '"></label></div>';
-    else if (e.kind !== 'check') {
-      h += '<div class="fields"><label class="f"><span>Séries</span><input id="it-' + i + '-sets" data-it="' + i + '" data-k="sets" inputmode="numeric" value="' + esc(it.sets || e.sets || '') + '"></label>';
-      h += '<label class="f"><span>' + (isSet ? 'Reps min' : 'Volume') + '</span><input id="it-' + i + '-lo" data-it="' + i + '" data-k="lo" inputmode="numeric" value="' + esc(it.lo || e.lo || '') + '"></label>';
-      if (isSet) h += '<label class="f"><span>Reps max</span><input id="it-' + i + '-hi" data-it="' + i + '" data-k="hi" inputmode="numeric" value="' + esc(it.hi || e.hi || '') + '"></label></div><div class="fields">' + restSelect('it-' + i + '-rest', 'data-it="' + i + '" data-k="rest"', it.rest || e.rest);
-      h += '</div>';
+    // Ligne ouverte : les champs disent déjà les valeurs, le résumé ne garde que le superset
+    const sum = open || e.kind === 'check' ? '' : e.kind === 'cardio' ? (it.lo || e.lo) + ' min' : (it.sets || e.sets) + ' × ' + (it.lo || e.lo) + (isSet ? '-' + (it.hi || e.hi) + ' · repos ' + fmtRest(num(it.rest || e.rest)) : ' ' + (e.unit || ''));
+    let r = '<div class="item it' + (it.ss ? ' ss' : '') + (open ? ' open' : '') + '"><div class="it-head">'
+      + '<button type="button" class="rot-grip" data-i="' + i + '" aria-label="Déplacer ' + nm + ', position ' + (i + 1) + ' : flèches haut et bas">' + GRIP + '</button>'
+      + '<button type="button" class="it-main" data-act="it-open" data-i="' + i + '" aria-expanded="' + open + '"><span class="t">' + (i + 1) + '. ' + nm + '</span><span class="m">' + esc([it.ss ? 'Superset ' + nSS : '', sum].filter(Boolean).join(' · ')) + '</span></button>'
+      + '<span class="it-chev" aria-hidden="true">›</span></div>';
+    if (open) {
+      r += '<div class="it-body">';
+      if (e.kind === 'cardio') r += '<div class="fields"><label class="f"><span>Durée (min)</span><input id="it-' + i + '-lo" data-it="' + i + '" data-k="lo" inputmode="numeric" value="' + esc(it.lo || e.lo || '') + '"></label></div>';
+      else if (e.kind !== 'check') {
+        r += '<div class="fields"><label class="f"><span>Séries</span><input id="it-' + i + '-sets" data-it="' + i + '" data-k="sets" inputmode="numeric" value="' + esc(it.sets || e.sets || '') + '"></label>';
+        r += '<label class="f"><span>' + (isSet ? 'Reps min' : 'Volume') + '</span><input id="it-' + i + '-lo" data-it="' + i + '" data-k="lo" inputmode="numeric" value="' + esc(it.lo || e.lo || '') + '"></label>';
+        if (isSet) r += '<label class="f"><span>Reps max</span><input id="it-' + i + '-hi" data-it="' + i + '" data-k="hi" inputmode="numeric" value="' + esc(it.hi || e.hi || '') + '"></label></div><div class="fields">' + restSelect('it-' + i + '-rest', 'data-it="' + i + '" data-k="rest"', it.rest || e.rest);
+        r += '</div>';
+      }
+      r += '<div class="row between">' + (next && linkable(it) && linkable(next) ? '<button type="button" class="link ss-link" data-act="it-link" data-i="' + i + '" aria-pressed="' + linked + '">' + (linked ? 'Séparer du suivant' : '+ Superset avec le suivant') + '</button>' : '<span></span>')
+        + '<button type="button" class="link it-rm" data-act="it-rm" data-i="' + i + '">Retirer</button></div></div>';
     }
-    if (next && linkable(it) && linkable(next)) h += '<button type="button" class="link ss-link" data-act="it-link" data-i="' + i + '" aria-pressed="' + linked + '">' + (linked ? 'Séparer du suivant' : '+ Superset avec le suivant') + '</button>';
-    h += '</div>';
-    if (it.ss && !linked) h += '</div>';
+    h += swipeRow(r + '</div>', 'it-rm', i, 'Retirer ' + nm + ' de la séance', ' data-i="' + i + '"').replace('class="sw"', 'class="sw auto it-row"');
   });
+  h += '</div>';
   h += '<button type="button" class="btn" data-act="pick-draft">+ Ajouter un exercice</button>';
-  h += '<p class="muted small">Superset : deux exercices (ou plus) enchaînés sans repos, puis le repos du dernier.</p>';
+  if (t.items.length) h += '<p class="muted small">Touche un exercice pour régler ses séries ou le lier en superset. Maintiens-le pour le déplacer, balaie-le vers la gauche pour le retirer.</p>';
   h += '<button type="button" class="btn primary big" data-act="save-tpl">Enregistrer la séance</button>';
   if (!D.isNew) {
     const t0 = tplDef(D.id);

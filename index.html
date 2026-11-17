@@ -306,6 +306,12 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .chip.sec.on{background:var(--court);color:var(--bg);box-shadow:none}
 .seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
 .seg .chip{white-space:nowrap;font-family:var(--f-body);font-weight:600;font-size:15px}
+/* Sous-onglets d'un écran (Entraînement, Progrès) : libellés sur toute la largeur, trait orange qui glisse sous celui qui est affiché */
+.subnav{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;box-shadow:inset 0 -1px 0 var(--line)}
+.subnav .st{min-height:44px;border:none;background:none;font-size:16px;font-weight:600;color:var(--muted);transition:color var(--dur-state) ease}
+.subnav .st.on{color:var(--ink);font-weight:700}
+.st-ind{position:absolute;left:0;bottom:0;height:3px;width:calc(100% / var(--n));transform:translateX(calc(var(--i) * 100%));pointer-events:none}
+.st-ind::after{content:"";position:absolute;inset:0 20%;border-radius:var(--r-pill);background:var(--grad-fire);box-shadow:var(--glow-1)}
 /* Sous-onglets et cases posés sur le fond de l'écran : matière des cartes, pour rester visibles sur le fond clair */
 .seg .chip:not(.on),#app > .stats .stat,.end .stat,#app > .pick{background:linear-gradient(180deg,var(--card-top),var(--card-bot));box-shadow:var(--card-sh)}
 .toggle{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
@@ -597,6 +603,24 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .sw.card-r .sw-del{border-radius:var(--r)}
 .sw.open .sw-del,.sw.moving .sw-del{visibility:visible;transition-delay:0s}
 .sw-del:active{filter:brightness(.9)}
+/* Balayage complet (.sw.auto, exercices de l'éditeur de séance) : le fond rouge suit la ligne sur toute sa largeur, pâle puis plein une fois le seuil passé */
+.sw.auto .sw-del{width:100%;text-align:right;padding-right:20px}
+.sw.auto.moving:not(.arm) .sw-del{background:var(--bad-soft);color:var(--bad)}
+/* Éditeur de séance : une ligne compacte par exercice (poignée, nom, résumé), ouverte au toucher ; trait orange à gauche pour un superset */
+.it-list .item.it{padding:0;gap:0}
+.it-head{display:grid;grid-template-columns:44px minmax(0,1fr) 32px;align-items:center;min-height:60px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.it-main{display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;min-height:60px;padding:8px 0;border:none;background:none;color:inherit;text-align:left}
+.it-main .t{overflow-wrap:anywhere}
+.it-main .m{color:var(--muted);font-size:var(--t-small)}
+.it-chev{justify-self:center;color:var(--muted);transition:transform var(--dur-state) var(--ease)}
+.it.open .it-chev{transform:rotate(90deg)}
+.it-body{display:flex;flex-direction:column;gap:var(--s-2);padding:0 10px 4px}
+.it.ss{box-shadow:inset 3px 0 0 var(--accent-ink)}
+.it-body .link{min-height:44px}
+.it-rm{color:var(--bad)}
+.rot-list.sorting .it-row{transition:transform var(--dur-state) var(--ease)}
+.rot-list.sorting .it-row.lift{z-index:2;transition:none}
+.it-row.lift .item{box-shadow:0 10px 24px var(--shade),inset 0 0 0 2px var(--accent-ink)}
 /* Pastille ronde d'un pictogramme : rubriques du suivi du jour, repas, écrans d'explication */
 .ic{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--accent-ink)}
 .ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -641,6 +665,15 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 @media (prefers-reduced-motion:reduce){.tab,.tab svg,.tab span{transition:none}}
 /* Sans flou (navigateur ancien) : verre opaque, pour garder le texte lisible */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.top,.tabs{background:var(--bg)}}
+ /* Cinq onglets (Social, avec le suivi de l'alimentation) : libellés plus petits ; sous 360 px seul l'onglet affiché garde le sien, les autres restent nommés pour les lecteurs d'écran */
+.tabs-in[data-n="5"]{grid-auto-columns:minmax(0,1fr)}
+.tabs-in[data-n="5"] .tab{font-size:11px;letter-spacing:-.01em;white-space:nowrap}
+@media (max-width:360px){.tabs-in[data-n="5"] .tab:not(.on) span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}}
+/* Social : profil sportif (avatar en pied) et aperçu de l'image partagée */
+.soc-id{display:flex;align-items:center;gap:var(--s-4);min-width:0}
+.soc-av{width:96px;border-radius:var(--r-md);background:var(--well)}
+.soc-name{overflow-wrap:anywhere}
+.share-cv{display:block;width:100%;max-width:340px;height:auto;margin:0 auto;border-radius:var(--r);box-shadow:var(--card-sh)}
 .tab .dot{position:absolute;top:10px;right:calc(50% - 18px);width:8px;height:8px;border-radius:50%;background:var(--accent)}
 .restbar{position:fixed;left:0;right:0;bottom:calc(var(--tabs-h) + env(safe-area-inset-bottom,0px));z-index:29;padding:0 16px 10px}
 /* Minuteur en verre : anneau du temps qui reste, le temps et les boutons sur une ligne, le nom de l'exercice dessous sur toute la largeur */
@@ -657,6 +690,9 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .restbar .rl{order:3;flex-basis:100%;font-size:15px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .restbar button{background:var(--surface-2);color:var(--ink);border:none;border-radius:999px;padding:6px 14px;font-weight:700;min-height:44px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs-h) + 84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:15px;max-width:calc(100% - 32px);text-align:center}
+/* « Annuler » dans le message (suppression annulable) : cible de 44 px sans grossir le message */
+.toast:has(.toast-undo){white-space:nowrap}
+.toast-undo{margin:-10px -8px -10px 8px;padding:0 8px;min-height:44px;border:none;background:none;color:inherit;font-weight:800;text-decoration:underline}
 /* Petits écrans : anneau, temps, « +15 s » et « Passer » tiennent sur une ligne */
 @media (max-width:360px){.restbar-in{gap:2px 8px}.restbar .rt{font-size:26px;min-width:0}.restbar button{padding:6px 10px;font-size:16px}}
 #restbar:not([hidden]) ~ .toast{bottom:calc(var(--tabs-h) + 140px + env(safe-area-inset-bottom,0px))}

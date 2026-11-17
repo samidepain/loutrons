@@ -12,6 +12,7 @@ const FOOD_LEVEL = { search:0, scan:1, notfound:2, portion:2, create:2, recipe:2
 // rang parmi des écrans voisins (sub : sous-onglets, jours du journal)
 export function screenOf(){
   if (S.setup) { const st = S.setup.step || 1; return S.setup.mode === 'welcome' ? { key:'setup-' + st, level:st } : { key:'change-' + st, level:st, sheet:'change' }; }
+  if (S.share) return { key:'share', level:0, sheet:'share' };
   if (S.picker) return { key:'picker', level:0, sheet:'picker' };
   if (S.draft) return { key:'draft-' + S.draft.kind + '-' + (S.draft.id || 'new'), level:0, sheet:'draft' };
   if (S.avatar) return { key:'avatar', level:0, sheet:'avatar' };
@@ -33,6 +34,7 @@ export function screenOf(){
   if (v === 'progress') return { key:'progress-' + S.progressTab, level:0, tab:v, sub:PRTABS.indexOf(S.progressTab) };
   if (v === 'food' && S.food) return { key:'food-' + S.food.mode, level:FOOD_LEVEL[S.food.mode] || 0, sheet:'food' };
   if (v === 'food') return { key:'food', level:0, tab:v, sub:S.foodDay || '9999' };
+  if (v === 'social') return { key:'social', level:0, tab:v };
   if (v === 'profile') return { key:'profile', level:1, from:S.from || 'today' };
   if (v === 'settings') return { key:'settings-' + S.set, level:2, from:S.from || 'today' };
   if (v === 'today' && S.day) return { key:'day', level:1, from:'today' };
@@ -62,7 +64,7 @@ export function navigate(paint){
   const back = kind === 'pop' || kind === 'down' || kind === 'next' || kind === 'prev' || (kind === 'fade' && next.level === 0);
   const y = back ? memo[next.key] || 0 : 0;
   finish(); cal = { m:S.calMonth, d:S.calDay };
-  if (kind === 'next' || kind === 'prev') { paint(); window.scrollTo(0, y); if (!reduced()) shift(kind); return; }
+  if (kind === 'next' || kind === 'prev') { paint(); window.scrollTo(0, y); if (!reduced()) shift(kind, prev.sub, next.sub); return; }
   const old = detach(); paint(); window.scrollTo(0, y);
   const fresh = document.getElementById('app');
   if (gesture && gesture.state === 'start') { gesture.view = { old, fresh }; gesture.state = 'drag'; follow(0); return; }
@@ -113,8 +115,10 @@ function track(old, fresh, anims){
 // Nouvelle navigation pendant une animation : on la termine tout de suite
 function finish(){ if (running) { const r = running; r.anims.forEach(a => a.cancel()); r.done(); } }
 // Sous-onglets et jours : le contenu sous les onglets glisse légèrement, les onglets restent en place
-function shift(kind){
-  const app = document.getElementById('app'); const bar = app.querySelector('.seg, .daynav');
+function shift(kind, from, to){
+  const app = document.getElementById('app'); const bar = app.querySelector('.subnav, .seg, .daynav');
+  // le trait des sous-onglets part de l'ancien libellé
+  const ind = bar && bar.querySelector('.st-ind'); if (ind && from >= 0 && to >= 0) ind.animate([{ transform:'translateX(' + from * 100 + '%)' }, { transform:'translateX(' + to * 100 + '%)' }], { duration:320, easing:EASE });
   let el = bar ? bar.nextElementSibling : app.firstElementChild; const d = kind === 'next' ? 28 : -28;
   for (; el; el = el.nextElementSibling) el.animate([{ opacity:0, transform:'translateX(' + d + 'px)' }, { opacity:1, transform:'none' }], { duration:260, easing:EASE });
 }

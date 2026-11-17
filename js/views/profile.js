@@ -23,7 +23,7 @@ export function sexChips(act, val){
     [['m', 'Un loutron'], ['f', 'Une loutronne']].map(o => '<button type="button" class="chip txt' + (val === o[0] ? ' on' : '') + '" data-act="' + act + '" data-v="' + o[0] + '" aria-pressed="' + (val === o[0]) + '">' + o[1] + '</button>').join('') + '</div></div>';
 }
 // Retour vers l'écran d'où le profil a été ouvert
-const FROM = { today:'Aujourd’hui', training:'Entraînement', food:'Alimentation', progress:'Progrès' };
+const FROM = { today:'Aujourd’hui', training:'Entraînement', food:'Alimentation', progress:'Progrès', social:'Social' };
 export function viewProfile(){
   const s = settings(); const pesees = bodyDocs().filter(b => num(b.weight) > 0); const last = pesees[pesees.length - 1];
   let h = '<div class="row"><button type="button" class="link" data-act="profile-back" data-back>‹ ' + (FROM[S.from] || FROM.today) + '</button></div>';

@@ -53,6 +53,12 @@ export const fmtDateYear = s => { const d = parseIso(s); return (d.getDate() ===
 export const fmtInt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
 // Texte comparable : sans accents ni majuscules, ponctuation remplacée par des espaces
 export const norm = s => String(s == null ? '' : s).replace(/[œŒ]/g, 'oe').replace(/[æÆ]/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-let toastT = null;
-export function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3500); }
+let toastT = null, toastUndo = null;
+// undo (facultatif) : fonction qui annule ce qui vient d'être fait ; le message porte alors un bouton « Annuler » pendant 6 s
+export function toast(msg, undo){
+  const t = $('#toast'); t.textContent = msg; toastUndo = undo || null;
+  if (undo) t.insertAdjacentHTML('beforeend', '<button type="button" class="toast-undo" data-act="toast-undo">Annuler</button>');
+  t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; toastUndo = null; }, undo ? 6000 : 3500);
+}
+export function undoToast(){ const f = toastUndo; toastUndo = null; clearTimeout(toastT); $('#toast').hidden = true; if (f) f(); }
 export function toggleIn(arr, v){ arr = (arr || []).slice(); const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); return arr; }

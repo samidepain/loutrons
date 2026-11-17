@@ -8,8 +8,11 @@ import { swipeRow } from '../swipe.js';
 import { ICONS } from '../icons.js';
 
 const PTABS = [['seances','Séances'],['planning','Planning'],['exercices','Exercices']];
+// Sous-onglets d'un écran : le trait orange glisse d'un libellé à l'autre (animé par shift() dans nav.js)
+export const subNav = (tabs, cur, act) => '<div class="subnav" role="tablist" style="--n:' + tabs.length + ';--i:' + Math.max(0, tabs.findIndex(t => t[0] === cur)) + '">'
+  + tabs.map(t => '<button type="button" class="st' + (cur === t[0] ? ' on' : '') + '" data-act="' + act + '" data-v="' + t[0] + '" role="tab" aria-selected="' + (cur === t[0]) + '">' + t[1] + '</button>').join('') + '<i class="st-ind" aria-hidden="true"></i></div>';
 export function viewProgram(){
-  let h = '<h1>Entraînement</h1><div class="seg" role="tablist">' + PTABS.map(t => '<button type="button" class="chip' + (S.progTab === t[0] ? ' on' : '') + '" data-act="ptab" data-v="' + t[0] + '" role="tab" aria-selected="' + (S.progTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
+  let h = '<h1>Entraînement</h1>' + subNav(PTABS, S.progTab, 'ptab');
   if (!S.loaded) return h + '<p class="loading">Chargement…</p>';
   // Premier lancement, aucune séance faite : la rubrique s'explique d'abord (sans les sous-onglets)
   const intro = introCard('training'); if (intro) return '<h1>Entraînement</h1>' + intro;
@@ -86,7 +89,7 @@ function viewPlanning(){
   return h + '</section>' + planLink() + weekCard() + settingsCard();
 }
 // Une séance de la rotation : poignée (on glisse la ligne ; au clavier, flèches haut et bas sur la poignée), rang, nom, case « dans la rotation »
-const GRIP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12M6 15h12"/></svg>';
+export const GRIP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12M6 15h12"/></svg>';
 function rotRow(t, i, on){
   const id = esc(t.id); const nm = esc(t.name);
   return '<div class="rot-row' + (on ? '" data-rot="' + id : ' off') + '">'

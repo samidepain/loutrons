@@ -21,11 +21,13 @@ import { viewMovement } from './views/movement.js';
 import { ICONS } from './icons.js';
 import { avatarImg, viewAvatar } from './views/avatar.js';
 import { avatarReady } from './avatar.js';
+import { drawShare, viewShare, viewSocial } from './views/social.js';
 
 // Trophée des records (carte dorée d'Aujourd'hui)
 export const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 // L'onglet Alimentation n'apparaît que si la personne suit son alimentation
-const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['food','Alimentation'],['progress','Progrès']];
+// Social vient en dernier : d'abord ce qui est à soi (le jour, la séance, les repas, les progrès), puis les autres
+const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['food','Alimentation'],['progress','Progrès'],['social','Social']];
 const tabsShown = () => TABS.filter(t => t[0] !== 'food' || (S.loaded && nutritionOf().on));
 // Roue dentée dessinée par l'appli : un anneau en tirets (les dents) et un petit cercle au centre
 const GEAR = '<svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke-width="4" stroke-dasharray="3.3 2.2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/></svg>';
@@ -40,7 +42,7 @@ export function renderTabs(){
   // et le CSS l'anime (couleur, taille de l'icône), en même temps que la lentille glisse
   const box = $('#tabs'); const keys = shown.map(t => t[0]).join(); const dotOf = t => (t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw);
   if (box.dataset.keys !== keys) {
-    box.dataset.keys = keys;
+    box.dataset.keys = keys; box.dataset.n = shown.length;
     box.innerHTML = shown.map(t => '<button type="button" class="tab" data-act="tab" data-v="' + t[0] + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span></button>').join('');
   }
   shown.forEach((t, i) => {
@@ -65,12 +67,13 @@ function paint(){
   const sc = screenOf(); document.body.classList.toggle('brandless', !(sc.key === 'today' || (S.setup && S.setup.mode === 'welcome'))); document.body.classList.toggle('in-sheet', !!sc.sheet);
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
-  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.avatar ? viewAvatar() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity() : S.plan ? viewPlan()
+  $('#app').innerHTML = S.setup ? viewSetup() : S.share ? viewShare() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.avatar ? viewAvatar() : S.move ? viewMovement() : S.bilan ? viewBilan(S.bilan) : S.summary && S.summary.screen ? viewEnd() : S.act ? viewActivity() : S.plan ? viewPlan()
     : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? (S.fiche ? viewFiche() : S.stat ? viewStat() : viewProgressPage())
     : v === 'food' && nutritionOf().on ? viewFood()
+    : v === 'social' ? viewSocial()
     : v === 'profile' ? viewProfile() : v === 'settings' ? viewSettings() : S.day ? viewDay() : viewToday();
   if (v === 'training' && aw) ensureTick();
-  foodAfterRender();
+  foodAfterRender(); if (S.share) drawShare();
 }
 // Apparence : automatique (réglage du téléphone), clair ou sombre. Gardée aussi dans localStorage pour s'appliquer dès l'ouverture.
 const THEME_COLORS = { light:'#F5F5F4', dark:'#0B0B0D' };
