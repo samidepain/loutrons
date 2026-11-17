@@ -26,8 +26,8 @@ import { drawShare, viewShare, viewSocial } from './views/social.js';
 // Trophée des records (carte dorée d'Aujourd'hui)
 export const TROPHY = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
 // L'onglet Alimentation n'apparaît que si la personne suit son alimentation
-// Social vient en dernier : d'abord ce qui est à soi (le jour, la séance, les repas, les progrès), puis les autres
-const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['food','Alimentation'],['progress','Progrès'],['social','Social']];
+// L'onglet Social (viewSocial, écran 'social') est masqué tant qu'il n'y a pas de réseau d'amis : pour le rouvrir, ajouter ['social','Social'] en dernier
+const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['food','Alimentation'],['progress','Progrès']];
 const tabsShown = () => TABS.filter(t => t[0] !== 'food' || (S.loaded && nutritionOf().on));
 // Roue dentée dessinée par l'appli : un anneau en tirets (les dents) et un petit cercle au centre
 const GEAR = '<svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke-width="4" stroke-dasharray="3.3 2.2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/></svg>';
