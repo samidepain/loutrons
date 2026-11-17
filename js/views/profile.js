@@ -50,7 +50,7 @@ export function viewProfile(){
   h += row('food', 'Alimentation', n.on ? GOALS[n.goal || 'keep'] : 'Suivi désactivé');
   h += row('look', 'Apparence', THEMES[s.theme || 'auto']);
   h += row('data', 'Sauvegarde et données', s.lastExport ? withDot('Dernière sauvegarde : ' + fmtDate(s.lastExport)) : 'Aucune sauvegarde', due ? '<span class="pill warn">À sauvegarder</span>' : '');
-  h += '<p class="muted small prof-ver">Loutrons · version ' + esc(VERSION) + '<br>Loutrons ne remplace pas un avis médical.</p>';
+  h += '<p class="muted small prof-ver">Loutrons · version ' + esc(VERSION) + '<br>Loutrons ne remplace pas un avis médical.<br>Données nutritionnelles : table Ciqual 2025 de l’ANSES (licence CC BY 4.0) et Open Food Facts (licence ODbL).</p>';
   return h;
 }
 const THEMES = { auto:'Automatique', light:'Clair', dark:'Sombre' };

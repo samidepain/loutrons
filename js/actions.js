@@ -186,6 +186,8 @@ const quickTarget = m => S.food ? { day: S.food.day, meal: S.food.meal } : { day
 const quickFoodOf = (key, m, day, l) => { const f = (l !== 'rec' && habitualFoods(m, day, 60).find(x => x.key === key)) || recentFoods(200).find(x => x.key === key); return f ? freshFood(f) : null; };
 const mealLow = m => ((MEALS.find(x => x[0] === m) || ['', ''])[1]);
 // « Ajouté : 1 aliment », « Ajoutés : 3 aliments » (accord indépendant du nom des aliments et du repas)
+// Après un ajout dans la fenêtre d'ajout : on revient à sa liste, qui montre le repas complété (null : ajout depuis le journal, rien à rouvrir)
+const toSearch = F => F ? Object.assign(F, { mode:'search', sel:null, edit:null, ret:null, qid:null, unit:null, n:null, msg:null, renaming:false, nameDraft:null }) : null;
 const added = n => (n > 1 ? 'Ajoutés : ' : 'Ajouté : ') + n + ' aliment' + (n > 1 ? 's' : '');
 // Nom d'un repas enregistré : obligatoire, 40 caractères au plus
 function savedName(){ const i = $('#sm-name'); const v = i ? i.value.trim() : ''; if (!v || v.length > 40) { toast('Donne un nom à ce repas.'); if (i) i.focus(); return ''; } return v; }
@@ -300,19 +302,19 @@ const A = {
   // « + » d'un habituel ou d'un récent : ajouté d'un geste avec la dernière quantité
   'fd-plus'(b){
     const t = quickTarget(b.dataset.m); const f = quickFoodOf(b.dataset.v, b.dataset.m, t.day, b.dataset.l); if (!f) return;
-    addEntries(t.day, copyEntries([f], t.meal)); S.food = null; render(); toast(nbsp(withDot('Ajouté : ' + f.name)));
+    addEntries(t.day, copyEntries([f], t.meal)); S.food = toSearch(S.food); render(); toast(nbsp(withDot('Ajouté : ' + f.name)));
   },
   // « + » d'un repas passé : tout le repas copié, mêmes quantités
   'fd-again'(b){
     const t = quickTarget(b.dataset.m); const items = dayDoc(b.dataset.d).items.filter(i => i.meal === b.dataset.m); if (!items.length) return;
-    addEntries(t.day, copyEntries(items, t.meal)); S.food = null; render();
+    addEntries(t.day, copyEntries(items, t.meal)); S.food = toSearch(S.food); render();
     const lab = mealLabel(b.dataset.d, t.day);
     toast(nbsp(added(items.length) + ' (' + mealLow(b.dataset.m).toLowerCase() + ' ' + (lab === 'hier' ? 'd’hier' : 'de ' + lab) + ')'));
   },
   // « + » d'un repas enregistré : tous ses aliments, dans le repas choisi en haut de la fenêtre
   'fd-meal-add'(b){
     const q = S.docs.get(b.dataset.v); if (!q || !q.items || !q.items.length) return; const t = quickTarget(q.meal);
-    addEntries(t.day, copyEntries(q.items, t.meal)); S.food = null; render(); toast(nbsp(added(q.items.length) + ' (« ' + q.name + ' »)'));
+    addEntries(t.day, copyEntries(q.items, t.meal)); S.food = toSearch(S.food); render(); toast(nbsp(added(q.items.length) + ' (« ' + q.name + ' »)'));
   },
   // Repas enregistrés : enregistrer un repas du journal (2 aliments au moins), détail, renommer, supprimer
   'fd-save-meal'(b){
@@ -336,7 +338,7 @@ const A = {
     const fromDay = !S.food;
     S.food = Object.assign(S.food || { q:'' }, { mode:'portion', meal:t.meal, day:t.day, sel:f, g:f.g, unit:null, n:null, msg:null }, fromDay ? { fromDay:true } : {}); S.confirm = null; render(); window.scrollTo(0, 0);
   },
-  'fd-back'(){ if (S.food.edit) { S.food = null; } else { S.food.mode = 'search'; S.food.msg = null; } render(); },
+  'fd-back'(){ S.food = S.food.edit && !S.food.ret ? null : toSearch(S.food); render(); },
   'fd-meal'(b){ S.food.meal = b.dataset.v; render(); },
   // Aliment choisi dans la liste. Après un scan sans résultat (F.link), il est enregistré avec ce code-barres : reconnu au prochain scan
   'fd-pick'(b){
@@ -364,15 +366,18 @@ const A = {
     if (f.src === 'rec' || f.src === 'recipe') entry.src = f.src;
     if (F.edit) { const d = dayDoc(F.day); put('m_' + F.day, Object.assign({}, d, { items: d.items.map(i => i.id === F.edit ? entry : i) })); }
     else addEntry(F.day, entry);
-    S.food = null; render(); toast(withDot((F.edit ? 'Modifié : ' : 'Ajouté : ') + f.name));
+    // Modifié depuis le journal, ou raccourci du journal : on y revient ; sinon la fenêtre d'ajout reste ouverte pour l'aliment suivant
+    S.food = (F.edit && !F.ret) || F.fromDay ? null : Object.assign(toSearch(F), { q:'' }); render(); toast(nbsp(withDot((F.edit ? 'Modifié : ' : 'Ajouté : ') + f.name)));
   },
+  // Toucher un aliment noté : dans le journal, ou dans « Dans ce repas » de la fenêtre d'ajout (ret : on revient à la fenêtre)
   'fd-edit'(b){
-    const day = S.foodDay || today(); const it = dayDoc(day).items.find(i => i.id === b.dataset.v); if (!it) return;
-    S.food = { mode:'portion', edit:it.id, meal:it.meal, day, g:it.g, sel:{ key:it.key, src:it.key.split(':')[0], name:it.name, brand:it.brand || '', per100:it.per100, serving:it.serving || null } };
+    const F = S.food; const day = F ? F.day : S.foodDay || today(); const it = dayDoc(day).items.find(i => i.id === b.dataset.v); if (!it) return;
+    const e = { mode:'portion', edit:it.id, meal:it.meal, day, g:it.g, unit:null, n:null, sel:{ key:it.key, src:it.key.split(':')[0], name:it.name, brand:it.brand || '', per100:it.per100, serving:it.serving || null } };
+    S.food = F ? Object.assign(F, e, { ret:true }) : e;
     S.confirm = null; render(); window.scrollTo(0, 0);
   },
   'fd-del'(){ S.confirm = 'fd-del'; render(); },
-  'fd-del-yes'(){ const F = S.food; const d = dayDoc(F.day); put('m_' + F.day, Object.assign({}, d, { items: d.items.filter(i => i.id !== F.edit) })); S.food = null; S.confirm = null; render(); toast('Retiré du journal.'); },
+  'fd-del-yes'(){ const F = S.food; const d = dayDoc(F.day); put('m_' + F.day, Object.assign({}, d, { items: d.items.filter(i => i.id !== F.edit) })); S.food = F.ret ? toSearch(F) : null; S.confirm = null; render(); toast('Retiré du journal.'); },
   'fd-scan'(){ Object.assign(S.food, { mode:'scan', msg:null }); render(); window.scrollTo(0, 0); },
   // Chiffres tapés sous la caméra, ou code-barres tapé dans la recherche (data-v)
   'fd-code'(b){ const i = $('#scan-code'); if (b.dataset.v) { b.disabled = true; b.textContent = 'Recherche du produit…'; } lookupBarcode(b.dataset.v || (i ? i.value : '')); },

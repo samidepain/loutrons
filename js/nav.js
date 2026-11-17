@@ -120,7 +120,11 @@ function shift(kind, from, to){
   // le trait des sous-onglets part de l'ancien libellé
   const ind = bar && bar.querySelector('.st-ind'); if (ind && from >= 0 && to >= 0) ind.animate([{ transform:'translateX(' + from * 100 + '%)' }, { transform:'translateX(' + to * 100 + '%)' }], { duration:320, easing:EASE });
   let el = bar ? bar.nextElementSibling : app.firstElementChild; const d = kind === 'next' ? 28 : -28;
-  for (; el; el = el.nextElementSibling) el.animate([{ opacity:0, transform:'translateX(' + d + 'px)' }, { opacity:1, transform:'none' }], { duration:260, easing:EASE });
+  // Seulement ce qui est à l'écran, et pour un bloc très haut (la liste des exercices, 13 000 px) ses enfants visibles :
+  // animer le bloc entier crée un calque géant, lent ou vide un instant sur iPhone
+  const H = window.innerHeight; const seen = e => e.getBoundingClientRect().top < H;
+  for (; el && seen(el); el = el.nextElementSibling) (el.offsetHeight > 2 * H && el.children.length > 1 ? Array.from(el.children).filter(c => seen(c) && c.getBoundingClientRect().bottom > 0) : [el])
+    .forEach(c => c.animate([{ opacity:0, transform:'translateX(' + d + 'px)' }, { opacity:1, transform:'none' }], { duration:260, easing:EASE }));
 }
 // Calendrier d'Aujourd'hui : la carte s'agrandit ou se réduit en douceur, le mois glisse dans le sens choisi
 function calHeight(){ const c = document.querySelector('#app .cal'); return c ? c.offsetHeight : null; }

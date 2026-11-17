@@ -137,9 +137,9 @@ body.brandless:not(.in-sheet) #app > :first-child:not(.sess-head){padding-right:
 body.brandless .sess-head{top:env(safe-area-inset-top,0px)}
 body.brandless .sess-head > .sess-top{padding-right:48px}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
-.top-in{max-width:640px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:800;font-stretch:125%;font-size:20px;letter-spacing:.02em;text-transform:uppercase}
-.brand img{width:32px;height:32px;display:block}
+/* Titre centré sur l'écran (et non dans la place laissée par le rond du profil) : il est posé au milieu, le rond reste à droite */
+.top-in{position:relative;max-width:640px;min-height:56px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:flex-end}
+.brand{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;pointer-events:none;font-family:var(--f-display);font-weight:800;font-stretch:125%;font-size:20px;letter-spacing:.02em;text-transform:uppercase}
 .me{width:36px;height:36px;flex:none;border-radius:50%;border:none;padding:0;background:var(--grad-fire);color:var(--on-accent);font-family:var(--f-display);font-weight:800;font-stretch:100%;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center}
 .me svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 .me.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
@@ -152,7 +152,8 @@ body.brandless .sess-head > .sess-top{padding-right:48px}
 .pill.acc{background:var(--accent-soft);color:var(--accent-ink)}
 .pill.court{background:var(--court-soft);color:var(--court)}
 
-main{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:16px calc(var(--tabs-h) + 96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
+/* overflow-x:clip : le contenu qui glisse d'un sous-onglet à l'autre ne déborde jamais sur le côté (iPhone ignore overflow-x sur body) ; sans conteneur de défilement, les en-têtes collants restent collants */
+main{max-width:640px;margin:0 auto;overflow-x:clip;padding-inline:16px;padding-block:16px calc(var(--tabs-h) + 96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
 /* Minuteur affiché (jusqu'à 2 lignes, environ 120 px) : plus de place en bas de page, pour ne pas cacher le dernier bouton */
 body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px + env(safe-area-inset-bottom,0px))}
 /* Carte : dégradé vertical à peine visible et reflet d'un pixel en haut (ombre douce en clair), sans bordure */
@@ -179,9 +180,6 @@ body:has(#restbar:not([hidden])) main{padding-bottom:calc(var(--tabs-h) + 140px 
 .greet{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
 /* Émile compagnon (version 3.38) : apparitions brèves, une seule fois par contexte (firstTime dans emile.js), transform et opacity
    seulement, jamais en boucle ni pendant une séance ; coupées par « Réduire les animations » (règle globale en bas de page) */
-.greet-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);min-width:0}
-.greet-emile{width:48px;height:48px;flex:none;border-radius:50%}
-@media (max-width:360px){.greet-emile{width:40px;height:40px}}
 .e-arrive{animation:e-arrive .7s var(--ease) .15s backwards}
 .e-hop{animation:e-hop .8s var(--ease) .5s backwards}
 .end.enter .e-hop,.end.enter .e-cheer{animation-delay:.85s}
@@ -514,13 +512,21 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 .macro{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;font-size:14px}
 .macro .label{font-size:13px}
 @media (max-width:360px){.ring.md{width:96px;height:96px}.day-n{font-size:22px}}
-/* Repas : nom, kcal et « + » rond sur une ligne */
-.meal-h{display:flex;align-items:center;gap:10px}
-.meal-t{flex:1;gap:0}
+/* Repas : toute la ligne (icône, nom, kcal, « + » rond) est un bouton qui ouvre l'ajout à ce repas ; il hérite la police du titre */
+.meal-h{min-height:48px;display:flex;align-items:center;gap:10px;margin:-6px;padding:6px;width:calc(100% + 12px);border:none;border-radius:14px;background:none;color:inherit;font:inherit;text-align:left;transition:background var(--dur-state) ease}
+.meal-h:active{background:var(--surface-2)}
+.meal-t{flex:1;gap:0;min-width:0}
+.meal-t .small{font-family:var(--f-body);font-weight:400;font-stretch:100%}
+.meal-h .plus{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--accent-ink);font-family:var(--f-body);font-size:26px;font-weight:700;font-stretch:100%;line-height:1;transition:transform .14s}
+.meal-h:active .plus{transform:scale(.93)}
+/* Fenêtre d'ajout : créations en liens discrets sous la liste ; « Terminé » fixé au bas de l'écran, au-dessus des onglets (main garde la place en bas) */
+.fd-new{gap:20px}
+.fd-done{position:fixed;left:0;right:0;bottom:calc(var(--tabs-h) + env(safe-area-inset-bottom,0px) + 12px);z-index:25;max-width:640px;margin:0 auto;padding:0 16px}
 /* Fenêtre d'ajout : recherche en grand, scanner en carré orange */
 .fd-search{display:flex;gap:8px;align-items:stretch}
 .fd-search input{flex:1;min-width:0;width:auto;min-height:52px;border-radius:16px;font-size:17px;padding-inline:16px}
 .scan-btn.btn{width:52px;min-height:52px;padding:0;border-radius:16px;flex:none;display:grid;place-items:center;box-shadow:var(--glow-3),inset 0 1px 0 rgba(255,255,255,.45)}
+body:has(.fd-done) .scan-btn.btn{box-shadow:var(--glow-2),inset 0 1px 0 rgba(255,255,255,.45)}
 .scan-btn svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* Petits écrans : le compteur de la semaine reste en texte, pour garder « Voir le mois » sur la même ligne */
 @media (max-width:360px){.cal .ring.xs{display:none}}
@@ -709,6 +715,8 @@ textarea{width:100%;min-height:80px;border:none;border-radius:12px;background:va
 /* Petits écrans : anneau, temps, « +15 s » et « Passer » tiennent sur une ligne */
 @media (max-width:360px){.restbar-in{gap:2px 8px}.restbar .rt{font-size:26px;min-width:0}.restbar button{padding:6px 10px;font-size:16px}}
 #restbar:not([hidden]) ~ .toast{bottom:calc(var(--tabs-h) + 140px + env(safe-area-inset-bottom,0px))}
+/* Fenêtre d'ajout d'aliments : le message passe au-dessus du bouton « Terminé » collé en bas */
+body:has(.fd-done) .toast{bottom:calc(var(--tabs-h) + 104px + env(safe-area-inset-bottom,0px))}
 .empty{color:var(--muted);font-size:15px;padding:8px 0}
 /* Fiche d'exercice : photos du mouvement (départ, arrivée) et silhouette des muscles travaillés */
 input[type=search]{-webkit-appearance:none;appearance:none}
@@ -842,7 +850,7 @@ button.plus svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-widt
 <body>
 
 <header class="top"><div class="top-in">
-  <div class="brand"><img src="icons/logo.png" alt="" width="32" height="32">LOUTRONS</div>
+  <div class="brand">LOUTRONS</div>
   <button type="button" id="me" class="me" data-act="profile" aria-label="Ton profil et les réglages" hidden></button>
 </div></header>
 

@@ -15,7 +15,6 @@ import { emile, emileQueue, firstTime, hey, returnTip } from '../emile.js';
 import { activitiesLine, lineCard, waterLine } from './activity.js';
 import { EFFORT, effortOf, sessionKcal, sessionMin, sportPlanned } from '../energy.js';
 import { introCard } from './intro.js';
-import { ic } from '../icons.js';
 import { foodTodayCard } from './food.js';
 
 // Choix de l'effort d'une séance terminée (il règle sa dépense) ; aussi sur l'écran de fin de séance
@@ -42,9 +41,9 @@ function planCard(d, plan, aw, doneToday, tpls){
   const prevu = plannedDates().indexOf(d) >= 0; const p = weekProgress(d); const reached = !prevu && p.done >= p.target;
   // Match ce soir ou demain (module sport) et séance du bas du corps : garder des jambes fraîches ; note du jour du programme exemple
   const mt = sportPlanned(d) === 'match' ? 'ce soir' : sportPlanned(addDays(d, 1)) === 'match' ? 'demain' : null;
-  const caution = (mt && tplLower(t) ? '<p class="small">' + esc(nbsp('Match ' + mt + ' : garde des jambes fraîches, préfère une séance du haut du corps (« Voir toutes mes séances »).')) + '</p>' : '') + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
+  const caution = (mt && tplLower(t) ? '<p class="small">' + esc(nbsp('Match ' + mt + ' : garde des jambes fraîches, préfère une séance du haut du corps (« Voir toutes mes séances »).')) + '</p>' : '');
   const count = p.done + ' séance' + (p.done > 1 ? 's' : '') + ' sur ' + p.target + ' cette semaine';
-  // Bloc compact (version 3.38) : le nom, ce qu'on y travaille et le bouton ; ni durée ni dernière séance (aucun chiffre de temps ici)
+  // Bloc compact : le nom, ce qu'on y travaille et le bouton ; ni durée, ni dernière séance, ni délai avant une autre activité
   return '<section class="card plan"><span class="label">' + (prevu ? 'Prévue aujourd’hui' : 'Ta prochaine séance') + '</span><div class="name">' + esc(t.name) + '</div>'
     + (t.focus ? '<p class="muted small">' + esc(t.focus) + '</p>' : '') + (reached ? '<div class="plan-rest"><img' + (firstTime('rest:' + d) ? ' class="e-hop"' : '') + ' src="icons/emile.png" alt="" width="44" height="44"><p class="small">' + esc(nbsp(count + ' : objectif atteint, tu peux te reposer.')) + '</p></div>' : '') + caution
     + '<button type="button" class="btn' + (reached ? '' : ' primary') + ' big" data-act="start" data-v="' + esc(id) + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>' + noterBtn + autre + '</section>';
@@ -58,12 +57,11 @@ function recordCard(d){
 
 // Conseil replié par défaut (avatar, titre, chevron) pour laisser la place aux suivis du jour ; les alertes (rang 2 : retour après une pause,
 // fatigue, genou) restent ouvertes car elles touchent la séance. Le titre est repris du <h3> de la bulle (déjà échappé).
-// Le message de la semaine (rang 5 : Progression, Décharge…) porte une flèche qui monte ; les autres conseils, le visage d'Émile.
 function foldEmile(html, top){
   if (!html || top === 2) return html;
   if (S.emileOpen) return html + '<button type="button" class="link emile-more" data-act="emile-open" aria-expanded="true">Réduire le conseil</button>';
   const t = (html.match(/<h3>(.*?)<\/h3>/) || [])[1] || 'Conseil d’Émile';
-  return '<section class="card line"><div class="line-row"><button type="button" class="line-h e-fold" data-act="emile-open" aria-expanded="false">' + (top === 5 ? ic('trend') : '<img src="icons/emile.png" alt="" width="32" height="32">') + '<span class="n">' + t + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></section>';
+  return '<section class="card line"><div class="line-row"><button type="button" class="line-h e-fold" data-act="emile-open" aria-expanded="false"><img src="icons/emile.png" alt="" width="32" height="32"><span class="n">' + t + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></section>';
 }
 
 // Exercices de la prochaine séance dont la charge est maintenue à cause de cette zone (au plus 4)
@@ -94,7 +92,8 @@ function emileCards(d, wk, goal){
     if (jumpsOn() && wk.bw === 6 && !testForBlock(wk.block)) q.push({ rank:4, html: emile('<p>Test de détente cette semaine : il s’affichera au début de ta prochaine séance jambes. La décharge te laisse reposé, c’est le bon moment.</p>', { key:'jumps:' + wk.block + ':6' }) });
     else if (jumpsOn() && wk.bw === 5) q.push({ rank:4, html: emile('<p>Test de détente la semaine prochaine, pendant la décharge.</p>', { key:'jumps:' + wk.block + ':5' }) });
   }
-  q.push({ rank:5, html: emile('<p>' + esc(goal.d) + '</p>', { title: goal.t, key:'week:' + mondayOf(d) + ':' + goal.t }) });
+  // Semaine ordinaire : rien à dire ; seules les semaines qui changent la consigne (calibration, fin de bloc, décharge, reprise) ont leur conseil
+  if (goal.t !== 'Progression') q.push({ rank:5, html: emile('<p>' + esc(goal.d) + '</p>', { title: goal.t, key:'week:' + mondayOf(d) + ':' + goal.t }) });
   const f = emileQueue(q); const top = Math.min(...q.filter(x => x.html).map(x => x.rank));
   const first = foldEmile(f.first, top);
   if (!f.rest.length) return first;
@@ -128,8 +127,7 @@ export function viewToday(){
   const doneToday = workouts().filter(w => w.date === d && w.status === 'terminée');
   const who = String(settings().name || '').trim(); 
   const hi = greeting(new Date().getHours()) + (who ? ', ' + who : '');
-  // Émile accueille la personne à côté du salut : il arrive une fois par jour et par ouverture de l'appli, puis reste immobile
-  let h = '<div class="greet-row"><div class="greet"><span class="g-hi">' + esc(hi) + '</span><span class="hero-date">' + esc(capFirst(fmtDateLong(d))) + ' · bloc ' + wk.block + ', semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<div class="row"><span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span></div>' : '') + '</div><img class="greet-emile' + (S.loaded && firstTime('hello:' + d) ? ' e-arrive' : '') + '" src="icons/emile.png" alt="" width="48" height="48"></div>';
+  let h = '<div class="greet"><span class="g-hi">' + esc(hi) + '</span><span class="hero-date">' + esc(capFirst(fmtDateLong(d))) + ' · bloc ' + wk.block + ', semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<div class="row"><span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span></div>' : '') + '</div>';
   // Premier lancement, rien de fait : Aujourd'hui s'explique d'abord
   const intro = introCard('today'); if (intro) return h + intro;
   h += planCard(d, plan, aw, doneToday, tpls);
